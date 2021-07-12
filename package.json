@@ -124,7 +124,7 @@
     "jasmine-core": "^3.8.0",
     "prettier": "^2.2.1",
     "rxjs": "^6.6.7",
-    "tsickle": "^0.39.1",
+    "tsickle": "^0.43.0",
     "typescript-json-schema": "^0.50.1",
     "zone.js": "^0.11.4"
   }
