@@ -1,0 +1,51 @@
+{
+  "name": "lib-tools",
+  "version": "3.0.0-dev.0",
+  "description": "The lib-tools helps you simplify the build, bundle, test and npm packaging workflows for Typescript, JavaScript, SCSS, CSS and assets module library projects.",
+  "author": "DagonMetric",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dagonmetric/lib-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dagonmetric/lib-tools/issues"
+  },
+  "homepage": "https://github.com/dagonmetric/lib-tools",
+  "keywords": [
+    "lib-tools",
+    "library-tools",
+    "npm-packaging-tools",
+    "library-packaging-tools",
+    "typescript-library-packaging",
+    "javascript-library-packaging",
+    "style-module",
+    "assets-module",
+    "typescript",
+    "sass",
+    "scss",
+    "postcss",
+    "autoprefixer",
+    "webpack",
+    "rollup",
+    "karma"
+  ],
+  "type": "module",
+  "scripts": {
+    "lint": "eslint . --ext .js,.ts",
+    "compile": "tsc --project tsconfig.json"
+  },
+  "dependencies": {
+    "typescript": "5.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-jsdoc": "^46.4.6",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.2"
+  }
+}
