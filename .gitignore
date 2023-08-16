@@ -1,0 +1,51 @@
+# System Files
+Thumbs.db
+.DS_Store
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# Node.js
+node_modules/
+
+# REPL history
+.node_repl_history
+
+# npm
+.npm
+npm-debug.log*
+
+# yarn
+yarn-debug.log*
+yarn-error.log*
+.yarn-integrity
+
+# Build results
+dist/
+out-tsc/
+
+# sass
+.sass-cache/
+
+# Coverage directory used by tools like istanbul
+/coverage
+
+# junit outputs
+junit/
+
+# eslint
+.eslintcache
+
+# Logs
+[Ll]og/
+[Ll]ogs/
+*.log
+
+# Misc.
+tmp/
+.cache
