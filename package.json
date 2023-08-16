@@ -33,7 +33,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint . --ext .js,.ts",
-    "compile": "tsc --project tsconfig.json"
+    "compile": "tsc --project tsconfig.build.json"
   },
   "dependencies": {
     "typescript": "5.1.6"
