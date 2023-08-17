@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a bug in Lib Tools
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hi there!
+
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: version
+    attributes:
+      label: Lib Tools Version
+      placeholder: e.g. v3.0.0
+    validations:
+      required: true
+  - type: input
+    id: node_version
+    attributes:
+      label: Node Version (if applicable)
+    validations:
+      required: false
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of the problem.
+      placeholder: I am doing ... What I expect is ... What actually happening is ...
+    validations:
+      required: true
