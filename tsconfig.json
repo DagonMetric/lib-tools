@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
+    "resolveJsonModule": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "forceConsistentCasingInFileNames": true,
@@ -20,12 +20,11 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "sourceRoot": ".",
-    "declaration": false,
+    "declaration": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
     "lib": ["ES2022"],
     "types": ["node"],
-
     "baseUrl": ".",
     "rootDir": ".",
     "outDir": "./dist"
