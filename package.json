@@ -30,11 +30,28 @@
     "rollup",
     "karma"
   ],
+  "bin": {
+    "lib": "./bin/lib.js"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "lint": "eslint . --ext .js,.ts",
     "compile": "tsc --project tsconfig.build.json",
-    "generate-json-schema": "node ./tools/generate-json-schema.js --input-type=module"
+    "generate-json-schema": "node ./tools/generate-json-schema.js --input-type=module",
+    "copy-files": "node ./tools/copy-files.js --input-type=module",
+    "show-help": "node --enable-source-maps ./dist/bin/lib.js --help",
+    "build": "npm run compile && npm run generate-json-schema && npm run copy-files && npm run show-help"
   },
   "dependencies": {
     "typescript": "5.1.6"
