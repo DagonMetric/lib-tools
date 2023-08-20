@@ -1,5 +1,4 @@
 import { OverridableTaskConfig } from './overridable-task-config.js';
-import { TaskBase } from './task-base.js';
 
 /**
  * @additionalProperties false
@@ -127,7 +126,7 @@ export interface TestTaskConfigBase {
  * The test task.
  * @additionalProperties false
  */
-export interface TestTaskConfig extends TestTaskConfigBase, OverridableTaskConfig<TestTaskConfigBase>, TaskBase {
+export interface TestTaskConfig extends TestTaskConfigBase, OverridableTaskConfig<TestTaskConfigBase> {
     /**
      * To override properties based on test environment.
      */
