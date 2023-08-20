@@ -1,5 +1,5 @@
-import { BuildConfig } from './build-config.js';
-import { TestConfig } from './test-config.js';
+import { BuildTaskConfig } from './build-task-config.js';
+import { TestTaskConfig } from './test-task-config.js';
 
 /**
  * @additionalProperties false
@@ -22,10 +22,10 @@ export interface ProjectConfig {
         /**
          * Build task configuration.
          */
-        build?: BuildConfig;
+        build?: BuildTaskConfig;
         /**
          * Test task configuration.
          */
-        test?: TestConfig;
+        test?: TestTaskConfig;
     };
 }

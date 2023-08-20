@@ -5,7 +5,7 @@ import { CommandOptions } from './command-options.js';
  */
 export interface BuildCommandOptions extends CommandOptions {
     /**
-     * Set the version to override the version field of the package.json file.
+     * Set version to override the version field of the package.json file.
      */
     version?: string;
 }

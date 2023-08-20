@@ -1,4 +1,5 @@
-import { OverridableConfig } from './overridable-config.js';
+import { OverridableTaskConfig } from './overridable-task-config.js';
+import { TaskBase } from './task-base.js';
 
 /**
  * @additionalProperties false
@@ -60,7 +61,7 @@ export interface JunitReporterOptions {
 /**
  * @additionalProperties false
  */
-export interface TestConfigBase {
+export interface TestTaskConfigBase {
     /**
      * Index file for test.
      */
@@ -126,9 +127,9 @@ export interface TestConfigBase {
  * The test task.
  * @additionalProperties false
  */
-export interface TestConfig extends TestConfigBase, OverridableConfig<TestConfigBase> {
+export interface TestTaskConfig extends TestTaskConfigBase, OverridableTaskConfig<TestTaskConfigBase>, TaskBase {
     /**
      * To override properties based on test environment.
      */
-    envOverrides?: Record<string, Partial<TestConfigBase>>;
+    envOverrides?: Record<string, Partial<TestTaskConfigBase>>;
 }

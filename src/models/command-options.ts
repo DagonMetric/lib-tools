@@ -1,21 +1,21 @@
 export interface CommandOptions {
     /**
-     * The workflow configuration file location or `auto` to analyze project structure and run task automatically.
+     * Set libconfig.json file location or set `auto` to analyze project structure automatically..
      */
-    workflow?: string;
+    libconfig?: string;
 
     /**
-     * Environment name to override the task configuration with `envOverrides[environment]` options.
+     * Set environment name to override the task configuration with envOverrides options.
      */
-    environment?: Record<string, boolean | string>;
+    env?: string;
 
     /**
-     * Filter project(s) by project name(s).
+     * Set project name to Filter project(s).
      */
-    filter?: string | string[];
+    project?: string;
 
     /**
-     * Logging level for output information.
+     * Set logging level for output information.
      */
-    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'fatal' | 'none';
+    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
 }
