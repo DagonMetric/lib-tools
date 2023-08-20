@@ -28,6 +28,5 @@
     "baseUrl": ".",
     "rootDir": ".",
     "outDir": "./dist"
-  },
-  "exclude": ["**/dist/**/*", "node_modules"]
+  }
 }
