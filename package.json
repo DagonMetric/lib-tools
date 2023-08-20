@@ -39,12 +39,12 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/cli/index.js",
+      "types": "./dist/cli/index.d.ts"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/cli/index.js",
+  "types": "./dist/cli/index.d.ts",
   "scripts": {
     "lint": "eslint . --ext .js,.ts",
     "compile": "tsc --project tsconfig.build.json",
