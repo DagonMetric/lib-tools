@@ -45,7 +45,7 @@ export async function parseLibConfig(
     }
 }
 
-function toParsedLibConfig(libConfig: LibConfig, configPath: string, workspaceRoot: string): ParsedLibConfig {
+export function toParsedLibConfig(libConfig: LibConfig, configPath: string, workspaceRoot: string): ParsedLibConfig {
     const parsedLibConfig: ParsedLibConfig = {
         projects: {}
     };

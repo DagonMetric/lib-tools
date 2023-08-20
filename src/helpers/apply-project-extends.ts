@@ -5,7 +5,7 @@ import { ParsedProjectConfig } from '../models/index.js';
 import { pathExists } from '../utils/index.js';
 
 import { readLibConfigFile } from './read-lib-config-file.js';
-import { getParsedLibConfig } from './get-parsed-lib-config.js';
+import { toParsedLibConfig } from './parse-lib-config.js';
 
 export async function applyProjectExtends(
     projectConfig: ParsedProjectConfig,
@@ -142,7 +142,7 @@ async function getBaseProjectConfigFromFile(
             );
         }
 
-        const libConfigInternal = getParsedLibConfig(libConfig, extendsFilePath, projectConfig._workspaceRoot);
+        const libConfigInternal = toParsedLibConfig(libConfig, extendsFilePath, projectConfig._workspaceRoot);
         const foundBaseProjectInternal = libConfigInternal.projects[projectNameToExtend];
 
         if (foundBaseProjectInternal._projectName === projectConfig._projectName) {
