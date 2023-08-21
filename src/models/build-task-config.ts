@@ -432,10 +432,6 @@ export interface BuildTaskConfigBase {
  */
 export interface BuildTaskConfig extends BuildTaskConfigBase, OverridableTaskConfig<BuildTaskConfigBase> {
     /**
-     * The handler for build task.
-     */
-    handler?: string;
-    /**
      * To override properties based on build environment.
      */
     envOverrides?: Record<string, Partial<BuildTaskConfigBase>>;
