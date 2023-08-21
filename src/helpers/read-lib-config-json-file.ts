@@ -4,7 +4,7 @@ import ajvFormats from 'ajv-formats';
 import { InvalidConfigError } from '../exceptions/index.js';
 import { LibConfig } from '../models/index.js';
 import { readJsonWithComments } from '../utils/index.js';
-import schema from '../schemas/schema.json';
+import schema from '../schemas/schema.json' assert { type: 'json' };
 
 const ajv = new Ajv.default();
 ajvFormats.default(ajv);
