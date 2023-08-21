@@ -1,6 +1,6 @@
 import { ParsedBuildTaskConfig } from '../../models/index.js';
 
-export default function (buildTask: ParsedBuildTaskConfig) {
+export function runBuildTask(buildTask: ParsedBuildTaskConfig) {
     console.log(buildTask);
 
     return Promise.resolve();
