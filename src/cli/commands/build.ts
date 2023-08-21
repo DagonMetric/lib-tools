@@ -65,7 +65,7 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
                 {} as Record<string, boolean>
             ) ?? {};
 
-    const parsedLibConfig = await parseLibConfig(argv, 'build');
+    const parsedLibConfig = await parseLibConfig(argv);
     const filteredProjectNames =
         argv.project
             ?.split(',')
@@ -108,9 +108,7 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
     // });
 
     for (const buildTask of buildTasks) {
-        if (!buildTask.handler) {
-            const handlerModule = await import('../../handlers/build/index.js');
-            await handlerModule.default(buildTask);
-        }
+        const handlerModule = await import('../../handlers/build/index.js');
+        await handlerModule.default(buildTask);
     }
 }
