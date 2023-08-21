@@ -1,5 +1,5 @@
-import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 
 function normalizePath(p: string): string {
     if (!p) {
