@@ -4,35 +4,34 @@ import { InternalError } from '../../exceptions/index.js';
 import { BuildCommandOptions, ParsedBuildTaskConfig, ParsedProjectConfig } from '../../models/index.js';
 import { runBuildTask } from '../../handlers/build/index.js';
 import { applyEnvOverrides, applyProjectExtends, parsedBuildTaskConfig, parseLibConfig } from '../../helpers/index.js';
-import { colors } from '../../utils/index.js';
 
 export const command = 'build';
 
-export const describe = 'Build the project(s).';
+export const describe = 'Build the project(s)';
 
 export function builder(argv: Argv): Argv<BuildCommandOptions> {
     return (
         argv
-            .usage(`${colors.cyan('lib-tools')}\nUsage:\nlib build [options...]`)
-            .example('lib build', 'Build the project(s).')
+            .usage('$0 build [options...]')
+            .example('$0 build', 'Build the project(s)')
             .option('version', {
-                describe: 'Set version to override the version field of the package.json file.',
+                describe: 'Set version to override the version field of the package.json file',
                 type: 'string'
             })
             .option('libconfig', {
-                describe: 'Set libconfig.json file location or set `auto` to analyze project structure automatically.',
+                describe: 'Set libconfig.json file location or set `auto` to analyze project structure automatically',
                 type: 'string'
             })
             .option('env', {
-                describe: 'Set environment name to override the task configuration with envOverrides options.',
+                describe: 'Set environment name to override the task configuration with envOverrides options',
                 type: 'string'
             })
             .option('project', {
-                describe: 'Set project name to Filter project(s).',
+                describe: 'Set project name to Filter project(s)',
                 type: 'string'
             })
             .option('logLevel', {
-                describe: 'Set logging level for output information.',
+                describe: 'Set logging level for output information',
                 // type: 'string'
                 choices: ['debug', 'info', 'warn', 'error', 'none'] as const
             })
@@ -42,7 +41,7 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
             //     type: 'boolean'
             // })
             .option('help', {
-                describe: 'Show help for build command.',
+                describe: 'Show help for build command',
                 type: 'boolean'
             })
     );

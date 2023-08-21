@@ -5,6 +5,10 @@ import { colors } from '../utils/index.js';
 
 import { CliInfo } from './cli-info.js';
 
+import * as buildCommand from './commands/build.js';
+
+const commands = [buildCommand];
+
 export default async function (cliInfo: CliInfo): Promise<void> {
     const yargsInstance = yargs(hideBin(process.argv));
     await yargsInstance
@@ -19,26 +23,26 @@ export default async function (cliInfo: CliInfo): Promise<void> {
             'strip-dashed': true,
             'camel-case-expansion': false
         })
-        .usage(colors.white(`${cliInfo.packageName} v${cliInfo.version}\nUsage:\nlib [command] [options...]`))
-        .example('lib build', 'Build the project(s) using libconfig.json configuration file.')
-        .example('lib build --libconfig=auto', 'Analyze project structure and build automatically.')
-        .example('lib --help', 'Show help')
+        // .usage(`${cliInfo.packageName} v${cliInfo.version}\n\nUsage:\nlib [command] [options...]`)
+        .usage(`$0 [command] [options...]`)
+        .example([
+            ['$0 build', 'Build the project(s)'],
+            ['$0 --help', 'Show help'],
+            ['$0 --version', 'Show version']
+        ])
         // A complete list of strings can be found: https://github.com/yargs/yargs/blob/main/locales/en.json
         .updateStrings({
             'Commands:': colors.cyan('Commands:'),
             'Options:': colors.cyan('Options:'),
             'Positionals:': colors.cyan('Arguments:'),
+            'Examples:': colors.cyan('Examples:'),
             deprecated: colors.yellow('deprecated'),
             'deprecated: %s': colors.yellow('deprecated:') + ' %s',
             'Did you mean %s?': 'Unknown command. Did you mean %s?'
         })
-        .demandCommand(
-            1,
-            `You need to specify a command before moving on. Use '--help' to view the available commands.`
-        )
-        .recommendCommands()
-        .version(false)
-        .help('help', 'Shows a help message for this command in the console.')
+        .command(commands)
+        .version(cliInfo.version)
+        .help('help')
         .showHelpOnFail(false)
         .wrap(yargsInstance.terminalWidth())
         .strict()
