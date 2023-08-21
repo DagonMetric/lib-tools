@@ -1,7 +1,7 @@
 {
   "name": "lib-tools",
   "version": "3.0.0-dev.0",
-  "description": "The lib-tools helps you simplify the build, bundle, test and npm packaging workflows for Typescript, JavaScript, SCSS, CSS and assets module library projects.",
+  "description": "The lib-tools helps you simplify the build, bundle and npm packaging workflows for Typescript, JavaScript, SCSS, CSS and assets module library projects.",
   "author": "DagonMetric",
   "license": "MIT",
   "repository": {
@@ -27,8 +27,7 @@
     "postcss",
     "autoprefixer",
     "webpack",
-    "rollup",
-    "karma"
+    "rollup"
   ],
   "bin": {
     "lib": "./bin/lib.js"
