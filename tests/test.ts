@@ -10,8 +10,8 @@ const runCli = (args: string) => {
 void describe('Cli', () => {
     void it(`should run 'help' command`, () => {
         const result = runCli('--help');
-        const actual = result.includes('--help  Shows a help message for this command in the console.');
+        const shouldContains = result.includes('--help  Shows a help message for this command in the console.');
 
-        strictEqual(actual, true);
+        strictEqual(shouldContains, true);
     });
 });
