@@ -2,6 +2,7 @@ import { Argv, ArgumentsCamelCase } from 'yargs';
 
 import { InternalError } from '../../exceptions/index.js';
 import { BuildCommandOptions, ParsedBuildTaskConfig, ParsedProjectConfig } from '../../models/index.js';
+import { runBuildTask } from '../../handlers/build/index.js';
 import { applyEnvOverrides, applyProjectExtends, parsedBuildTaskConfig, parseLibConfig } from '../../helpers/index.js';
 import { colors } from '../../utils/index.js';
 
@@ -108,7 +109,6 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
     // });
 
     for (const buildTask of buildTasks) {
-        const handlerModule = await import('../../handlers/build/index.js');
-        await handlerModule.default(buildTask);
+        await runBuildTask(buildTask);
     }
 }
