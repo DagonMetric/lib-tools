@@ -64,11 +64,11 @@ export interface ParsedPackageJson {
     _packageJson: Record<string, unknown>;
     _packageName: string;
     _packageNameWithoutScope: string;
-    _packageScope?: string | null;
+    _packageScope?: string;
     _packageVersion?: string;
     _nestedPackage?: boolean;
-    _rootPackageJsonPath?: string | null;
-    _rootPackageJson?: Record<string, unknown> | null;
+    _rootPackageJsonPath?: string;
+    _rootPackageJson?: Record<string, unknown>;
 }
 
 export interface ParsedBuildTaskConfig extends BuildTaskConfig {
