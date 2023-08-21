@@ -1,10 +1,10 @@
-import * as path from 'path';
+import * as path from 'node:path';
 
 import { InvalidConfigError } from '../exceptions/index.js';
 import { ParsedProjectConfig } from '../models/index.js';
 import { pathExists } from '../utils/index.js';
 
-import { readLibConfigFile } from './read-lib-config-file.js';
+import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 import { toParsedLibConfig } from './parse-lib-config.js';
 
 export async function applyProjectExtends(
@@ -134,7 +134,7 @@ async function getBaseProjectConfigFromFile(
 
     try {
         const projectNameToExtend = parts[2];
-        const libConfig = await readLibConfigFile(extendsFilePath, true);
+        const libConfig = await readLibConfigJsonFile(extendsFilePath, true);
         const foundBaseProject = libConfig.projects[projectNameToExtend];
         if (!foundBaseProject) {
             throw new InvalidConfigError(

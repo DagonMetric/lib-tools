@@ -4,7 +4,6 @@ import { BuildCommandOptions, ParsedPackageJson } from '../models/index.js';
 import { isSamePaths, isInFolder } from '../utils/index.js';
 
 import { findPackageJsonPath } from './find-package-json-path.js';
-
 import { readPackageJsonFile } from './read-package-json-file.js';
 
 const versionPlaceholderRegex = /0\.0\.0-PLACEHOLDER/i;

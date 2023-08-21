@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 
 import { InternalError, InvalidConfigError } from '../exceptions/index.js';
 import { BuildCommandOptions, BuildTaskConfig, ParsedBuildTaskConfig, ParsedProjectConfig } from '../models/index.js';

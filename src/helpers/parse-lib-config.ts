@@ -1,16 +1,13 @@
-import * as path from 'path';
+import * as path from 'node:path';
 
 import { InternalError, InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
 import { CommandOptions, LibConfig, ParsedLibConfig, ParsedProjectConfig } from '../models/index.js';
 import { findUp, pathExists } from '../utils/index.js';
 
 import { detectLibConfig } from './detect-lib-config.js';
-import { readLibConfigFile } from './read-lib-config-file.js';
+import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 
-export async function parseLibConfig(
-    commandOptions: CommandOptions,
-    forTask: 'build' | 'test'
-): Promise<ParsedLibConfig> {
+export async function parseLibConfig(commandOptions: CommandOptions): Promise<ParsedLibConfig> {
     let configPath: string | null = null;
 
     if (commandOptions.libconfig && commandOptions.libconfig !== 'auto') {
@@ -30,12 +27,12 @@ export async function parseLibConfig(
     }
 
     if (configPath) {
-        const libConfig = await readLibConfigFile(configPath, true);
+        const libConfig = await readLibConfigJsonFile(configPath, true);
         const workspaceRoot = path.extname(configPath) ? path.dirname(configPath) : configPath;
 
         return toParsedLibConfig(libConfig, configPath, workspaceRoot);
     } else {
-        const libConfig = await detectLibConfig(forTask);
+        const libConfig = await detectLibConfig();
 
         if (libConfig == null) {
             throw new InternalError(`The lib workflow configuration could not be detected automatically.`);
