@@ -7,5 +7,3 @@ export * from './parsed-lib-config.js';
 export * from './parsed-project-config.js';
 export * from './project-config.js';
 export * from './overridable-task-config.js';
-export * from './test-command-options.js';
-export * from './test-task-config.js';

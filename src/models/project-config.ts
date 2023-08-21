@@ -1,5 +1,4 @@
 import { BuildTaskConfig } from './build-task-config.js';
-import { TestTaskConfig } from './test-task-config.js';
 
 /**
  * @additionalProperties false
@@ -23,9 +22,5 @@ export interface ProjectConfig {
          * Build task configuration.
          */
         build?: BuildTaskConfig;
-        /**
-         * Test task configuration.
-         */
-        test?: TestTaskConfig;
     };
 }

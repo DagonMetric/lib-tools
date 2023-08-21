@@ -9,7 +9,7 @@ import {
     StyleEntry
 } from './build-task-config.js';
 
-export interface StyleEntryInternal extends StyleEntry {
+export interface ParsedStyleEntry extends StyleEntry {
     _inputFilePath: string;
     _outputFilePath: string;
     _loadPaths: string[];
@@ -31,7 +31,7 @@ export interface TsConfigJsonOptions {
     files?: string[];
 }
 
-export interface ScriptBundleOptionsInternal extends ScriptBundleOptions {
+export interface ParsedScriptBundleOptions extends ScriptBundleOptions {
     _entryFilePath: string;
     _outputFilePath: string;
     _externals: string[];
@@ -40,22 +40,22 @@ export interface ScriptBundleOptionsInternal extends ScriptBundleOptions {
     _ecma?: number;
 }
 
-export interface ScriptCompilationOptionsInternal extends ScriptCompilationOptions {
+export interface ParsedScriptCompilationOptions extends ScriptCompilationOptions {
     _declaration: boolean;
     _scriptTarget: number;
     _tsOutDirRootResolved: string;
     _customTsOutDir: string | null;
     _tsConfigInfo: TsConfigInfo;
     _entryName: string;
-    _bundles: ScriptBundleOptionsInternal[];
+    _bundles: ParsedScriptBundleOptions[];
 }
 
-export interface ScriptOptionsInternal extends ScriptOptions {
+export interface ParsedScriptOptions extends ScriptOptions {
     _tsConfigInfo: TsConfigInfo | null;
     _projectTypescriptModulePath: string | null;
     _entryName: string | null;
-    _compilations: ScriptCompilationOptionsInternal[];
-    _bundles: ScriptBundleOptionsInternal[];
+    _compilations: ParsedScriptCompilationOptions[];
+    _bundles: ParsedScriptBundleOptions[];
 }
 
 export interface ParsedPackageJson {
@@ -90,8 +90,8 @@ export interface ParsedBuildTaskConfig extends BuildTaskConfig {
     _assetEntries?: AssetEntry[] | null;
 
     // styles
-    _styleEntries?: StyleEntryInternal[] | null;
+    _styleEntries?: ParsedStyleEntry[] | null;
 
     // scripts
-    _script?: ScriptOptionsInternal | null;
+    _script?: ParsedScriptOptions | null;
 }
