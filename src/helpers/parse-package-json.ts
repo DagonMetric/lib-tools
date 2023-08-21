@@ -1,9 +1,11 @@
 import * as path from 'node:path';
 
 import { BuildCommandOptions, ParsedPackageJson } from '../models/index.js';
+import { isSamePaths, isInFolder } from '../utils/index.js';
 
 import { findPackageJsonPath } from './find-package-json-path.js';
-import { readPackageJson } from './read-package-json.js';
+
+import { readPackageJsonFile } from './read-package-json-file.js';
 
 const versionPlaceholderRegex = /0\.0\.0-PLACEHOLDER/i;
 
@@ -18,7 +20,7 @@ export async function parsePackageJson(
         return null;
     }
 
-    const packageJson = await readPackageJson(packageJsonPath);
+    const packageJson = await readPackageJsonFile(packageJsonPath);
 
     const packageName = packageJson.name as string;
 
@@ -40,8 +42,13 @@ export async function parsePackageJson(
         packageNameWithoutScope = packageName.substr(slashIndex + 1);
     }
 
-    const rootPackageJsonPath = await findPackageJsonPath(null, workspaceRoot);
-    const rootPackageJson = rootPackageJsonPath ? await readPackageJson(rootPackageJsonPath) : null;
+    let rootPackageJsonPath: string | undefined;
+    let rootPackageJson: Record<string, unknown> | undefined;
+
+    if (!isSamePaths(path.dirname(packageJsonPath), workspaceRoot) && isInFolder(workspaceRoot, packageJsonPath)) {
+        const rootPackageJsonPath = await findPackageJsonPath(null, workspaceRoot);
+        rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : undefined;
+    }
 
     let packageVersion: string | undefined;
     let nestedPackage = false;

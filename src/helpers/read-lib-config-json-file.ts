@@ -11,7 +11,7 @@ ajvFormats.default(ajv);
 
 const LibConfigSchemaKey = 'LibConfigSchema';
 
-export async function readLibConfigFile(configPath: string, validateSchema: boolean): Promise<LibConfig> {
+export async function readLibConfigJsonFile(configPath: string, validateSchema: boolean): Promise<LibConfig> {
     const ligConfig = (await readJsonWithComments(configPath)) as LibConfig;
 
     if (!validateSchema) {

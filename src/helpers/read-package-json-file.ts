@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 
 const cache = new Map<string, Record<string, unknown>>();
 
-export async function readPackageJson(packageJsonPath: string): Promise<Record<string, unknown>> {
+export async function readPackageJsonFile(packageJsonPath: string): Promise<Record<string, unknown>> {
     const cachedPackageJson = cache.get(packageJsonPath);
     if (cachedPackageJson) {
         return cachedPackageJson;
