@@ -10,9 +10,9 @@ const packageVersion = packageJson.version;
 
 const runCli = async (args: string) => {
     // execSync(`node ./dist/bin/lib.js ${args}`).toString();
-    const { stdout } = await execAsync(`node ./dist/bin/lib.js ${args}`);
+    const { stderr, stdout } = await execAsync(`node --no-warnings ./dist/bin/lib.js ${args}`);
 
-    return stdout.toString().trim();
+    return stderr ? stderr.toString().trim() : stdout.toString().trim();
 };
 
 void describe('Cli', () => {
