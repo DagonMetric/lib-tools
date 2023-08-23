@@ -63,3 +63,36 @@ export async function pathExists(path: string): Promise<boolean> {
         .then(() => true)
         .catch(() => false);
 }
+
+export async function findUp(
+    fileName: string,
+    startDir: string | string[] | null,
+    endDir: string
+): Promise<string | null> {
+    const startDirs: string[] = [];
+    if (!startDir || (Array.isArray(startDir) && !startDir.length)) {
+        startDirs.push(endDir);
+    } else if (Array.isArray(startDir)) {
+        startDirs.push(...startDir);
+    } else {
+        startDirs.push(startDir);
+    }
+
+    const rootPath = path.parse(endDir).root;
+
+    for (let currentDir of startDirs) {
+        do {
+            const filePath = path.resolve(currentDir, fileName);
+            if (await pathExists(filePath)) {
+                return filePath;
+            }
+            currentDir = path.dirname(currentDir);
+        } while (
+            currentDir &&
+            currentDir !== rootPath &&
+            (isSamePaths(endDir, currentDir) || isInFolder(endDir, currentDir))
+        );
+    }
+
+    return null;
+}
