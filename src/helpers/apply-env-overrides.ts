@@ -1,5 +1,13 @@
 import { OverridableTaskConfig } from '../models/index.js';
 
+function overrideActionConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>): void {
+    Object.keys(newConfig)
+        .filter((key: string) => key !== 'envOverrides')
+        .forEach((key: string) => {
+            oldConfig[key] = JSON.parse(JSON.stringify(newConfig[key])) as unknown;
+        });
+}
+
 export function applyEnvOverrides<TTaskConfigBase>(
     taskConfig: OverridableTaskConfig<TTaskConfigBase>,
     env: Record<string, boolean>
@@ -42,12 +50,4 @@ export function applyEnvOverrides<TTaskConfigBase>(
             }
         });
     });
-}
-
-function overrideActionConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>): void {
-    Object.keys(newConfig)
-        .filter((key: string) => key !== 'envOverrides')
-        .forEach((key: string) => {
-            oldConfig[key] = JSON.parse(JSON.stringify(newConfig[key])) as unknown;
-        });
 }

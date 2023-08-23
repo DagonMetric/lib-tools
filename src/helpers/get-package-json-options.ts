@@ -1,26 +1,26 @@
 import * as path from 'node:path';
 
-import { BuildCommandOptions, ParsedPackageJson } from '../models/index.js';
-import { isSamePaths, isInFolder } from '../utils/index.js';
+import { ParsedPackageJsonOptions } from '../models/index.js';
+import { findUp, isSamePaths, isInFolder } from '../utils/index.js';
 
-import { findPackageJsonPath } from './find-package-json-path.js';
 import { readPackageJsonFile } from './read-package-json-file.js';
 
 const versionPlaceholderRegex = /0\.0\.0-PLACEHOLDER/i;
 
-export async function parsePackageJson(
-    buildCommandOptions: BuildCommandOptions,
-    projectRoot: string | null,
-    workspaceRoot: string,
-    outputPathAbs: string
-): Promise<ParsedPackageJson | null> {
-    const packageJsonPath = await findPackageJsonPath(projectRoot, workspaceRoot);
+export async function getPackageJsonOptions(config: {
+    projectRoot: string;
+    workspaceRoot: string;
+    outputPath: string;
+    versionToOverride: string | undefined;
+}): Promise<ParsedPackageJsonOptions | null> {
+    const { projectRoot, workspaceRoot, outputPath, versionToOverride } = config;
+
+    const packageJsonPath = await findUp('package.json', projectRoot, workspaceRoot);
     if (!packageJsonPath) {
         return null;
     }
 
     const packageJson = await readPackageJsonFile(packageJsonPath);
-
     const packageName = packageJson.name as string;
 
     if (!packageName) {
@@ -34,26 +34,26 @@ export async function parsePackageJson(
     let packageNameWithoutScope = packageName;
 
     const slashIndex = packageName.indexOf('/');
-    let packageScope: string | undefined;
+    let packageScope: string | null = null;
 
     if (slashIndex > -1 && packageName.startsWith('@')) {
         packageScope = packageName.substr(0, slashIndex);
         packageNameWithoutScope = packageName.substr(slashIndex + 1);
     }
 
-    let rootPackageJsonPath: string | undefined;
-    let rootPackageJson: Record<string, unknown> | undefined;
+    let rootPackageJsonPath: string | null = null;
+    let rootPackageJson: Record<string, unknown> | null = null;
 
     if (!isSamePaths(path.dirname(packageJsonPath), workspaceRoot) && isInFolder(workspaceRoot, packageJsonPath)) {
-        const rootPackageJsonPath = await findPackageJsonPath(null, workspaceRoot);
-        rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : undefined;
+        rootPackageJsonPath = await findUp('package.json', null, workspaceRoot);
+        rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : null;
     }
 
-    let packageVersion: string | undefined;
+    let packageVersion: string | null = null;
     let nestedPackage = false;
 
-    if (buildCommandOptions.version) {
-        packageVersion = buildCommandOptions.version;
+    if (versionToOverride) {
+        packageVersion = versionToOverride;
     } else {
         if (
             !packageJson.version ||
@@ -76,9 +76,9 @@ export async function parsePackageJson(
     let packageJsonOutDir: string;
     if (nestedPackage) {
         const nestedPath = packageNameWithoutScope.substr(packageNameWithoutScope.indexOf('/') + 1);
-        packageJsonOutDir = path.resolve(outputPathAbs, nestedPath);
+        packageJsonOutDir = path.resolve(outputPath, nestedPath);
     } else {
-        packageJsonOutDir = outputPathAbs;
+        packageJsonOutDir = outputPath;
     }
 
     return {

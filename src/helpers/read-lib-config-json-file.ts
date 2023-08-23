@@ -1,7 +1,7 @@
 import Ajv from 'ajv';
 import ajvFormats from 'ajv-formats';
 
-import { InvalidConfigError } from '../exceptions/index.js';
+import { SchemaValidationError } from '../exceptions/index.js';
 import { LibConfig } from '../models/index.js';
 import { readJsonWithComments } from '../utils/index.js';
 import schema from '../schemas/schema.json' assert { type: 'json' };
@@ -25,7 +25,7 @@ export async function readLibConfigJsonFile(configPath: string, validateSchema: 
     }
 
     if (!validate || !validate(ligConfig)) {
-        throw new InvalidConfigError(`${ajv.errorsText()}`);
+        throw new SchemaValidationError(`${ajv.errorsText()}`);
     }
 
     return ligConfig;
