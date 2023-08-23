@@ -1,4 +1,4 @@
-import { strictEqual } from 'node:assert/strict';
+import * as assert from 'node:assert';
 import { exec } from 'node:child_process';
 import { describe, it } from 'node:test';
 import { promisify } from 'node:util';
@@ -9,27 +9,37 @@ const execAsync = promisify(exec);
 const packageVersion = packageJson.version;
 
 const runCli = async (args: string) => {
-    const { stderr, stdout } = await execAsync(`node --no-warnings ./dist/bin/lib.js ${args}`);
+    try {
+        const { stderr, stdout } = await execAsync(`node --no-warnings ./dist/bin/lib.js ${args}`);
 
-    return stderr ? stderr.toString().trim() : stdout.toString().trim();
+        return stderr ? stderr.toString().trim() : stdout.toString().trim();
+    } catch (err) {
+        // Line 1: Command failed: node --no-warnings ./dist/bin/lib.js build
+        const errLines = (err as Error).message.split('\n');
+        return errLines.length > 1 ? errLines.slice(1).join(' ').trim() : errLines.join(' ').trim();
+    }
 };
 
-void describe('Cli Integration Tests', () => {
-    void it(`should show 'help'`, async () => {
+void describe('CLI Integration Tests', () => {
+    void it(`should show help if '--help' option is passed`, async () => {
         const result = await runCli('--help');
-
-        strictEqual(result.includes('Show help'), true);
+        const expected = 'Show help';
+        assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
     });
 
-    void it(`should show 'version'`, async () => {
-        const outputResult = await runCli('--version');
-
-        strictEqual(outputResult, packageVersion);
+    void it(`should show version if '--version' option is passed`, async () => {
+        const result = await runCli('--version');
+        assert.strictEqual(result, packageVersion);
     });
 
-    void it('should show warning message when no build task', async () => {
-        const outputResult = await runCli('build');
+    void it('should show warning message if no build task is found', async () => {
+        const result = await runCli('build');
+        assert.strictEqual(result, 'Warning: No task to build.');
+    });
 
-        strictEqual(outputResult, 'Warning: No task to build.');
+    void it(`should show usage message if 'build --help' command is passed`, async () => {
+        const result = await runCli('build --help');
+        const expected = 'Show help for build command';
+        assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
     });
 });
