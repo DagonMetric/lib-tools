@@ -30,6 +30,6 @@ void describe('Cli Integration Tests', () => {
     void it('should show warning message when no build task', async () => {
         const outputResult = await runCli('build');
 
-        strictEqual(outputResult, 'No task to build.');
+        strictEqual(outputResult, 'Warning: No task to build.');
     });
 });
