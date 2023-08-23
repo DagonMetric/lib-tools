@@ -34,7 +34,8 @@ void describe('CLI Integration Tests', () => {
 
     void it('should show warning message if no build task is found', async () => {
         const result = await runCli('build');
-        assert.strictEqual(result, 'Warning: No task to build.');
+        const expected = 'Warning: No task to build.';
+        assert.strictEqual(result, expected);
     });
 
     void it(`should show usage message if 'build --help' command is passed`, async () => {
