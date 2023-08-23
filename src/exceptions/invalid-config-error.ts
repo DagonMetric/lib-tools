@@ -1,5 +1,5 @@
 export class InvalidConfigError extends Error {
-    constructor(message = '') {
-        super('Invalid configuration. ' + message);
+    constructor(message: string, configLocation: string | null) {
+        super(`Invalid configuration. ${message} Config location: ${configLocation}`);
     }
 }
