@@ -20,7 +20,7 @@ const runCli = async (args: string) => {
     }
 };
 
-void describe('CLI Integration Tests', () => {
+void describe('CLI', () => {
     void it(`should show help if '--help' option is passed`, async () => {
         const result = await runCli('--help');
         const expected = 'Show help';
