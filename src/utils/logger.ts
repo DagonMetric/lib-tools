@@ -2,7 +2,6 @@ import { colors } from './colorize.js';
 
 export enum LogLevel {
     None = 0,
-    Fatal = 1,
     Error = 2,
     Warn = 4,
     Info = 8,
@@ -18,7 +17,6 @@ export interface LoggerOptions {
     infoPrefix?: string;
     warnPrefix?: string;
     errorPrefix?: string;
-    fatalPrefix?: string;
     color?: boolean;
 }
 
@@ -28,7 +26,6 @@ export interface LoggerBase {
     info(message: string, optionalParams?: unknown): void;
     warn(message: string, optionalParams?: unknown): void;
     error(message: string, optionalParams?: unknown): void;
-    fatal(message: string, optionalParams?: unknown): void;
 }
 
 export class Logger implements LoggerBase {
@@ -62,7 +59,7 @@ export class Logger implements LoggerBase {
 
         if (this.loggerOptions.color !== false && logLevel === LogLevel.Warn) {
             logMsg = colors.yellow(logMsg);
-        } else if (this.loggerOptions.color !== false && (logLevel === LogLevel.Error || logLevel === LogLevel.Fatal)) {
+        } else if (this.loggerOptions.color !== false && logLevel === LogLevel.Error) {
             logMsg = colors.red(logMsg);
         }
 
@@ -99,10 +96,6 @@ export class Logger implements LoggerBase {
         this.log(LogLevel.Error, message, optionalParams);
     }
 
-    fatal(message: string, optionalParams?: unknown): void {
-        this.log(LogLevel.Fatal, message, optionalParams);
-    }
-
     private toLogLevel(logLevelString: LogLevelString): LogLevel {
         switch (logLevelString) {
             case 'debug':
@@ -134,8 +127,6 @@ export class Logger implements LoggerBase {
             prefix += `${this.loggerOptions.warnPrefix} `;
         } else if (logLevel === LogLevel.Error && this.loggerOptions.errorPrefix) {
             prefix += `${this.loggerOptions.errorPrefix} `;
-        } else if (logLevel === LogLevel.Fatal && (this.loggerOptions.fatalPrefix ?? this.loggerOptions.errorPrefix)) {
-            prefix += `${this.loggerOptions.fatalPrefix ?? this.loggerOptions.errorPrefix} `;
         }
 
         return prefix;
