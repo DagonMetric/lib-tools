@@ -100,11 +100,16 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
     }
 
     const logger = new Logger({
-        logLevel: argv.logLevel ?? 'info'
+        logLevel: argv.logLevel ?? 'info',
+        debugPrefix: 'Debug:',
+        infoPrefix: 'Info:',
+        warnPrefix: 'Warning:',
+        errorPrefix: 'Error:'
     });
 
     if (!buildTasks.length) {
         logger.warn('No task to build.');
+        process.exitCode = 1;
 
         return;
     }
