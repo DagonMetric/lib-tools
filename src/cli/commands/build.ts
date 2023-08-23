@@ -55,7 +55,6 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
 
 export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Promise<void> {
     const commandOptions = await parseBuildCommandOptions(argv);
-    const buildTaskFromCommandOptions = getBuildTaskConfigFromCommandOptions(commandOptions);
     const libConfig = await getLibConfig(commandOptions._configPath);
 
     const buildTasks: ParsedBuildTaskConfig[] = [];
@@ -81,7 +80,11 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
             });
             buildTasks.push(parsedBuildTask);
         }
-    } else if (buildTaskFromCommandOptions) {
+    }
+
+    const buildTaskFromCommandOptions = getBuildTaskConfigFromCommandOptions(commandOptions, buildTasks);
+
+    if (buildTaskFromCommandOptions && !buildTasks.length) {
         const workspaceRoot = process.cwd();
         const projectRoot = workspaceRoot;
 
@@ -91,17 +94,13 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
             projectName: null,
             configPath: null
         });
+
         buildTasks.push(parsedBuildTask);
     }
 
     if (!buildTasks.length) {
         throw new InternalError('No project build task is found.');
     }
-
-    // const logLevel = argv.logLevel ? argv.logLevel : 'info';
-    // const logger = new Logger({
-    //     logLevel
-    // });
 
     for (const buildTask of buildTasks) {
         await runBuildTask(buildTask);
