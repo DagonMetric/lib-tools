@@ -51,8 +51,9 @@
     "copy-files": "node ./tools/copy-files.js --input-type=module",
     "build": "npm run compile && npm run generate-json-schema && npm run copy-files",
     "test": "node --no-warnings --loader ts-node/esm --test tests/test.ts",
-    "show-help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --help",
-    "show-version": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --version"
+    "lib-help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --help",
+    "lib-version": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --version",
+    "lib-build": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build"
   },
   "dependencies": {
     "ajv": "^8.12.0",
