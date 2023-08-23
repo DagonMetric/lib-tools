@@ -7,21 +7,6 @@ import { findUp, isInFolder, isSamePaths } from '../utils/index.js';
 import { applyProjectExtends } from './apply-project-extends.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 
-export async function getLibConfig(configPath: string | null = null): Promise<ParsedLibConfig | null> {
-    if (!configPath) {
-        configPath = await findUp('libconfig.json', process.cwd(), path.parse(process.cwd()).root);
-    }
-
-    if (configPath) {
-        const libConfig = await readLibConfigJsonFile(configPath, true);
-        const workspaceRoot = path.extname(configPath) ? path.dirname(configPath) : configPath;
-
-        return getLibConfigInternal(libConfig, configPath, workspaceRoot);
-    }
-
-    return null;
-}
-
 function getLibConfigInternal(libConfig: LibConfig, configPath: string, workspaceRoot: string): ParsedLibConfig {
     const parsedLibConfig: ParsedLibConfig = {
         projects: {}
@@ -57,4 +42,19 @@ function getLibConfigInternal(libConfig: LibConfig, configPath: string, workspac
     }
 
     return parsedLibConfig;
+}
+
+export async function getLibConfig(configPath: string | null = null): Promise<ParsedLibConfig | null> {
+    if (!configPath) {
+        configPath = await findUp('libconfig.json', process.cwd(), path.parse(process.cwd()).root);
+    }
+
+    if (configPath) {
+        const libConfig = await readLibConfigJsonFile(configPath, true);
+        const workspaceRoot = path.extname(configPath) ? path.dirname(configPath) : configPath;
+
+        return getLibConfigInternal(libConfig, configPath, workspaceRoot);
+    }
+
+    return null;
 }
