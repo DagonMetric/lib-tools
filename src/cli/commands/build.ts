@@ -1,9 +1,15 @@
 import { Argv, ArgumentsCamelCase } from 'yargs';
 
 import { InternalError } from '../../exceptions/index.js';
-import { BuildCommandOptions, ParsedBuildTaskConfig, ParsedProjectConfig } from '../../models/index.js';
+import { BuildCommandOptions, ParsedBuildTaskConfig } from '../../models/index.js';
 import { runBuildTask } from '../../handlers/build/index.js';
-import { applyEnvOverrides, applyProjectExtends, parsedBuildTaskConfig, parseLibConfig } from '../../helpers/index.js';
+import {
+    applyEnvOverrides,
+    getParsedBuildTaskConfig,
+    getBuildTaskConfigFromCommandOptions,
+    getLibConfig,
+    parseBuildCommandOptions
+} from '../../helpers/index.js';
 
 export const command = 'build';
 
@@ -30,7 +36,7 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
                 describe: 'Set project name to Filter project(s)',
                 type: 'string'
             })
-            .option('logLevel', {
+            .option('log-level', {
                 describe: 'Set logging level for output information',
                 // type: 'string'
                 choices: ['debug', 'info', 'warn', 'error', 'none'] as const
@@ -48,54 +54,44 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
 }
 
 export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Promise<void> {
-    // const startTime = Date.now();
-
-    const env =
-        argv.env
-            ?.split(',')
-            .filter((envName) => envName && envName.trim().length > 0)
-            .filter((value, index, array) => array.indexOf(value) === index)
-            .reduce(
-                (obj, key) => {
-                    return {
-                        ...obj,
-                        [key]: true
-                    };
-                },
-                {} as Record<string, boolean>
-            ) ?? {};
-
-    const parsedLibConfig = await parseLibConfig(argv);
-    const filteredProjectNames =
-        argv.project
-            ?.split(',')
-            .filter((projectName) => projectName && projectName.trim().length > 0)
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-    const projects = Object.keys(parsedLibConfig.projects).map((projectName) => parsedLibConfig.projects[projectName]);
+    const commandOptions = await parseBuildCommandOptions(argv);
+    const buildTaskFromCommandOptions = getBuildTaskConfigFromCommandOptions(commandOptions);
+    const libConfig = await getLibConfig(commandOptions._configPath);
 
     const buildTasks: ParsedBuildTaskConfig[] = [];
 
-    for (const project of projects) {
-        if (filteredProjectNames.length && !filteredProjectNames.includes(project._projectName)) {
-            continue;
+    if (libConfig) {
+        const projects = Object.keys(libConfig.projects).map((projectName) => libConfig.projects[projectName]);
+        for (const project of projects) {
+            if (commandOptions._projects.length && !commandOptions._projects.includes(project._projectName)) {
+                continue;
+            }
+
+            if (!project.tasks?.build || project.tasks?.build.skip) {
+                continue;
+            }
+
+            applyEnvOverrides(project.tasks.build, commandOptions._env);
+
+            const parsedBuildTask = await getParsedBuildTaskConfig(project.tasks.build, commandOptions, {
+                workspaceRoot: project._workspaceRoot,
+                projectRoot: project._projectRoot,
+                projectName: project._projectName,
+                configPath: project._configPath
+            });
+            buildTasks.push(parsedBuildTask);
         }
+    } else if (buildTaskFromCommandOptions) {
+        const workspaceRoot = process.cwd();
+        const projectRoot = workspaceRoot;
 
-        const projectConfig = JSON.parse(JSON.stringify(project)) as ParsedProjectConfig;
-
-        await applyProjectExtends(projectConfig, parsedLibConfig.projects, projectConfig._config);
-
-        if (!projectConfig.tasks?.build) {
-            continue;
-        }
-
-        applyEnvOverrides(projectConfig.tasks.build, env);
-
-        if (projectConfig.tasks.build.skip) {
-            continue;
-        }
-
-        const buildTask = await parsedBuildTaskConfig(projectConfig, argv);
-        buildTasks.push(buildTask);
+        const parsedBuildTask = await getParsedBuildTaskConfig(buildTaskFromCommandOptions, commandOptions, {
+            workspaceRoot,
+            projectRoot,
+            projectName: null,
+            configPath: null
+        });
+        buildTasks.push(parsedBuildTask);
     }
 
     if (!buildTasks.length) {
