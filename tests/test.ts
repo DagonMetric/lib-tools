@@ -9,13 +9,12 @@ const execAsync = promisify(exec);
 const packageVersion = packageJson.version;
 
 const runCli = async (args: string) => {
-    // execSync(`node ./dist/bin/lib.js ${args}`).toString();
     const { stderr, stdout } = await execAsync(`node --no-warnings ./dist/bin/lib.js ${args}`);
 
     return stderr ? stderr.toString().trim() : stdout.toString().trim();
 };
 
-void describe('Cli', () => {
+void describe('Cli Integration Tests', () => {
     void it(`should show 'help'`, async () => {
         const result = await runCli('--help');
 
@@ -26,5 +25,11 @@ void describe('Cli', () => {
         const outputResult = await runCli('--version');
 
         strictEqual(outputResult, packageVersion);
+    });
+
+    void it('should show warning message when no build task', async () => {
+        const outputResult = await runCli('build');
+
+        strictEqual(outputResult, 'No task to build.');
     });
 });
