@@ -1,5 +1,5 @@
 import { InvalidConfigError } from '../exceptions/index.js';
-import { ProjectConfig } from '../models/index.js';
+import { BuildTaskConfig, ProjectConfig } from '../models/index.js';
 
 function applyProjectExtendsInternal(
     projectName: string,
@@ -27,16 +27,23 @@ function applyProjectExtendsInternal(
     }
 
     prevExtends.push(projectNameToExtend);
-    const clonedBaseProject = JSON.parse(JSON.stringify(baseProjectConfig)) as ProjectConfig;
 
-    if (clonedBaseProject.extends) {
-        applyProjectExtendsInternal(projectName, clonedBaseProject, projectCollection, prevExtends);
-
-        delete clonedBaseProject.extends;
+    if (baseProjectConfig.extends) {
+        applyProjectExtendsInternal(projectName, baseProjectConfig, projectCollection, prevExtends);
     }
 
-    const extendedConfig = { ...clonedBaseProject, ...projectConfig };
-    Object.assign(projectConfig, extendedConfig);
+    if (baseProjectConfig.tasks?.build) {
+        const baseBuildConfig = JSON.parse(JSON.stringify(baseProjectConfig.tasks.build)) as BuildTaskConfig;
+        const buildConfig = projectConfig.tasks?.build ?? {};
+        const extendedBuildConfig = { ...baseBuildConfig, ...buildConfig };
+        if (!projectConfig.tasks) {
+            projectConfig.tasks = {
+                build: extendedBuildConfig
+            };
+        } else {
+            projectConfig.tasks.build = extendedBuildConfig;
+        }
+    }
 }
 
 export function applyProjectExtends(
