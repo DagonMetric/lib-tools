@@ -8,7 +8,8 @@ import { getBannerText } from './get-banner-text.js';
 import { getPackageJsonOptions } from './get-package-json-options.js';
 
 export function getBuildTaskConfigFromCommandOptions(
-    commandOptions: ParsedBuildCommandOptions
+    commandOptions: ParsedBuildCommandOptions,
+    buildTasks: BuildTaskConfig[]
 ): BuildTaskConfig | null {
     if (
         !commandOptions._outputPath ||
@@ -20,24 +21,64 @@ export function getBuildTaskConfigFromCommandOptions(
         return null;
     }
 
-    const buildTaskConfig: BuildTaskConfig = {
-        outputPath: commandOptions._outputPath
-    };
+    const buildTaskConfig: BuildTaskConfig = buildTasks.length
+        ? buildTasks[0]
+        : {
+              outputPath: commandOptions._outputPath
+          };
 
-    if (commandOptions.clean) {
-        buildTaskConfig.clean = true;
+    // clean
+    if (commandOptions.clean != null) {
+        if (buildTaskConfig.clean == null || typeof buildTaskConfig.clean === 'boolean') {
+            buildTaskConfig.clean = commandOptions.clean;
+        } else {
+            if (buildTaskConfig.clean.beforeBuild) {
+                buildTaskConfig.clean.beforeBuild.cleanOutDir = commandOptions.clean;
+            } else {
+                buildTaskConfig.clean.beforeBuild = {
+                    cleanOutDir: commandOptions.clean
+                };
+            }
+        }
     }
 
+    // copy
     if (commandOptions._copyEntries.length) {
-        buildTaskConfig.copy = [...commandOptions._copyEntries];
+        if (!buildTaskConfig.copy) {
+            buildTaskConfig.copy = [...commandOptions._copyEntries];
+        } else {
+            buildTaskConfig.copy = [...buildTaskConfig.copy, ...commandOptions._copyEntries];
+        }
     }
 
+    // styles
     if (commandOptions._styleEntries.length) {
-        buildTaskConfig.style = [...commandOptions._styleEntries];
+        if (!buildTaskConfig.style) {
+            buildTaskConfig.style = [...commandOptions._styleEntries];
+        } else {
+            if (Array.isArray(buildTaskConfig.style)) {
+                buildTaskConfig.style = [...buildTaskConfig.style, ...commandOptions._styleEntries];
+            } else {
+                const bundleEntries = buildTaskConfig.style.bundles ?? [];
+                commandOptions._styleEntries.forEach((entry) => bundleEntries.push({ entry }));
+                buildTaskConfig.style.bundles = bundleEntries;
+            }
+        }
     }
 
+    // scripts
     if (commandOptions._scriptEntries.length) {
-        buildTaskConfig.script = [...commandOptions._scriptEntries];
+        if (!buildTaskConfig.script) {
+            buildTaskConfig.script = [...commandOptions._scriptEntries];
+        } else {
+            if (Array.isArray(buildTaskConfig.script)) {
+                buildTaskConfig.script = [...buildTaskConfig.script, ...commandOptions._scriptEntries];
+            } else {
+                const bundleEntries = buildTaskConfig.script.bundles ?? [];
+                commandOptions._scriptEntries.forEach((entry) => bundleEntries.push({ entry }));
+                buildTaskConfig.script.bundles = bundleEntries;
+            }
+        }
     }
 
     return buildTaskConfig;
