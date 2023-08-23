@@ -1,11 +1,12 @@
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { InvalidConfigError } from '../exceptions/index.js';
 import { BuildTaskConfig, ParsedBuildTaskConfig, ParsedBuildCommandOptions } from '../models/index.js';
-import { isInFolder } from '../utils/index.js';
+import { findUp, isInFolder } from '../utils/index.js';
 
-import { getBannerText } from './get-banner-text.js';
 import { getPackageJsonOptions } from './get-package-json-options.js';
+import { parseBannerText } from './parse-banner-text.js';
 
 export function getBuildTaskConfigFromCommandOptions(
     commandOptions: ParsedBuildCommandOptions,
@@ -135,14 +136,23 @@ export async function getParsedBuildTaskConfig(
     });
 
     // banner
-    const bannerText = await getBannerText({
-        banner: buildTaskConfig.banner,
-        projectRoot,
-        workspaceRoot,
-        packageName: packageJsonOptions?._packageName,
-        packageVersion: packageJsonOptions?._packageVersion,
-        configLocationPrefix
-    });
+    let bannerText: string | null = null;
+    if (buildTaskConfig.banner) {
+        let rawBanner = buildTaskConfig.banner.trim();
+
+        if (/\.txt$/i.test(rawBanner)) {
+            const bannerFilePath = await findUp(rawBanner, projectRoot, workspaceRoot);
+            if (bannerFilePath) {
+                rawBanner = await fs.readFile(rawBanner, 'utf-8');
+            }
+        }
+
+        bannerText = parseBannerText({
+            banner: rawBanner,
+            packageName: packageJsonOptions?._packageName,
+            packageVersion: packageJsonOptions?._packageVersion
+        });
+    }
 
     const parsedBuildTaskConfig: ParsedBuildTaskConfig = {
         ...buildTaskConfig,

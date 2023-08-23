@@ -1,9 +1,3 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
-
-import { InvalidConfigError } from '../exceptions/index.js';
-import { findUp } from '../utils/index.js';
-
 function addCommentToBanner(banner: string): string {
     if (banner.trim().startsWith('/')) {
         return banner;
@@ -28,35 +22,15 @@ function addCommentToBanner(banner: string): string {
     return banner;
 }
 
-export async function getBannerText(config: {
-    banner: string | undefined;
-    projectRoot: string;
-    workspaceRoot: string;
+export function parseBannerText(config: {
+    banner: string;
     packageName: string | null | undefined;
     packageVersion: string | null | undefined;
-    configLocationPrefix: string | null;
-}): Promise<string | null> {
-    const { banner, projectRoot, workspaceRoot, packageName, packageVersion, configLocationPrefix } = config;
+}): string {
+    const { banner, packageName, packageVersion } = config;
 
-    if (!banner?.trim().length) {
-        return null;
-    }
+    let bannerText = addCommentToBanner(banner);
 
-    let bannerText = banner.trim();
-
-    if (/\.txt$/i.test(bannerText)) {
-        const bannerFilePath = await findUp(bannerText, projectRoot, workspaceRoot);
-        if (bannerFilePath) {
-            bannerText = await fs.readFile(bannerFilePath, 'utf-8');
-        } else {
-            throw new InvalidConfigError(
-                `The banner file: ${path.resolve(projectRoot, bannerText)} doesn't exist.`,
-                `${configLocationPrefix}.banner`
-            );
-        }
-    }
-
-    bannerText = addCommentToBanner(bannerText);
     bannerText = bannerText.replace(/[$|[]CURRENT[_-]?YEAR[$|\]]/gim, new Date().getFullYear().toString());
 
     if (packageName) {
