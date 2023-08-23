@@ -1,9 +1,272 @@
 import { OverridableTaskConfig } from './overridable-task-config.js';
-import { CleanOptions } from './build-task-clean-options.js';
-import { CopyEntry } from './build-task-copy-options.js';
-import { PackageJsonOptions } from './build-task-package-json-options.js';
-import { ScriptOptions } from './build-task-script-options.js';
-import { StyleOptions } from './build-task-style-options.js';
+
+/**
+ * @additionalProperties false
+ */
+export interface BeforeBuildCleanOptions {
+    /**
+     * If true, delete output directory before build. Default is `true`.
+     */
+    cleanOutDir?: boolean;
+    /**
+     * Custom file or directory paths to delete.
+     */
+    paths?: string[];
+    /**
+     * Exclude list of minimatch patterns.
+     */
+    exclude?: string[];
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface AfterEmitCleanOptions {
+    /**
+     * File or directory paths to delete after build emit assets.
+     */
+    paths?: string[];
+    /**
+     * Exclude list of minimatch patterns.
+     */
+    exclude?: string[];
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface CleanOptions {
+    /**
+     * Clean options for before build task run.
+     */
+    beforeBuild?: BeforeBuildCleanOptions;
+    /**
+     * Clean options after emit.
+     */
+    afterEmit?: AfterEmitCleanOptions;
+    /**
+     * If true, allow cleaning outside of the output directory.
+     */
+    allowOutsideOutDir?: boolean;
+    /**
+     * If true, allow cleaning outside of the workspace root directory.
+     */
+    allowOutsideWorkspaceRoot?: boolean;
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface CopyEntry {
+    /**
+     * The source file, folder path or minimatch pattern.
+     */
+    from: string;
+    /**
+     * Custom output file or folder name.
+     */
+    to?: string;
+    /**
+     * Exclude list of minimatch patterns.
+     */
+    exclude?: string[];
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface AutoPrefixerOptions {
+    /**
+     * The environment for `Browserslist.
+     */
+    env?: string;
+    /**
+     * Should Autoprefixer use Visual Cascade, if CSS is uncompressed.
+     */
+    cascade?: boolean;
+    /**
+     * Should Autoprefixer add prefixes.
+     */
+    add?: boolean;
+    /**
+     * Should Autoprefixer [remove outdated] prefixes.
+     */
+    remove?: boolean;
+    /**
+     * Should Autoprefixer add prefixes for @supports parameters.
+     */
+    supports?: boolean;
+    /**
+     * Should Autoprefixer add prefixes for flexbox properties.
+     */
+    flexbox?: boolean | 'no-2009';
+    /**
+     * Should Autoprefixer add IE 10-11 prefixes for Grid Layout properties.
+     */
+    grid?: false | 'autoplace' | 'no-autoplace';
+    /**
+     * Do not raise error on unknown browser version in `Browserslist` config..
+     */
+    ignoreUnknownVersions?: boolean;
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface StyleBundleEntry {
+    /**
+     * The input style file. Supported formats are .scss, .sass or .css.
+     */
+    entry: string;
+    /**
+     * The output file for bundled css. The output can be directory or css file name relative to project `outputPath`.
+     */
+    outputFile?: string;
+    /**
+     * If true, enable the outputing of sourcemap. Default is `true`.
+     */
+    sourceMap?: boolean;
+    /**
+     * If true, enable the outputing of sources in the generated source map. Default is `true`.
+     */
+    sourceMapIncludeSources?: boolean;
+    /**
+     * Paths in which to look for stylesheets loaded by rules like @use and @import.
+     */
+    loadPaths?: string[];
+    /**
+     * Set autoprefixer options or boolean value to add vendor prefixes to css rules. Default is `true`.
+     */
+    vendorPrefixes?: boolean | AutoPrefixerOptions;
+    /**
+     * Set true to generate minify file. Default is `true`.
+     */
+    minify?: boolean;
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface StyleOptions {
+    /**
+     * List of style compilation / bundel entries.
+     */
+    bundles?: StyleBundleEntry[];
+    /**
+     * Default sourceMap option to all entries. If true, enable the outputing of sourcemap. Default is `true`.
+     */
+    sourceMap?: boolean;
+    /**
+     * Default sourceMapIncludeSources option to all entries. If true, enable the outputing of sources in the generated source map. Default is `true`.
+     */
+    sourceMapIncludeSources?: boolean;
+    /**
+     * Default loadPaths option to all entries. Paths in which to look for stylesheets loaded by rules like @use and @import.
+     */
+    loadPaths?: string[];
+    /**
+     * Default minify option to all entries. Default is `true`.
+     */
+    minify?: boolean;
+    /**
+     * Default vendorPrefixes option to all entries. Set autoprefixer options or boolean value to add vendor prefixes to css rules. Default is `true`.
+     */
+    vendorPrefixes?: boolean | AutoPrefixerOptions;
+    /**
+     * If true, automatically add `style` entry to package.json file.
+     */
+    updatePackageJson?: boolean;
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface ScriptBundleEntry {
+    /**
+     * Specify the format of the generated bundle.
+     */
+    moduleFormat?: 'cjs' | 'es' | 'umd';
+    /**
+     * Entry file to bundle.
+     */
+    entry?: string;
+    /**
+     * Custom bundle output file.
+     */
+    outputFile?: string;
+    /**
+     *  If true, sourcemap file will be generated.
+     */
+    sourceMap?: boolean;
+    /**
+     * If true, minify file will be generated.
+     */
+    minify?: boolean;
+    /**
+     * External id and global variable name mapping for bundling options.
+     */
+    externals?: Record<string, string>;
+    /**
+     * If true, 'dependencies' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
+     */
+    dependenciesAsExternals?: boolean;
+    /**
+     * If true, 'peerDependenciesAsExternals' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
+     */
+    peerDependenciesAsExternals?: boolean;
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface ScriptOptions {
+    /**
+     * If true, emit typescript tsc outputs.
+     */
+    tsc?: boolean;
+    /**
+     * List of bundle options.
+     */
+    bundles?: ScriptBundleEntry[];
+    /**
+     * Typescript configuration file to be used.
+     */
+    tsConfig?: string;
+    /**
+     * Entry file to bundle or entry point name to add to package.json. By default it will be automatically detected.
+     */
+    entry?: string;
+    /**
+     * If true, automatically add entry points to package.json file.
+     */
+    updatePackageJson?: boolean;
+    /**
+     * External id and global variable name mapping for bundling options.
+     */
+    externals?: Record<string, string>;
+    /**
+     * If true, 'dependencies' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
+     */
+    dependenciesAsExternals?: boolean;
+    /**
+     * If true, 'peerDependenciesAsExternals' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
+     */
+    peerDependenciesAsExternals?: boolean;
+}
+
+/**
+ * @additionalProperties false
+ */
+export interface PackageJsonOptions {
+    /**
+     * Boolean value whether to update package.json file fields with generated build assets.
+     */
+    updateFields?: boolean;
+    /**
+     * Array of field names to be removed from package.json file.
+     */
+    removeFields?: string[];
+}
 
 /**
  * @additionalProperties false
@@ -13,32 +276,26 @@ export interface BuildTaskConfigBase {
      * The output directory for build results.
      */
     outputPath?: string;
-
     /**
      * Banner text to add at the top of each generated files. It can be file path or raw text.
      */
     banner?: string;
-
     /**
      * Clean options for deleting build output files and directories.
      */
-    clean?: boolean | string[] | CleanOptions;
-
+    clean?: boolean | CleanOptions;
     /**
      * List of assets to copy to output directory.
      */
     copy?: (string | CopyEntry)[];
-
     /**
      * Style compilation / bundling options.
      */
     style?: string[] | StyleOptions;
-
     /**
      * Script compilation / bundle options.
      */
     script?: string[] | ScriptOptions;
-
     /**
      * Options for updating package.json file.
      */
@@ -54,7 +311,6 @@ export interface BuildTaskConfig extends BuildTaskConfigBase, OverridableTaskCon
      * Set true to skip the task.
      */
     skip?: boolean;
-
     /**
      * To override properties based on build environment.
      */
