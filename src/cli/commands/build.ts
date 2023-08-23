@@ -1,6 +1,5 @@
 import { Argv, ArgumentsCamelCase } from 'yargs';
 
-import { InternalError } from '../../exceptions/index.js';
 import { BuildCommandOptions, ParsedBuildTaskConfig } from '../../models/index.js';
 import { runBuildTask } from '../../handlers/build/index.js';
 import {
@@ -10,6 +9,7 @@ import {
     getLibConfig,
     parseBuildCommandOptions
 } from '../../helpers/index.js';
+import { Logger } from '../../utils/index.js';
 
 export const command = 'build';
 
@@ -98,8 +98,15 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
         buildTasks.push(parsedBuildTask);
     }
 
+    const logLevel = argv.logLevel ? argv.logLevel : 'info';
+    const logger = new Logger({
+        logLevel
+    });
+
     if (!buildTasks.length) {
-        throw new InternalError('No project build task is found.');
+        logger.warn('No task to build.');
+
+        return;
     }
 
     for (const buildTask of buildTasks) {
