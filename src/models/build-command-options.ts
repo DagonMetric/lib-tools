@@ -1,7 +1,6 @@
-/**
- * @additionalProperties false
- */
 export interface BuildCommandOptions {
+    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
+
     /**
      * Set environment name to override the task configuration with envOverrides options.
      */
@@ -13,19 +12,9 @@ export interface BuildCommandOptions {
     libconfig?: string;
 
     /**
-     * Set logging level for output information.
-     */
-    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
-
-    /**
      * Set project name to Filter project(s).
      */
     project?: string;
-
-    /**
-     * Set version to override the version field of the generated package.json file.
-     */
-    version?: string;
 
     /**
      * Set output directory for build results.
@@ -51,4 +40,8 @@ export interface BuildCommandOptions {
      * Set TypeScript or JavaScript file entry to compile or bundle.
      */
     script?: string;
+    /**
+     * Set version to override the version field of the generated package.json file.
+     */
+    version?: string;
 }
