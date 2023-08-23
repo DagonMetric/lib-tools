@@ -56,7 +56,7 @@ const runCli = async () => {
     const cliModule = await import(cliRelPath);
     await cliModule.default(cliInfo).catch((err) => {
         console.error(err);
-        process.exitCode = 1;
+        process.exitCode = 2;
     });
 };
 
