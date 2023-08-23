@@ -20,6 +20,11 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
         argv
             .usage('$0 build [options...]')
             .example('$0 build', 'Build the project(s)')
+            .option('log-level', {
+                describe: 'Set logging level for output information',
+                choices: ['debug', 'info', 'warn', 'error', 'none'] as const,
+                default: 'info'
+            })
             .option('version', {
                 describe: 'Set version to override the version field of the package.json file',
                 type: 'string'
@@ -36,11 +41,7 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
                 describe: 'Set project name to Filter project(s)',
                 type: 'string'
             })
-            .option('log-level', {
-                describe: 'Set logging level for output information',
-                // type: 'string'
-                choices: ['debug', 'info', 'warn', 'error', 'none'] as const
-            })
+
             // TODO: To support watch
             // .option('watch', {
             //     describe: 'Run in watch mode.',
@@ -98,9 +99,8 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
         buildTasks.push(parsedBuildTask);
     }
 
-    const logLevel = argv.logLevel ? argv.logLevel : 'info';
     const logger = new Logger({
-        logLevel
+        logLevel: argv.logLevel ?? 'info'
     });
 
     if (!buildTasks.length) {
