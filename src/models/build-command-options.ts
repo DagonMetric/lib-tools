@@ -33,9 +33,9 @@ export interface BuildCommandOptions {
     outputPath?: string;
 
     /**
-     * Set true to clean ouput directory or set clean path to clean specific path.
+     * Set true to clean build output directory before emitting build results.
      */
-    clean?: string | boolean;
+    clean?: boolean;
 
     /**
      * Set path to copy assets to output directory.

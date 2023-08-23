@@ -3,17 +3,15 @@ import { BuildCommandOptions } from './build-command-options.js';
 export interface ParsedBuildCommandOptions extends BuildCommandOptions {
     _env: Record<string, boolean>;
 
-    _config: string | null;
+    _projects: string[];
 
-    _projects: string[] | null;
+    _configPath: string | null;
 
     _outputPath: string | null;
 
-    _cleanPaths: string[] | null;
+    _copyEntries: string[];
 
-    _copyEntries: string[] | null;
+    _styleEntries: string[];
 
-    _styleEntries: string[] | null;
-
-    _scriptEntries: string[] | null;
+    _scriptEntries: string[];
 }
