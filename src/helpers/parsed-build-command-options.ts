@@ -1,10 +1,6 @@
 import * as path from 'node:path';
 
-import { InvalidCommandOptionError } from '../exceptions/index.js';
 import { BuildCommandOptions } from '../models/index.js';
-import { isInFolder, pathExists } from '../utils/index.js';
-
-let cachedInstance: ParsedBuildCommandOptions | null = null;
 
 export interface ParsedBuildCommandOptions extends BuildCommandOptions {
     readonly _env: Record<string, boolean>;
@@ -88,36 +84,6 @@ export class ParsedBuildCommandOptionsImpl implements ParsedBuildCommandOptions 
     }
 }
 
-async function validateOptions(options: ParsedBuildCommandOptions): Promise<void> {
-    if (options._configPath && !(await pathExists(options._configPath))) {
-        throw new InvalidCommandOptionError(
-            `The 'libconfig' file path doesn't exist. File path: ${options._configPath}.`
-        );
-    }
-
-    if (options._outputPath) {
-        if (options._outputPath === path.parse(options._outputPath).root) {
-            throw new InvalidCommandOptionError(`The 'outputPath' must not be the same as system root directory.`);
-        }
-
-        if (isInFolder(options._outputPath, process.cwd())) {
-            throw new InvalidCommandOptionError(
-                `The 'outputPath' must not be parent directory of current working directory.`
-            );
-        }
-    }
-}
-
-export async function getParsedBuildCommandOptions(
-    cmdOptions: BuildCommandOptions,
-    cache = true
-): Promise<ParsedBuildCommandOptions> {
-    if (cache && cachedInstance != null) {
-        return cachedInstance;
-    }
-
-    cachedInstance = new ParsedBuildCommandOptionsImpl(cmdOptions);
-    await validateOptions(cachedInstance);
-
-    return cachedInstance;
+export function getParsedBuildCommandOptions(cmdOptions: BuildCommandOptions): ParsedBuildCommandOptions {
+    return new ParsedBuildCommandOptionsImpl(cmdOptions);
 }
