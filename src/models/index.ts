@@ -3,8 +3,4 @@ export * from './build-task-config.js';
 export * from './build-command-options.js';
 export * from './lib-config.js';
 export * from './overridable-task-config.js';
-export * from './parsed-build-command-options.js';
-export * from './parsed-build-task-config.js';
-export * from './parsed-lib-config.js';
-export * from './parsed-project-config.js';
 export * from './project-config.js';
