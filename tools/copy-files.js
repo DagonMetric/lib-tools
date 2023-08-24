@@ -20,8 +20,6 @@ const copyFiles = async () => {
     }
 
     // copy files
-    await fs.copyFile(path.resolve(rootDir, 'README.md'), path.resolve(distDir, 'README.md'));
-    await fs.copyFile(path.resolve(rootDir, 'LICENSE'), path.resolve(distDir, 'LICENSE'));
     await fs.copyFile(path.resolve(rootDir, 'bin/lib.js'), path.resolve(distDir, 'bin/lib.js'));
 
     // package.json
