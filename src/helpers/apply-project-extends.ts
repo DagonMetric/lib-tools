@@ -15,15 +15,12 @@ function applyProjectExtendsInternal(
     const configLocation = `projects[${projectName}].extends`;
 
     if (prevExtends.includes(projectNameToExtend)) {
-        throw new InvalidConfigError(
-            `Cross referencing extends found with name '${projectNameToExtend}'.`,
-            configLocation
-        );
+        throw new InvalidConfigError('Cross referencing extend founds.', configLocation);
     }
 
     const baseProjectConfig = projectCollection[projectNameToExtend];
     if (!baseProjectConfig) {
-        throw new InvalidConfigError(`No base project exists with name '${projectNameToExtend}'.`, configLocation);
+        throw new InvalidConfigError('No base project to extend.', configLocation);
     }
 
     prevExtends.push(projectNameToExtend);
