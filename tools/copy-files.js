@@ -1,5 +1,5 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,6 +24,7 @@ const copyFiles = async () => {
 
     // package.json
     const content = await fs.readFile(path.resolve(__dirname, '../package.json'), { encoding: 'utf-8' });
+
     const packageJson = JSON.parse(content);
     if (packageJson.main) {
         packageJson.main = packageJson.main.replace(distStartRegExp, './');
