@@ -11,12 +11,15 @@ ajvFormats.default(ajv);
 
 const LibConfigSchemaKey = 'LibConfigSchema';
 
-export async function readLibConfigJsonFile(configPath: string, validateSchema: boolean): Promise<LibConfig> {
-    const ligConfig = (await readJsonWithComments(configPath)) as LibConfig;
+const libConfigCache = new Map<string, LibConfig>();
 
-    if (!validateSchema) {
-        return ligConfig;
+export async function readLibConfigJsonFile(configPath: string): Promise<LibConfig> {
+    let libConfig = libConfigCache.get(configPath);
+    if (libConfig) {
+        return libConfig;
     }
+
+    libConfig = (await readJsonWithComments(configPath)) as LibConfig;
 
     let validate = ajv.getSchema<LibConfig>(LibConfigSchemaKey);
     if (!validate) {
@@ -24,9 +27,11 @@ export async function readLibConfigJsonFile(configPath: string, validateSchema: 
         validate = ajv.getSchema<LibConfig>(LibConfigSchemaKey);
     }
 
-    if (!validate || !validate(ligConfig)) {
+    if (!validate || !validate(libConfig)) {
         throw new SchemaValidationError(`${ajv.errorsText()}`);
     }
 
-    return ligConfig;
+    libConfigCache.set(configPath, libConfig);
+
+    return libConfig;
 }
