@@ -1,11 +1,16 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
+import * as path from 'node:path';
 
 import { InvalidConfigError } from '../src/exceptions/index.js';
-import { BuildTaskConfig, ProjectConfig } from '../src/models/index.js';
+import { BuildCommandOptions, BuildTaskConfig, ProjectConfig } from '../src/models/index.js';
 
 import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
+import {
+    getParsedBuildCommandOptions,
+    ParsedBuildCommandOptions
+} from '../src/helpers/parsed-build-command-options.js';
 
 void describe('Helpers', () => {
     void describe('applyEnvOverrides', () => {
@@ -161,6 +166,37 @@ void describe('Helpers', () => {
                 () => applyProjectExtends('b', projectB, projects),
                 'Invalid configuration. No base project to extends. Config location: projects[b].extends'
             );
+        });
+    });
+
+    void describe('getParsedBuildCommandOptions', () => {
+        void it('should parse command options', () => {
+            const cmdOptions: BuildCommandOptions = {
+                version: '1.0.0',
+                libconfig: './libconfig.json',
+                outputPath: 'dist',
+                env: 'prod,ci',
+                project: 'a,b,c',
+                copy: 'a.txt,**/*.md',
+                style: 'a.css,b.scss',
+                script: 'a.js,b.ts'
+            };
+
+            const result = getParsedBuildCommandOptions(cmdOptions);
+            const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildCommandOptions;
+
+            const expected: ParsedBuildCommandOptions = {
+                ...cmdOptions,
+                _configPath: path.resolve(process.cwd(), 'libconfig.json'),
+                _outputPath: path.resolve(process.cwd(), 'dist'),
+                _env: { prod: true, ci: true },
+                _projects: ['a', 'b', 'c'],
+                _copyEntries: ['a.txt', '**/*.md'],
+                _styleEntries: ['a.css', 'b.scss'],
+                _scriptEntries: ['a.js', 'b.ts']
+            };
+
+            assert.deepStrictEqual(actual, expected);
         });
     });
 });
