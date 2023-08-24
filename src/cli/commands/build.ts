@@ -1,14 +1,9 @@
 import { Argv, ArgumentsCamelCase } from 'yargs';
 
-import { BuildCommandOptions, ParsedBuildTaskConfig } from '../../models/index.js';
+import { BuildCommandOptions } from '../../models/index.js';
+import { getBuildTasks } from '../../helpers/index.js';
 import { runBuildTask } from '../../handlers/build/index.js';
-import {
-    applyEnvOverrides,
-    getParsedBuildTaskConfig,
-    getBuildTaskConfigFromCommandOptions,
-    getLibConfig,
-    parseBuildCommandOptions
-} from '../../helpers/index.js';
+
 import { Logger } from '../../utils/index.js';
 
 export const command = 'build';
@@ -62,49 +57,7 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
 }
 
 export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Promise<void> {
-    const commandOptions = await parseBuildCommandOptions(argv);
-    const libConfig = await getLibConfig(commandOptions._configPath);
-
-    const buildTasks: ParsedBuildTaskConfig[] = [];
-
-    if (libConfig) {
-        const projects = Object.keys(libConfig.projects).map((projectName) => libConfig.projects[projectName]);
-        for (const project of projects) {
-            if (commandOptions._projects.length && !commandOptions._projects.includes(project._projectName)) {
-                continue;
-            }
-
-            if (!project.tasks?.build || project.tasks?.build.skip) {
-                continue;
-            }
-
-            applyEnvOverrides(project.tasks.build, commandOptions._env);
-
-            const parsedBuildTask = await getParsedBuildTaskConfig(project.tasks.build, commandOptions, {
-                workspaceRoot: project._workspaceRoot,
-                projectRoot: project._projectRoot,
-                projectName: project._projectName,
-                configPath: project._configPath
-            });
-            buildTasks.push(parsedBuildTask);
-        }
-    }
-
-    const buildTaskFromCommandOptions = getBuildTaskConfigFromCommandOptions(commandOptions, buildTasks);
-
-    if (buildTaskFromCommandOptions && !buildTasks.length) {
-        const workspaceRoot = process.cwd();
-        const projectRoot = workspaceRoot;
-
-        const parsedBuildTask = await getParsedBuildTaskConfig(buildTaskFromCommandOptions, commandOptions, {
-            workspaceRoot,
-            projectRoot,
-            projectName: null,
-            configPath: null
-        });
-
-        buildTasks.push(parsedBuildTask);
-    }
+    const buildTasks = await getBuildTasks(argv);
 
     const logger = new Logger({
         logLevel: argv.logLevel ?? 'info',
