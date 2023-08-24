@@ -1,0 +1,14 @@
+{
+  "$schema": "./dist/schemas/schema.json",
+  "projects": {
+    "lib-tools": {
+      "root": ".",
+      "tasks": {
+        "build": {
+          "outputPath": "dist",
+          "copy": ["README.md", "LICENSE"]
+        }
+      }
+    }
+  }
+}
