@@ -11,6 +11,11 @@ import {
     getParsedBuildCommandOptions,
     ParsedBuildCommandOptions
 } from '../src/helpers/parsed-build-command-options.js';
+import {
+    getParsedBuildTaskConfig,
+    ParsedBuildTaskConfig,
+    WorkspaceInfo
+} from '../src/helpers/parsed-build-task-config.js';
 
 void describe('Helpers', () => {
     void describe('applyEnvOverrides', () => {
@@ -194,6 +199,45 @@ void describe('Helpers', () => {
                 _copyEntries: ['a.txt', '**/*.md'],
                 _styleEntries: ['a.css', 'b.scss'],
                 _scriptEntries: ['a.js', 'b.ts']
+            };
+
+            assert.deepStrictEqual(actual, expected);
+        });
+    });
+
+    void describe('getParsedBuildTaskConfig', () => {
+        void it('should parse build task config', () => {
+            const config: BuildTaskConfig = {
+                outputPath: 'out',
+                clean: true,
+                script: ['a.js', 'b.ts']
+            };
+
+            const cmdOptions: ParsedBuildCommandOptions = {
+                _env: {},
+                _configPath: null,
+                _outputPath: null,
+                _projects: [],
+                _copyEntries: [],
+                _scriptEntries: [],
+                _styleEntries: []
+            };
+
+            const workspaceInfo: WorkspaceInfo = {
+                workspaceRoot: process.cwd(),
+                projectRoot: process.cwd(),
+                projectName: null,
+                configPath: null
+            };
+
+            const result = getParsedBuildTaskConfig(config, cmdOptions, workspaceInfo, null);
+            const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildTaskConfig;
+
+            const expected: ParsedBuildTaskConfig = {
+                ...config,
+                workspaceInfo,
+                packageJsonInfo: null,
+                _outputPath: path.resolve(process.cwd(), 'out')
             };
 
             assert.deepStrictEqual(actual, expected);
