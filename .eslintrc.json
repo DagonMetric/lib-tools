@@ -36,7 +36,7 @@
   },
   "overrides": [
     {
-      "files": ["bin/*.js", "tools/*.js"],
+      "files": ["bin/*", "tools/*"],
       "rules": {
         "@typescript-eslint/no-unsafe-assignment": "off",
         "@typescript-eslint/no-unsafe-member-access": "off",
