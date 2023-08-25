@@ -17,8 +17,8 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
             describe: 'Set logging level for output information',
             choices: ['debug', 'info', 'warn', 'error', 'none'] as const
         })
-        .option('libconfig', {
-            describe: 'Set libconfig.json file location',
+        .option('workspace', {
+            describe: 'Set workspace root directory or libconfig.json file location',
             type: 'string'
         })
         .option('project', {
@@ -76,11 +76,7 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
 
     for (const buildTask of buildTasks) {
         logger.info(`Running [${buildTask.taskName}] task`);
-        if (buildTask.handler) {
-            //
-        } else {
-            await runBuildTask(buildTask, logger);
-        }
+        await runBuildTask(buildTask, logger);
         logger.info(`Running [${buildTask.taskName}] task completed`);
     }
 }
