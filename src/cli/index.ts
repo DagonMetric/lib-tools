@@ -46,7 +46,7 @@ export default async function (cliInfo: CliInfo): Promise<void> {
         .showHelpOnFail(false)
         .wrap(yargsInstance.terminalWidth())
         .strict()
-        .fail((msg, err) => {
+        .fail((msg?: string, err?: Error) => {
             throw msg
                 ? // Validation failed example: `Unknown argument:`
                   new Error(msg)
