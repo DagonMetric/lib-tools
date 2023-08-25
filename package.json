@@ -54,7 +54,8 @@
     "lib:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --help",
     "lib:version": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --version",
     "lib:build": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build",
-    "lib:build-help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build --help"
+    "lib:test": "node --no-warnings --enable-source-maps ./dist/bin/lib.js test",
+    "lib:run:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js run --help"
   },
   "dependencies": {
     "ajv": "^8.12.0",
