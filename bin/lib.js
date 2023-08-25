@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,9 +37,9 @@ const getCliInfo = async () => {
     );
 
     return {
-        packageName: packageName,
-        version: version,
-        cliPath: cliPath
+        packageName,
+        version,
+        cliPath
     };
 };
 
