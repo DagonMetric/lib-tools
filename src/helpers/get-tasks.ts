@@ -24,7 +24,10 @@ async function validateCommandOptions(cmdOptions: ParsedCommandOptions): Promise
             throw new InvalidCommandOptionError(`The 'outputPath' must not be the same as system root directory.`);
         }
 
-        if (isInFolder(cmdOptions._outputPath, process.cwd())) {
+        if (
+            isInFolder(cmdOptions._outputPath, process.cwd()) ||
+            (cmdOptions._workspaceRoot && isInFolder(cmdOptions._outputPath, cmdOptions._workspaceRoot))
+        ) {
             throw new InvalidCommandOptionError(
                 `The 'outputPath' must not be parent directory of current working directory.`
             );
@@ -193,13 +196,15 @@ export async function getTasks(cmdOptions: CommandOptions): Promise<ParsedTaskCo
 
     let configPath = parsedCmdOptions._configPath;
     if (!configPath) {
-        configPath = await findUp('libconfig.json', process.cwd(), path.parse(process.cwd()).root);
+        const workingDir = parsedCmdOptions._workspaceRoot ?? process.cwd();
+
+        configPath = await findUp('libconfig.json', workingDir, path.parse(workingDir).root);
     }
 
     const workspaceRoot = configPath
-        ? path.extname(configPath)
-            ? path.dirname(configPath)
-            : configPath
+        ? path.dirname(configPath)
+        : parsedCmdOptions._workspaceRoot
+        ? parsedCmdOptions._workspaceRoot
         : process.cwd();
 
     const tasks: ParsedTaskConfig[] = [];

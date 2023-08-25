@@ -4,6 +4,7 @@ import { BuildCommandOptions, CommandOptions } from '../models/index.js';
 
 export interface ParsedCommandOptions extends BuildCommandOptions {
     readonly _projects: string[];
+    readonly _workspaceRoot: string | null;
     readonly _configPath: string | null;
 
     // For build
@@ -16,6 +17,7 @@ export interface ParsedCommandOptions extends BuildCommandOptions {
 
 export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
     readonly _projects: string[];
+    readonly _workspaceRoot: string | null;
     readonly _configPath: string | null;
 
     // For build
@@ -34,12 +36,22 @@ export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
                 .filter((projectName) => projectName && projectName.trim().length > 0)
                 .filter((value, index, array) => array.indexOf(value) === index) ?? [];
 
-        const configPath = cmdOptions.libconfig
-            ? path.isAbsolute(cmdOptions.libconfig)
-                ? cmdOptions.libconfig
-                : path.resolve(process.cwd(), cmdOptions.libconfig)
-            : null;
-        this._configPath = configPath;
+        if (cmdOptions.workspace) {
+            const pathAbs = path.isAbsolute(cmdOptions.workspace)
+                ? path.resolve(cmdOptions.workspace)
+                : path.resolve(process.cwd(), cmdOptions.workspace);
+
+            if (path.extname(pathAbs)) {
+                this._configPath = pathAbs;
+                this._workspaceRoot = path.dirname(this._configPath);
+            } else {
+                this._configPath = null;
+                this._workspaceRoot = pathAbs;
+            }
+        } else {
+            this._configPath = null;
+            this._workspaceRoot = null;
+        }
 
         this._env =
             cmdOptions.env
@@ -56,11 +68,7 @@ export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
                     {} as Record<string, boolean>
                 ) ?? {};
 
-        const workspaceRoot = configPath
-            ? path.extname(configPath)
-                ? path.dirname(configPath)
-                : configPath
-            : process.cwd();
+        const workspaceRoot = this._workspaceRoot ?? process.cwd();
 
         this._outputPath = cmdOptions.outputPath
             ? path.isAbsolute(cmdOptions.outputPath)
