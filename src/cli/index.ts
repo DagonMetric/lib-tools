@@ -20,13 +20,6 @@ export default async function (cliInfo: CliInfo): Promise<void> {
             'strip-dashed': true,
             'camel-case-expansion': false
         })
-        // .usage('$0 <task> [options...]')
-        // .example([
-        //     ['$0 build', 'Run build task(s)'],
-        //     ['$0 --help', 'Show help'],
-        //     ['$0 --version', 'Show version']
-        // ])
-        // A complete list of strings can be found: https://github.com/yargs/yargs/blob/main/locales/en.json
         .updateStrings({
             'Commands:': colors.cyan('Commands:'),
             'Options:': colors.cyan('Options:'),
