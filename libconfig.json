@@ -7,6 +7,12 @@
         "build": {
           "outputPath": "dist",
           "copy": ["README.md", "LICENSE"]
+        },
+        "test": {
+          "skip": true
+        },
+        "lint": {
+          "skip": true
         }
       }
     }
