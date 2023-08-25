@@ -1,8 +1,8 @@
 import * as path from 'node:path';
 
-import { BuildCommandOptions, CommandOptions } from '../models/index.js';
+import { CommandOptions } from '../models/index.js';
 
-export interface ParsedCommandOptions extends BuildCommandOptions {
+export interface ParsedCommandOptions extends CommandOptions {
     readonly _projects: string[];
     readonly _workspaceRoot: string | null;
     readonly _configPath: string | null;
@@ -27,7 +27,7 @@ export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
     readonly _styleEntries: string[];
     readonly _scriptEntries: string[];
 
-    constructor(cmdOptions: BuildCommandOptions) {
+    constructor(cmdOptions: CommandOptions) {
         Object.assign(this, cmdOptions);
 
         this._projects =
