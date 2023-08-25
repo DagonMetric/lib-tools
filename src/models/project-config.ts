@@ -6,9 +6,9 @@ import { TaskBase } from './task.js';
  */
 export interface ProjectConfig {
     /**
-     * A list of project names to inherit from.
+     * Base project names to inherit from.
      */
-    extends?: string[];
+    extends?: string;
 
     /**
      * Root folder of the project files.
