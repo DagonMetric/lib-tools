@@ -1,11 +1,7 @@
 /**
  * @additionalProperties false
  */
-export interface TaskBase {
-    /**
-     * The description of the task to display.
-     */
-    description?: string;
+export interface Task {
     /**
      * Handler module to run this task.
      */

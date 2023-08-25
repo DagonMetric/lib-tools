@@ -1,8 +1,7 @@
-export interface BuildCommandOptions {
-    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
+import { CommandOptions } from './command-options.js';
+
+export interface BuildCommandOptions extends CommandOptions {
     env?: string;
-    libconfig?: string;
-    project?: string;
     outputPath?: string;
     clean?: boolean;
     copy?: string;
