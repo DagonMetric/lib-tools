@@ -1,9 +1,8 @@
-import { Argv, ArgumentsCamelCase } from 'yargs';
+import { ArgumentsCamelCase, Argv } from 'yargs';
 
-import { BuildCommandOptions } from '../../models/index.js';
-import { getBuildTasks } from '../../helpers/index.js';
 import { runBuildTask } from '../../handlers/build/index.js';
-
+import { getBuildTasks } from '../../helpers/index.js';
+import { BuildCommandOptions } from '../../models/index.js';
 import { Logger } from '../../utils/index.js';
 
 export const command = 'build';

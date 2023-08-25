@@ -24,7 +24,7 @@ export default async function (cliInfo: CliInfo): Promise<void> {
             'camel-case-expansion': false
         })
         // .usage(`${cliInfo.packageName} v${cliInfo.version}\n\nUsage:\nlib [command] [options...]`)
-        .usage(`$0 [command] [options...]`)
+        .usage('$0 [command] [options...]')
         .example([
             ['$0 build', 'Build the project(s)'],
             ['$0 --help', 'Show help'],
