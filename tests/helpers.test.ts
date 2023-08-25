@@ -8,7 +8,7 @@ import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
 import { ParsedBuildTaskConfig, getParsedBuildTaskConfig } from '../src/helpers/parsed-build-task-config.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
 import { WorkspaceInfo } from '../src/helpers/parsed-task-config.js';
-import { BuildCommandOptions, BuildTaskConfig, ProjectConfig } from '../src/models/index.js';
+import { BuildTaskConfig, CommandOptions, ProjectConfig } from '../src/models/index.js';
 
 void describe('Helpers', () => {
     void describe('applyEnvOverrides', () => {
@@ -169,7 +169,7 @@ void describe('Helpers', () => {
 
     void describe('getParsedBuildCommandOptions', () => {
         void it('should parse command options', () => {
-            const cmdOptions: BuildCommandOptions = {
+            const cmdOptions: CommandOptions = {
                 version: '1.0.0',
                 workspace: '../notfound',
                 outputPath: 'dist',
