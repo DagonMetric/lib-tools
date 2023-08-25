@@ -1,5 +1,5 @@
 import { BuildTaskConfig } from './build-task-config.js';
-import { Task } from './task.js';
+import { ExternalTask } from './task.js';
 
 /**
  * @additionalProperties false
@@ -19,7 +19,7 @@ export interface ProjectConfig {
      * The task configurations.
      */
     tasks?: {
-        [key: string]: Task | BuildTaskConfig | undefined;
+        [key: string]: ExternalTask | BuildTaskConfig | undefined;
         /**
          * Build task configuration.
          */
