@@ -7,10 +7,6 @@ export interface TaskBase {
      */
     description?: string;
     /**
-     * A list of task names that must have been run before.
-     */
-    dependOn?: string[];
-    /**
      * Handler module to run this task.
      */
     handler?: string;
