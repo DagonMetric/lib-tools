@@ -32,10 +32,6 @@ export class Logger implements LoggerBase {
     readonly loggerOptions: LoggerOptions;
     private _minLogLevel: LogLevel = LogLevel.Info;
 
-    set minLogLevel(minLogLevel: LogLevel | LogLevelString) {
-        this._minLogLevel = typeof minLogLevel === 'string' ? this.toLogLevel(minLogLevel) : minLogLevel;
-    }
-
     constructor(loggerOptions: LoggerOptions) {
         this.loggerOptions = loggerOptions || {};
         if (this.loggerOptions.logLevel != null) {
@@ -44,6 +40,10 @@ export class Logger implements LoggerBase {
                     ? this.toLogLevel(this.loggerOptions.logLevel)
                     : this.loggerOptions.logLevel;
         }
+    }
+
+    set minLogLevel(minLogLevel: LogLevel | LogLevelString) {
+        this._minLogLevel = typeof minLogLevel === 'string' ? this.toLogLevel(minLogLevel) : minLogLevel;
     }
 
     log(level: LogLevel | LogLevelString, message: string, optionalParams?: unknown): void {
@@ -67,14 +67,12 @@ export class Logger implements LoggerBase {
             if (logLevel === LogLevel.Warn) {
                 console.warn(logMsg, optionalParams);
             } else {
-                // eslint-disable-next-line no-console
                 console.log(logMsg, optionalParams);
             }
         } else {
             if (logLevel === LogLevel.Warn) {
                 console.warn(logMsg);
             } else {
-                // eslint-disable-next-line no-console
                 console.log(logMsg);
             }
         }
