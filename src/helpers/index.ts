@@ -1,2 +1,2 @@
 export { ParsedBuildTaskConfig } from './parsed-build-task-config.js';
-export { getBuildTasks } from './get-build-tasks.js';
+export { getTasks } from './get-tasks.js';

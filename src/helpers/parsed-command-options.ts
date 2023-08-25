@@ -1,21 +1,25 @@
 import * as path from 'node:path';
 
-import { BuildCommandOptions } from '../models/index.js';
+import { BuildCommandOptions, CommandOptions } from '../models/index.js';
 
-export interface ParsedBuildCommandOptions extends BuildCommandOptions {
-    readonly _env: Record<string, boolean>;
+export interface ParsedCommandOptions extends BuildCommandOptions {
     readonly _projects: string[];
     readonly _configPath: string | null;
+
+    // For build
+    readonly _env: Record<string, boolean>;
     readonly _outputPath: string | null;
     readonly _copyEntries: string[];
     readonly _styleEntries: string[];
     readonly _scriptEntries: string[];
 }
 
-export class ParsedBuildCommandOptionsImpl implements ParsedBuildCommandOptions {
-    readonly _env: Record<string, boolean>;
+export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
     readonly _projects: string[];
     readonly _configPath: string | null;
+
+    // For build
+    readonly _env: Record<string, boolean>;
     readonly _outputPath: string | null;
     readonly _copyEntries: string[];
     readonly _styleEntries: string[];
@@ -23,6 +27,19 @@ export class ParsedBuildCommandOptionsImpl implements ParsedBuildCommandOptions 
 
     constructor(cmdOptions: BuildCommandOptions) {
         Object.assign(this, cmdOptions);
+
+        this._projects =
+            cmdOptions.project
+                ?.split(',')
+                .filter((projectName) => projectName && projectName.trim().length > 0)
+                .filter((value, index, array) => array.indexOf(value) === index) ?? [];
+
+        const configPath = cmdOptions.libconfig
+            ? path.isAbsolute(cmdOptions.libconfig)
+                ? cmdOptions.libconfig
+                : path.resolve(process.cwd(), cmdOptions.libconfig)
+            : null;
+        this._configPath = configPath;
 
         this._env =
             cmdOptions.env
@@ -38,19 +55,6 @@ export class ParsedBuildCommandOptionsImpl implements ParsedBuildCommandOptions 
                     },
                     {} as Record<string, boolean>
                 ) ?? {};
-
-        this._projects =
-            cmdOptions.project
-                ?.split(',')
-                .filter((projectName) => projectName && projectName.trim().length > 0)
-                .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
-        const configPath = cmdOptions.libconfig
-            ? path.isAbsolute(cmdOptions.libconfig)
-                ? cmdOptions.libconfig
-                : path.resolve(process.cwd(), cmdOptions.libconfig)
-            : null;
-        this._configPath = configPath;
 
         const workspaceRoot = configPath
             ? path.extname(configPath)
@@ -84,6 +88,6 @@ export class ParsedBuildCommandOptionsImpl implements ParsedBuildCommandOptions 
     }
 }
 
-export function getParsedBuildCommandOptions(cmdOptions: BuildCommandOptions): ParsedBuildCommandOptions {
-    return new ParsedBuildCommandOptionsImpl(cmdOptions);
+export function getParsedCommandOptions(cmdOptions: CommandOptions): ParsedCommandOptions {
+    return new ParsedCommandOptionsImpl(cmdOptions);
 }

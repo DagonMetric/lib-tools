@@ -4,7 +4,8 @@ import { InvalidConfigError } from '../exceptions/index.js';
 import { BuildTaskConfig } from '../models/index.js';
 import { isInFolder } from '../utils/index.js';
 
-import { ParsedBuildCommandOptions } from './parsed-build-command-options.js';
+import { ParsedCommandOptions } from './parsed-command-options.js';
+import { ParsedTaskConfig, ParsedTaskConfigImpl, WorkspaceInfo } from './parsed-task-config.js';
 
 export interface PackageJsonInfo {
     readonly packageJson: Record<string, unknown>;
@@ -18,33 +19,25 @@ export interface PackageJsonInfo {
     readonly rootPackageJsonPath: string | null;
 }
 
-export interface WorkspaceInfo {
-    readonly workspaceRoot: string;
-    readonly projectRoot: string;
-    readonly projectName: string | null;
-    readonly configPath: string | null;
-}
-
-export interface ParsedBuildTaskConfig extends BuildTaskConfig {
-    readonly workspaceInfo: WorkspaceInfo;
+export interface ParsedBuildTaskConfig extends BuildTaskConfig, ParsedTaskConfig {
     readonly packageJsonInfo: PackageJsonInfo | null;
     _outputPath: string;
 }
 
-export class ParsedBuildTaskConfigImpl implements ParsedBuildTaskConfig {
-    readonly workspaceInfo: WorkspaceInfo;
+export class ParsedBuildTaskConfigImpl extends ParsedTaskConfigImpl implements ParsedBuildTaskConfig {
     readonly packageJsonInfo: PackageJsonInfo | null;
     readonly _outputPath: string;
 
     constructor(
         config: BuildTaskConfig,
-        cmdOptions: ParsedBuildCommandOptions,
         workspaceInfo: WorkspaceInfo,
+        cmdOptions: ParsedCommandOptions,
         packageJsonInfo: PackageJsonInfo | null
     ) {
+        super('build', config, workspaceInfo);
+
         Object.assign(this, config);
 
-        this.workspaceInfo = workspaceInfo;
         this.packageJsonInfo = packageJsonInfo;
 
         const projectRoot = this.workspaceInfo.projectRoot;
@@ -89,11 +82,11 @@ function validateConfig(config: ParsedBuildTaskConfig): void {
 
 export function getParsedBuildTaskConfig(
     config: BuildTaskConfig,
-    cmdOptions: ParsedBuildCommandOptions,
     workspaceInfo: WorkspaceInfo,
+    cmdOptions: ParsedCommandOptions,
     packageJsonInfo: PackageJsonInfo | null
 ): ParsedBuildTaskConfig {
-    const parsedBuildTaskConfig = new ParsedBuildTaskConfigImpl(config, cmdOptions, workspaceInfo, packageJsonInfo);
+    const parsedBuildTaskConfig = new ParsedBuildTaskConfigImpl(config, workspaceInfo, cmdOptions, packageJsonInfo);
 
     validateConfig(parsedBuildTaskConfig);
 

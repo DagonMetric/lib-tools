@@ -2,21 +2,17 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
-import { BuildCommandOptions, BuildTaskConfig } from '../models/index.js';
+import { BuildTaskConfig, CommandOptions } from '../models/index.js';
 import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
-import { ParsedBuildCommandOptions, getParsedBuildCommandOptions } from './parsed-build-command-options.js';
-import {
-    PackageJsonInfo,
-    ParsedBuildTaskConfig,
-    WorkspaceInfo,
-    getParsedBuildTaskConfig
-} from './parsed-build-task-config.js';
+import { PackageJsonInfo, ParsedBuildTaskConfig, getParsedBuildTaskConfig } from './parsed-build-task-config.js';
+import { ParsedCommandOptions, getParsedCommandOptions } from './parsed-command-options.js';
+import { ParsedTaskConfig, WorkspaceInfo, getParsedTaskConfig } from './parsed-task-config.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 
-async function validateCommandOptions(cmdOptions: ParsedBuildCommandOptions): Promise<void> {
+async function validateCommandOptions(cmdOptions: ParsedCommandOptions): Promise<void> {
     if (cmdOptions._configPath && !(await pathExists(cmdOptions._configPath))) {
         throw new InvalidCommandOptionError(
             `The 'libconfig' file path doesn't exist. File path: ${cmdOptions._configPath}.`
@@ -36,74 +32,18 @@ async function validateCommandOptions(cmdOptions: ParsedBuildCommandOptions): Pr
     }
 }
 
-function mergeBuildTaskFromCommandOptions(
-    cmdOptions: ParsedBuildCommandOptions,
-    buildTaskConfig: BuildTaskConfig
-): boolean {
-    if (
-        !cmdOptions.clean &&
-        !cmdOptions._copyEntries.length &&
-        !cmdOptions._styleEntries.length &&
-        !cmdOptions._scriptEntries.length
-    ) {
-        return false;
+const packageJsonCache = new Map<string, Record<string, unknown>>();
+async function readPackageJsonFile(packageJsonPath: string): Promise<Record<string, unknown>> {
+    const cachedPackageJson = packageJsonCache.get(packageJsonPath);
+    if (cachedPackageJson) {
+        return cachedPackageJson;
     }
 
-    // clean
-    if (cmdOptions.clean != null) {
-        if (buildTaskConfig.clean == null || typeof buildTaskConfig.clean === 'boolean') {
-            buildTaskConfig.clean = cmdOptions.clean;
-        } else {
-            if (buildTaskConfig.clean.beforeBuild) {
-                buildTaskConfig.clean.beforeBuild.cleanOutDir = cmdOptions.clean;
-            } else {
-                buildTaskConfig.clean.beforeBuild = {
-                    cleanOutDir: cmdOptions.clean
-                };
-            }
-        }
-    }
+    const content = await fs.readFile(packageJsonPath, { encoding: 'utf8' });
+    const packageJson = JSON.parse(content) as Record<string, unknown>;
+    packageJsonCache.set(packageJsonPath, packageJson);
 
-    // copy
-    if (cmdOptions._copyEntries.length) {
-        if (!buildTaskConfig.copy) {
-            buildTaskConfig.copy = [...cmdOptions._copyEntries];
-        } else {
-            buildTaskConfig.copy = [...buildTaskConfig.copy, ...cmdOptions._copyEntries];
-        }
-    }
-
-    // styles
-    if (cmdOptions._styleEntries.length) {
-        if (!buildTaskConfig.style) {
-            buildTaskConfig.style = [...cmdOptions._styleEntries];
-        } else {
-            if (Array.isArray(buildTaskConfig.style)) {
-                buildTaskConfig.style = [...buildTaskConfig.style, ...cmdOptions._styleEntries];
-            } else {
-                const bundleEntries = buildTaskConfig.style.bundles ?? [];
-                cmdOptions._styleEntries.forEach((entry) => bundleEntries.push({ entry }));
-                buildTaskConfig.style.bundles = bundleEntries;
-            }
-        }
-    }
-
-    // scripts
-    if (cmdOptions._scriptEntries.length) {
-        if (!buildTaskConfig.script) {
-            buildTaskConfig.script = [...cmdOptions._scriptEntries];
-        } else {
-            if (Array.isArray(buildTaskConfig.script)) {
-                buildTaskConfig.script = [...buildTaskConfig.script, ...cmdOptions._scriptEntries];
-            } else {
-                const bundleEntries = buildTaskConfig.script.bundles ?? [];
-                cmdOptions._scriptEntries.forEach((entry) => bundleEntries.push({ entry }));
-                buildTaskConfig.script.bundles = bundleEntries;
-            }
-        }
-    }
-
-    return true;
+    return packageJson;
 }
 
 async function getPackageJsonInfo(
@@ -180,22 +120,75 @@ async function getPackageJsonInfo(
     };
 }
 
-const packageJsonCache = new Map<string, Record<string, unknown>>();
-async function readPackageJsonFile(packageJsonPath: string): Promise<Record<string, unknown>> {
-    const cachedPackageJson = packageJsonCache.get(packageJsonPath);
-    if (cachedPackageJson) {
-        return cachedPackageJson;
+function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buildTaskConfig: BuildTaskConfig): boolean {
+    if (
+        !cmdOptions.clean &&
+        !cmdOptions._copyEntries?.length &&
+        !cmdOptions._styleEntries?.length &&
+        !cmdOptions._scriptEntries?.length
+    ) {
+        return false;
     }
 
-    const content = await fs.readFile(packageJsonPath, { encoding: 'utf8' });
-    const packageJson = JSON.parse(content) as Record<string, unknown>;
-    packageJsonCache.set(packageJsonPath, packageJson);
+    // clean
+    if (cmdOptions.clean != null) {
+        if (buildTaskConfig.clean == null || typeof buildTaskConfig.clean === 'boolean') {
+            buildTaskConfig.clean = cmdOptions.clean;
+        } else {
+            if (buildTaskConfig.clean.beforeBuild) {
+                buildTaskConfig.clean.beforeBuild.cleanOutDir = cmdOptions.clean;
+            } else {
+                buildTaskConfig.clean.beforeBuild = {
+                    cleanOutDir: cmdOptions.clean
+                };
+            }
+        }
+    }
 
-    return packageJson;
+    // copy
+    if (cmdOptions._copyEntries?.length) {
+        if (!buildTaskConfig.copy) {
+            buildTaskConfig.copy = [...cmdOptions._copyEntries];
+        } else {
+            buildTaskConfig.copy = [...buildTaskConfig.copy, ...cmdOptions._copyEntries];
+        }
+    }
+
+    // styles
+    if (cmdOptions._styleEntries?.length) {
+        if (!buildTaskConfig.style) {
+            buildTaskConfig.style = [...cmdOptions._styleEntries];
+        } else {
+            if (Array.isArray(buildTaskConfig.style)) {
+                buildTaskConfig.style = [...buildTaskConfig.style, ...cmdOptions._styleEntries];
+            } else {
+                const bundleEntries = buildTaskConfig.style.bundles ?? [];
+                cmdOptions._styleEntries.forEach((entry) => bundleEntries.push({ entry }));
+                buildTaskConfig.style.bundles = bundleEntries;
+            }
+        }
+    }
+
+    // scripts
+    if (cmdOptions._scriptEntries?.length) {
+        if (!buildTaskConfig.script) {
+            buildTaskConfig.script = [...cmdOptions._scriptEntries];
+        } else {
+            if (Array.isArray(buildTaskConfig.script)) {
+                buildTaskConfig.script = [...buildTaskConfig.script, ...cmdOptions._scriptEntries];
+            } else {
+                const bundleEntries = buildTaskConfig.script.bundles ?? [];
+                cmdOptions._scriptEntries.forEach((entry) => bundleEntries.push({ entry }));
+                buildTaskConfig.script.bundles = bundleEntries;
+            }
+        }
+    }
+
+    return true;
 }
 
-export async function getBuildTasks(cmdOptions: BuildCommandOptions): Promise<ParsedBuildTaskConfig[]> {
-    const parsedCmdOptions = getParsedBuildCommandOptions(cmdOptions);
+export async function getTasks(cmdOptions: CommandOptions): Promise<ParsedTaskConfig[]> {
+    const parsedCmdOptions = getParsedCommandOptions(cmdOptions);
     await validateCommandOptions(parsedCmdOptions);
 
     let configPath = parsedCmdOptions._configPath;
@@ -209,7 +202,7 @@ export async function getBuildTasks(cmdOptions: BuildCommandOptions): Promise<Pa
             : configPath
         : process.cwd();
 
-    const buildTasks: ParsedBuildTaskConfig[] = [];
+    const tasks: ParsedTaskConfig[] = [];
 
     if (configPath) {
         const libConfig = await readLibConfigJsonFile(configPath);
@@ -237,14 +230,6 @@ export async function getBuildTasks(cmdOptions: BuildCommandOptions): Promise<Pa
                 continue;
             }
 
-            if (!project.tasks?.build || project.tasks?.build.skip) {
-                continue;
-            }
-
-            const buildTaskConfig = project.tasks.build;
-
-            applyEnvOverrides(buildTaskConfig, parsedCmdOptions._env);
-
             const workspaceInfo: WorkspaceInfo = {
                 workspaceRoot,
                 projectRoot,
@@ -252,21 +237,50 @@ export async function getBuildTasks(cmdOptions: BuildCommandOptions): Promise<Pa
                 configPath
             };
 
-            const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.version);
+            if (!project.tasks) {
+                continue;
+            }
 
-            const parsedBuildTask = getParsedBuildTaskConfig(
-                buildTaskConfig,
-                parsedCmdOptions,
-                workspaceInfo,
-                packageJsonInfo
-            );
+            const taskNames = Object.keys(project.tasks);
+            for (const taskName of taskNames) {
+                const taskConfig = project.tasks[taskName];
 
-            buildTasks.push(parsedBuildTask);
+                if (!taskConfig) {
+                    continue;
+                }
+
+                if (taskName === 'build') {
+                    const buildTaskConfig = taskConfig as BuildTaskConfig;
+
+                    let packageJsonInfo: PackageJsonInfo | null = null;
+
+                    if (!buildTaskConfig.skip) {
+                        applyEnvOverrides(buildTaskConfig, parsedCmdOptions._env);
+                        packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.version);
+                    }
+
+                    const parsedBuildTask = getParsedBuildTaskConfig(
+                        buildTaskConfig,
+                        workspaceInfo,
+                        parsedCmdOptions,
+                        packageJsonInfo
+                    );
+
+                    tasks.push(parsedBuildTask);
+                } else {
+                    const parsedTask = getParsedTaskConfig(taskName, taskConfig, workspaceInfo);
+
+                    tasks.push(parsedTask);
+                }
+            }
         }
     }
 
-    const firstBuildTaskConfig = buildTasks.length ? buildTasks[0] : {};
+    const buildTasks = tasks.filter((t) => t.taskName === 'build');
+    const firstBuildTaskConfig = buildTasks.length ? (buildTasks[0] as ParsedBuildTaskConfig) : {};
+
     const hasCommandOptionsBuildTask = mergeBuildTaskFromCommandOptions(parsedCmdOptions, firstBuildTaskConfig);
+
     if (hasCommandOptionsBuildTask && !buildTasks.length) {
         const workspaceInfo: WorkspaceInfo = {
             workspaceRoot,
@@ -279,13 +293,13 @@ export async function getBuildTasks(cmdOptions: BuildCommandOptions): Promise<Pa
 
         const parsedBuildTask = getParsedBuildTaskConfig(
             firstBuildTaskConfig,
-            parsedCmdOptions,
             workspaceInfo,
+            parsedCmdOptions,
             packageJsonInfo
         );
 
         buildTasks.push(parsedBuildTask);
     }
 
-    return buildTasks;
+    return tasks;
 }
