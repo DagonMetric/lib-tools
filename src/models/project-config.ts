@@ -1,13 +1,14 @@
 import { BuildTaskConfig } from './build-task-config.js';
+import { TaskBase } from './task.js';
 
 /**
  * @additionalProperties false
  */
 export interface ProjectConfig {
     /**
-     * Path to base configuration file or name of the base project to inherit from.
+     * A list of project names to inherit from.
      */
-    extends?: string;
+    extends?: string[];
 
     /**
      * Root folder of the project files.
@@ -18,6 +19,7 @@ export interface ProjectConfig {
      * The task configurations.
      */
     tasks?: {
+        [key: string]: TaskBase | BuildTaskConfig | undefined;
         /**
          * Build task configuration.
          */

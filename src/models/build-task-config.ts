@@ -1,4 +1,5 @@
 import { OverridableTaskConfig } from './overridable-task-config.js';
+import { TaskBase } from './task.js';
 
 /**
  * @additionalProperties false
@@ -306,11 +307,7 @@ export interface BuildTaskConfigBase {
  * The build task.
  * @additionalProperties false
  */
-export interface BuildTaskConfig extends BuildTaskConfigBase, OverridableTaskConfig<BuildTaskConfigBase> {
-    /**
-     * Set true to skip the task.
-     */
-    skip?: boolean;
+export interface BuildTaskConfig extends BuildTaskConfigBase, OverridableTaskConfig<BuildTaskConfigBase>, TaskBase {
     /**
      * To override properties based on build environment.
      */

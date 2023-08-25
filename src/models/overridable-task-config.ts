@@ -1,3 +1,3 @@
-export interface OverridableTaskConfig<TTaskConfigBase> {
-    envOverrides?: Record<string, Partial<TTaskConfigBase>>;
+export interface OverridableTaskConfig<TTaskBase> {
+    envOverrides?: Record<string, Partial<TTaskBase>>;
 }
