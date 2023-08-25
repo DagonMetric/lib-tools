@@ -171,7 +171,7 @@ void describe('Helpers', () => {
         void it('should parse command options', () => {
             const cmdOptions: BuildCommandOptions = {
                 version: '1.0.0',
-                libconfig: './libconfig.json',
+                workspace: '../notfound',
                 outputPath: 'dist',
                 env: 'prod,ci',
                 project: 'a,b,c',
@@ -185,8 +185,9 @@ void describe('Helpers', () => {
 
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
-                _configPath: path.resolve(process.cwd(), 'libconfig.json'),
-                _outputPath: path.resolve(process.cwd(), 'dist'),
+                _configPath: null,
+                _workspaceRoot: path.resolve(process.cwd(), '../notfound'),
+                _outputPath: path.resolve(process.cwd(), '../notfound/dist'),
                 _env: { prod: true, ci: true },
                 _projects: ['a', 'b', 'c'],
                 _copyEntries: ['a.txt', '**/*.md'],
@@ -209,6 +210,7 @@ void describe('Helpers', () => {
             const cmdOptions: ParsedCommandOptions = {
                 _env: {},
                 _configPath: null,
+                _workspaceRoot: null,
                 _outputPath: null,
                 _projects: [],
                 _copyEntries: [],

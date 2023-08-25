@@ -33,7 +33,7 @@ void describe('CLI', () => {
     });
 
     void it('should show warning message if no build task is found', async () => {
-        const result = await runCli('build');
+        const result = await runCli('build --workspace=../notfound/dist');
         const expected = 'Warning: No task to build.';
         assert.strictEqual(result, expected);
     });
