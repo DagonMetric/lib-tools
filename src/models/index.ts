@@ -1,4 +1,3 @@
-export * from './build-command-options.js';
 export * from './build-task-config.js';
 export * from './command-options.js';
 export * from './lib-config.js';
