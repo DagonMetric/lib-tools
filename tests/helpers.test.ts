@@ -5,15 +5,9 @@ import { describe, it } from 'node:test';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
-import {
-    ParsedBuildCommandOptions,
-    getParsedBuildCommandOptions
-} from '../src/helpers/parsed-build-command-options.js';
-import {
-    ParsedBuildTaskConfig,
-    WorkspaceInfo,
-    getParsedBuildTaskConfig
-} from '../src/helpers/parsed-build-task-config.js';
+import { ParsedBuildTaskConfig, getParsedBuildTaskConfig } from '../src/helpers/parsed-build-task-config.js';
+import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
+import { WorkspaceInfo } from '../src/helpers/parsed-task-config.js';
 import { BuildCommandOptions, BuildTaskConfig, ProjectConfig } from '../src/models/index.js';
 
 void describe('Helpers', () => {
@@ -186,10 +180,10 @@ void describe('Helpers', () => {
                 script: 'a.js,b.ts'
             };
 
-            const result = getParsedBuildCommandOptions(cmdOptions);
-            const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildCommandOptions;
+            const result = getParsedCommandOptions(cmdOptions);
+            const actual = JSON.parse(JSON.stringify(result)) as ParsedCommandOptions;
 
-            const expected: ParsedBuildCommandOptions = {
+            const expected: ParsedCommandOptions = {
                 ...cmdOptions,
                 _configPath: path.resolve(process.cwd(), 'libconfig.json'),
                 _outputPath: path.resolve(process.cwd(), 'dist'),
@@ -212,7 +206,7 @@ void describe('Helpers', () => {
                 script: ['a.js', 'b.ts']
             };
 
-            const cmdOptions: ParsedBuildCommandOptions = {
+            const cmdOptions: ParsedCommandOptions = {
                 _env: {},
                 _configPath: null,
                 _outputPath: null,
@@ -229,11 +223,12 @@ void describe('Helpers', () => {
                 configPath: null
             };
 
-            const result = getParsedBuildTaskConfig(config, cmdOptions, workspaceInfo, null);
+            const result = getParsedBuildTaskConfig(config, workspaceInfo, cmdOptions, null);
             const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildTaskConfig;
 
             const expected: ParsedBuildTaskConfig = {
                 ...config,
+                taskName: 'build',
                 workspaceInfo,
                 packageJsonInfo: null,
                 _outputPath: path.resolve(process.cwd(), 'out')
