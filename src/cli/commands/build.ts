@@ -1,7 +1,7 @@
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { runBuildTask } from '../../handlers/build/index.js';
-import { getBuildTasks } from '../../helpers/index.js';
+import { ParsedBuildTaskConfig, getTasks } from '../../helpers/index.js';
 import { BuildCommandOptions } from '../../models/index.js';
 import { Logger } from '../../utils/index.js';
 
@@ -56,7 +56,8 @@ export function builder(argv: Argv): Argv<BuildCommandOptions> {
 }
 
 export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Promise<void> {
-    const buildTasks = await getBuildTasks(argv);
+    const tasks = await getTasks(argv);
+    const buildTasks = tasks.filter((t) => !t.skip && t.taskName === 'build').map((t) => t as ParsedBuildTaskConfig);
 
     const logger = new Logger({
         logLevel: argv.logLevel ?? 'info',
@@ -74,6 +75,12 @@ export async function handler(argv: ArgumentsCamelCase<BuildCommandOptions>): Pr
     }
 
     for (const buildTask of buildTasks) {
-        await runBuildTask(buildTask);
+        logger.info(`Running [${buildTask.taskName}] task`);
+        if (buildTask.handler) {
+            //
+        } else {
+            await runBuildTask(buildTask, logger);
+        }
+        logger.info(`Running [${buildTask.taskName}] task completed`);
     }
 }
