@@ -3,8 +3,7 @@ import { ArgumentsCamelCase, Argv } from 'yargs';
 import { runBuildTask } from '../../handlers/build/index.js';
 import { ParsedBuildTaskConfig, getTasks } from '../../helpers/index.js';
 import { CommandOptions } from '../../models/index.js';
-
-import { Logger } from '../../utils/index.js';
+import { Logger, colors } from '../../utils/index.js';
 
 export const command = 'run <task> [options..]';
 
@@ -13,8 +12,14 @@ export const describe = 'Run by task name';
 export function builder(argv: Argv): Argv<CommandOptions> {
     return (
         argv
-            // .usage('run <task> [options..]')
-            // .example('$0 run test', 'Run test tasks from libconfig.json')
+            .positional('task', {
+                describe: 'Task name to run',
+                type: 'string',
+                default: 'build'
+            })
+
+            // Shared task options
+            .group(['logLevel', 'workspace', 'project'], colors.cyan('Common task options:'))
             .option('logLevel', {
                 describe: 'Set logging level for output information',
                 choices: ['debug', 'info', 'warn', 'error', 'none'] as const
@@ -28,7 +33,15 @@ export function builder(argv: Argv): Argv<CommandOptions> {
                 type: 'string'
             })
 
-            // Build command options
+            // Buuild task options
+            .group(
+                ['env', 'outputPath', 'clean', 'copy', 'style', 'script', 'version'],
+                colors.cyan('Build task options:')
+            )
+            .option('env', {
+                describe: 'Set env name to override the build task configuration with `envOverrides[name]` options.',
+                type: 'string'
+            })
             .option('outputPath', {
                 describe: 'Set output directory for build results',
                 type: 'string'
@@ -56,7 +69,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
 
             // help
             .option('help', {
-                describe: 'Show help for run command',
+                describe: 'Show help for this command',
                 type: 'boolean'
             })
     );
@@ -81,7 +94,7 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
     });
 
     if (!tasks.length) {
-        logger.warn(`No task found for '${taskName}'.`);
+        logger.warn(`No active task found for '${taskName}'.`);
         process.exitCode = 1;
 
         return;
