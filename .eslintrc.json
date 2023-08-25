@@ -4,7 +4,7 @@
     "es2022": true,
     "node": true
   },
-  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/junit/**"],
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"],
   "plugins": ["@typescript-eslint"],
   "extends": [
     "eslint:recommended",
@@ -15,8 +15,18 @@
     // With Type Checking
     "plugin:@typescript-eslint/recommended-type-checked",
     "plugin:@typescript-eslint/stylistic-type-checked",
-    "plugin:prettier/recommended"
+    "plugin:prettier/recommended",
+    "plugin:import/recommended",
+    "plugin:import/typescript"
   ],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true
+        // project": "tsconfig.json"
+      }
+    }
+  },
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "project": "tsconfig.json",
@@ -25,6 +35,74 @@
   },
   "rules": {
     // ------------------------------
+    // eslint
+    // ------------------------------
+    "constructor-super": "error",
+    "curly": "error",
+    "dot-notation": "error",
+    "eqeqeq": ["error", "smart"],
+    "guard-for-in": "error",
+    "no-bitwise": "error",
+    "no-caller": "error",
+    "no-console": "error",
+    "no-constant-condition": ["error"],
+    "no-empty": ["error", { "allowEmptyCatch": true }],
+    "no-eval": "error",
+    "no-extra-bind": "error",
+    "no-fallthrough": "error",
+    "no-new-func": "error",
+    "no-new-wrappers": "error",
+    "no-restricted-globals": [
+      "error",
+      { "name": "setTimeout" },
+      { "name": "clearTimeout" },
+      { "name": "setInterval" },
+      { "name": "clearInterval" },
+      { "name": "setImmediate" },
+      { "name": "clearImmediate" },
+      // These globals don't exist outside of CJS files.
+      { "name": "__filename" },
+      { "name": "__dirname" },
+      { "name": "require" },
+      { "name": "module" },
+      { "name": "exports" }
+    ],
+    "no-template-curly-in-string": "error",
+    "no-throw-literal": "error",
+    "no-undef-init": "error",
+    "no-var": "error",
+    "object-shorthand": "error",
+    "one-var": ["error", "never"],
+    "prefer-const": "error",
+    "prefer-object-spread": "error",
+    "unicode-bom": ["error", "never"],
+    "radix": "error",
+    "sort-imports": [
+      "error",
+      {
+        "ignoreDeclarationSort": true
+      }
+    ],
+    "spaced-comment": "error",
+    "use-isnan": "error",
+
+    // ------------------------------
+    // import
+    // ------------------------------
+    "import/first": "error",
+    "import/newline-after-import": "error",
+    "import/no-absolute-path": "error",
+    "import/no-duplicates": "error",
+    "import/no-unassigned-import": ["error", { "allow": ["symbol-observable"] }],
+    "import/order": [
+      "error",
+      {
+        "alphabetize": { "order": "asc" },
+        "groups": [["builtin", "external"], "parent", "sibling", "index"]
+      }
+    ],
+
+    // ------------------------------
     // prettier
     // ------------------------------
     "prettier/prettier": [
@@ -32,12 +110,100 @@
       {
         "endOfLine": "auto"
       }
-    ]
+    ],
+
+    // ------------------------------
+    // @typescript-eslint
+    // ------------------------------
+    "@typescript-eslint/ban-types": [
+      "error",
+      {
+        "extendDefaults": true,
+        "types": {
+          // This is theoretically good, but ts-eslint appears to mistake our declaration of Symbol for the global Symbol type.
+          // See: https://github.com/typescript-eslint/typescript-eslint/issues/7306
+          "Symbol": false,
+          "{}": false // {} is a totally useful and valid type.
+        }
+      }
+    ],
+    "@typescript-eslint/member-ordering": "error",
+    "@typescript-eslint/prefer-for-of": "error",
+    "@typescript-eslint/naming-convention": [
+      "error",
+      {
+        "selector": "typeLike",
+        "format": ["PascalCase"],
+        "filter": { "regex": "^(__String|[A-Za-z]+_[A-Za-z]+)$", "match": false }
+      },
+      {
+        "selector": "interface",
+        "format": ["PascalCase"],
+        "custom": { "regex": "^I[A-Z]", "match": false },
+        "filter": { "regex": "^I(Arguments|TextWriter|O([A-Z][a-z]+[A-Za-z]*)?)$", "match": false }
+      },
+      {
+        "selector": "variable",
+        "format": ["camelCase", "PascalCase", "UPPER_CASE"],
+        "leadingUnderscore": "allow",
+        "filter": { "regex": "^(_{1,2}filename|_{1,2}dirname|_+|[A-Za-z]+_[A-Za-z]+)$", "match": false }
+      },
+      {
+        "selector": "function",
+        "format": ["camelCase", "PascalCase"],
+        "leadingUnderscore": "allow",
+        "filter": { "regex": "^[A-Za-z]+_[A-Za-z]+$", "match": false }
+      },
+      {
+        "selector": "parameter",
+        "format": ["camelCase"],
+        "leadingUnderscore": "allow",
+        "filter": { "regex": "^(_+|[A-Za-z]+_[A-Z][a-z]+)$", "match": false }
+      },
+      {
+        "selector": "method",
+        "format": ["camelCase", "PascalCase"],
+        "leadingUnderscore": "allow",
+        "filter": { "regex": "^([0-9]+|[A-Za-z]+_[A-Za-z]+)$", "match": false }
+      },
+      {
+        "selector": "memberLike",
+        "format": ["camelCase"],
+        "leadingUnderscore": "allow",
+        "filter": { "regex": "^([0-9]+|[A-Za-z]+_[A-Za-z]+)$", "match": false }
+      },
+      {
+        "selector": "enumMember",
+        "format": ["camelCase", "PascalCase"],
+        "leadingUnderscore": "allow",
+        "filter": { "regex": "^[A-Za-z]+_[A-Za-z]+$", "match": false }
+      },
+      { "selector": "property", "format": null }
+    ],
+    "@typescript-eslint/prefer-function-type": "error"
   },
   "overrides": [
+    { "files": ["*.ts", "*.mts", "*.cts", "*.mjs", "*.cjs"] },
+    {
+      "files": ["src/utils/logger.*"],
+      "rules": {
+        "no-console": [
+          "error",
+          {
+            "allow": ["log", "warn", "error"]
+          }
+        ]
+      }
+    },
     {
       "files": ["bin/*", "tools/*"],
       "rules": {
+        "no-console": [
+          "error",
+          {
+            "allow": ["error"]
+          }
+        ],
         "@typescript-eslint/no-unsafe-assignment": "off",
         "@typescript-eslint/no-unsafe-member-access": "off",
         "@typescript-eslint/no-unsafe-argument": "off",
