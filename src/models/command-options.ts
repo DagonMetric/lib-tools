@@ -11,5 +11,5 @@ export interface CommandOptions {
     copy?: string;
     style?: string;
     script?: string;
-    version?: string;
+    packageVersion?: string;
 }
