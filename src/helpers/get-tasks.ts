@@ -261,7 +261,7 @@ export async function getTasks(cmdOptions: CommandOptions): Promise<ParsedTaskCo
 
                     if (!buildTaskConfig.skip) {
                         applyEnvOverrides(buildTaskConfig, parsedCmdOptions._env);
-                        packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.version);
+                        packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
                     }
 
                     const parsedBuildTask = getParsedBuildTaskConfig(
@@ -294,7 +294,7 @@ export async function getTasks(cmdOptions: CommandOptions): Promise<ParsedTaskCo
             configPath
         };
 
-        const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.version);
+        const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
 
         const parsedBuildTask = getParsedBuildTaskConfig(
             firstBuildTaskConfig,
