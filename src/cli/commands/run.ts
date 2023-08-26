@@ -35,7 +35,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
 
             // Buuild task options
             .group(
-                ['env', 'outputPath', 'clean', 'copy', 'style', 'script', 'version'],
+                ['env', 'outputPath', 'clean', 'copy', 'style', 'script', 'packageVersion'],
                 colors.cyan('Build task options:')
             )
             .option('env', {
@@ -62,7 +62,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
                 describe: 'Set TypeScript or JavaScript file entry to compile or bundle',
                 type: 'string'
             })
-            .option('version', {
+            .option('packageVersion', {
                 describe: 'Set version to override the version field of the package.json file',
                 type: 'string'
             })
