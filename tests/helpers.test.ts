@@ -170,7 +170,7 @@ void describe('Helpers', () => {
     void describe('getParsedBuildCommandOptions', () => {
         void it('should parse command options', () => {
             const cmdOptions: CommandOptions = {
-                version: '1.0.0',
+                packageVersion: '1.0.0',
                 workspace: '../notfound',
                 outputPath: 'dist',
                 env: 'prod,ci',
