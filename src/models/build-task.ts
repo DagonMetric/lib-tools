@@ -1,4 +1,4 @@
-import { OverridableTaskConfig } from './overridable-task-config.js';
+import { OverridableTask } from './overridable-task.js';
 import { Task } from './task.js';
 
 /**
@@ -234,7 +234,7 @@ export interface PackageJsonOptions {
 /**
  * @additionalProperties false
  */
-export interface BuildTaskConfigBase {
+export interface BuildTaskOptions {
     /**
      * The output directory for build results.
      */
@@ -269,9 +269,9 @@ export interface BuildTaskConfigBase {
  * The build task.
  * @additionalProperties false
  */
-export interface BuildTaskConfig extends BuildTaskConfigBase, OverridableTaskConfig<BuildTaskConfigBase>, Task {
+export interface BuildTask extends BuildTaskOptions, OverridableTask<BuildTaskOptions>, Task {
     /**
      * To override properties based on build environment.
      */
-    envOverrides?: Record<string, Partial<BuildTaskConfigBase>>;
+    envOverrides?: Record<string, Partial<BuildTaskOptions>>;
 }

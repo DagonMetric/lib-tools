@@ -1,9 +1,4 @@
-export interface CommandOptions {
-    task?: string;
-    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
-    workspace?: string;
-    project?: string;
-
+export interface BuildCommandOptions {
     // Build command options
     env?: string;
     outputPath?: string;
@@ -12,4 +7,11 @@ export interface CommandOptions {
     style?: string;
     script?: string;
     packageVersion?: string;
+}
+
+export interface CommandOptions extends BuildCommandOptions {
+    task?: string;
+    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
+    workspace?: string;
+    project?: string;
 }

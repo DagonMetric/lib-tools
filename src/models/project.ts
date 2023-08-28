@@ -1,12 +1,12 @@
-import { BuildTaskConfig } from './build-task-config.js';
-import { ExternalTask } from './task.js';
+import { BuildTask } from './build-task.js';
+import { Task } from './task.js';
 
 /**
  * @additionalProperties false
  */
-export interface ProjectConfig {
+export interface Project {
     /**
-     * Base project names to inherit from.
+     * Base project name to inherit from.
      */
     extends?: string;
 
@@ -19,10 +19,10 @@ export interface ProjectConfig {
      * The task configurations.
      */
     tasks?: {
-        [key: string]: ExternalTask | BuildTaskConfig | undefined;
+        [key: string]: Task | undefined;
         /**
          * Build task configuration.
          */
-        build?: BuildTaskConfig;
+        build?: BuildTask;
     };
 }

@@ -1,4 +1,4 @@
-import { ProjectConfig } from './project-config.js';
+import { Project } from './project.js';
 
 /**
  * The library workflow configuration.
@@ -11,7 +11,7 @@ export interface LibConfig {
     $schema?: string;
 
     /**
-     * The workflow configurations for projects.
+     * The project configurations.
      */
-    projects: Record<string, ProjectConfig>;
+    projects: Record<string, Project>;
 }
