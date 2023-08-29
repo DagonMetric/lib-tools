@@ -1,4 +1,4 @@
-import { OverridableTaskConfig } from '../models/index.js';
+import { OverridableTaskOptions, Task } from '../models/index.js';
 
 function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>): void {
     Object.keys(newConfig)
@@ -8,8 +8,8 @@ function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<st
         });
 }
 
-export function applyEnvOverrides<TTaskConfigBase>(
-    taskConfig: OverridableTaskConfig<TTaskConfigBase>,
+export function applyEnvOverrides<TTaskOptions extends Task>(
+    taskConfig: OverridableTaskOptions<TTaskOptions>,
     env: Record<string, boolean>
 ): void {
     if (!taskConfig.envOverrides || !Object.keys(taskConfig.envOverrides).length) {

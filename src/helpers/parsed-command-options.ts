@@ -9,7 +9,7 @@ export interface ParsedCommandOptions extends CommandOptions {
 
     // For build
     readonly _env: Record<string, boolean>;
-    readonly _outputPath: string | null;
+    readonly _outDir: string | null;
     readonly _copyEntries: string[];
     readonly _styleEntries: string[];
     readonly _scriptEntries: string[];
@@ -22,7 +22,7 @@ export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
 
     // For build
     readonly _env: Record<string, boolean>;
-    readonly _outputPath: string | null;
+    readonly _outDir: string | null;
     readonly _copyEntries: string[];
     readonly _styleEntries: string[];
     readonly _scriptEntries: string[];
@@ -70,10 +70,10 @@ export class ParsedCommandOptionsImpl implements ParsedCommandOptions {
 
         const workspaceRoot = this._workspaceRoot ?? process.cwd();
 
-        this._outputPath = cmdOptions.outputPath
-            ? path.isAbsolute(cmdOptions.outputPath)
-                ? path.resolve(cmdOptions.outputPath)
-                : path.resolve(workspaceRoot, cmdOptions.outputPath)
+        this._outDir = cmdOptions.outDir
+            ? path.isAbsolute(cmdOptions.outDir)
+                ? path.resolve(cmdOptions.outDir)
+                : path.resolve(workspaceRoot, cmdOptions.outDir)
             : null;
 
         this._copyEntries =
