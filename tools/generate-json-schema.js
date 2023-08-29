@@ -14,7 +14,7 @@ const generateJsonSchemaFile = async () => {
         // -p, --path
         path: '../src/models/**/*.ts',
         // -f, --tsconfig
-        tsconfig: path.resolve(__dirname, '../tsconfig.json'),
+        tsconfig: path.resolve(__dirname, './tsconfig.schema.json'),
         // -t, --type
         type: 'LibConfig'
     };
