@@ -5,15 +5,15 @@ import { describe, it } from 'node:test';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
-import { ParsedBuildTaskConfig, getParsedBuildTaskConfig } from '../src/helpers/parsed-build-task-config.js';
+import { ParsedBuildTask, getParsedBuildTask } from '../src/helpers/parsed-build-task.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
-import { WorkspaceInfo } from '../src/helpers/parsed-task-config.js';
-import { BuildTaskConfig, CommandOptions, ProjectConfig } from '../src/models/index.js';
+import { WorkspaceInfo } from '../src/helpers/parsed-task.js';
+import { BuildAndExternalTask, BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
 
 void describe('Helpers', () => {
     void describe('applyEnvOverrides', () => {
-        void it('should override with env', () => {
-            const config: BuildTaskConfig = {
+        void it('should override with env value', () => {
+            const config: BuildTask = {
                 banner: 'b1',
                 clean: false,
                 copy: ['a.txt', 'b.md'],
@@ -28,7 +28,7 @@ void describe('Helpers', () => {
 
             applyEnvOverrides(config, { prod: true });
 
-            const expectedConfig: BuildTaskConfig = {
+            const expectedConfig: BuildTask = {
                 banner: 'b2',
                 clean: true,
                 copy: ['c.md'],
@@ -47,33 +47,42 @@ void describe('Helpers', () => {
 
     void describe('applyProjectExtends', () => {
         void it('should extend', () => {
-            const projects: Record<string, ProjectConfig> = {
+            const projectATasks: BuildAndExternalTask = {
+                build: {
+                    banner: 'a',
+                    clean: true,
+                    copy: ['a.txt', 'b.txt']
+                },
+                lint: {
+                    handler: './handler.mjs'
+                }
+            };
+
+            const projectBTasks: BuildAndExternalTask = {
+                build: {
+                    clean: false,
+                    style: ['a.css']
+                }
+            };
+
+            const projectCTasks: BuildAndExternalTask = {
+                build: {
+                    banner: 'c',
+                    script: ['a.js']
+                }
+            };
+
+            const projects: Record<string, Project> = {
                 a: {
-                    tasks: {
-                        build: {
-                            banner: 'a',
-                            clean: true,
-                            copy: ['a.txt', 'b.txt']
-                        }
-                    }
+                    tasks: projectATasks as Record<string, ExternalTask>
                 },
                 b: {
                     extends: 'a',
-                    tasks: {
-                        build: {
-                            clean: false,
-                            style: ['a.css']
-                        }
-                    }
+                    tasks: projectBTasks as Record<string, ExternalTask>
                 },
                 c: {
                     extends: 'b',
-                    tasks: {
-                        build: {
-                            banner: 'c',
-                            script: ['a.js']
-                        }
-                    }
+                    tasks: projectCTasks as Record<string, ExternalTask>
                 }
             };
 
@@ -90,6 +99,9 @@ void describe('Helpers', () => {
                         copy: ['a.txt', 'b.txt'],
                         style: ['a.css'],
                         script: ['a.js']
+                    },
+                    lint: {
+                        handler: './handler.mjs'
                     }
                 }
             };
@@ -98,34 +110,18 @@ void describe('Helpers', () => {
         });
 
         void it('should throw if cross extends found', () => {
-            const projects: Record<string, ProjectConfig> = {
+            const projects: Record<string, Project> = {
                 a: {
                     extends: 'c',
-                    tasks: {
-                        build: {
-                            banner: 'a',
-                            clean: true,
-                            copy: ['a.txt', 'b.txt']
-                        }
-                    }
+                    tasks: {}
                 },
                 b: {
                     extends: 'a',
-                    tasks: {
-                        build: {
-                            clean: false,
-                            style: ['a.css']
-                        }
-                    }
+                    tasks: {}
                 },
                 c: {
                     extends: 'b',
-                    tasks: {
-                        build: {
-                            banner: 'c',
-                            script: ['a.js']
-                        }
-                    }
+                    tasks: {}
                 }
             };
 
@@ -137,24 +133,13 @@ void describe('Helpers', () => {
         });
 
         void it('should throw if no base project to extend', () => {
-            const projects: Record<string, ProjectConfig> = {
+            const projects: Record<string, Project> = {
                 a: {
-                    tasks: {
-                        build: {
-                            banner: 'a',
-                            clean: true,
-                            copy: ['a.txt', 'b.txt']
-                        }
-                    }
+                    tasks: {}
                 },
                 b: {
                     extends: 'c',
-                    tasks: {
-                        build: {
-                            clean: false,
-                            style: ['a.css']
-                        }
-                    }
+                    tasks: {}
                 }
             };
 
@@ -172,7 +157,7 @@ void describe('Helpers', () => {
             const cmdOptions: CommandOptions = {
                 packageVersion: '1.0.0',
                 workspace: '../notfound',
-                outputPath: 'dist',
+                outDir: 'dist',
                 env: 'prod,ci',
                 project: 'a,b,c',
                 copy: 'a.txt,**/*.md',
@@ -187,7 +172,7 @@ void describe('Helpers', () => {
                 ...cmdOptions,
                 _configPath: null,
                 _workspaceRoot: path.resolve(process.cwd(), '../notfound'),
-                _outputPath: path.resolve(process.cwd(), '../notfound/dist'),
+                _outDir: path.resolve(process.cwd(), '../notfound/dist'),
                 _env: { prod: true, ci: true },
                 _projects: ['a', 'b', 'c'],
                 _copyEntries: ['a.txt', '**/*.md'],
@@ -200,9 +185,9 @@ void describe('Helpers', () => {
     });
 
     void describe('getParsedBuildTaskConfig', () => {
-        void it('should parse build task config', () => {
-            const config: BuildTaskConfig = {
-                outputPath: 'out',
+        void it('should parse build task config', async () => {
+            const buildTask: BuildTask = {
+                outDir: 'out',
                 clean: true,
                 script: ['a.js', 'b.ts']
             };
@@ -211,7 +196,7 @@ void describe('Helpers', () => {
                 _env: {},
                 _configPath: null,
                 _workspaceRoot: null,
-                _outputPath: null,
+                _outDir: null,
                 _projects: [],
                 _copyEntries: [],
                 _scriptEntries: [],
@@ -225,15 +210,16 @@ void describe('Helpers', () => {
                 configPath: null
             };
 
-            const result = getParsedBuildTaskConfig(config, workspaceInfo, cmdOptions, null);
-            const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildTaskConfig;
+            const result = await getParsedBuildTask(buildTask, workspaceInfo, cmdOptions, null);
+            const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildTask;
 
-            const expected: ParsedBuildTaskConfig = {
-                ...config,
-                taskName: 'build',
-                workspaceInfo,
-                packageJsonInfo: null,
-                _outputPath: path.resolve(process.cwd(), 'out')
+            const expected: ParsedBuildTask = {
+                ...buildTask,
+                _handleTask: null,
+                _taskName: 'build',
+                _workspaceInfo: workspaceInfo,
+                _packageJsonInfo: null,
+                _outDir: path.resolve(process.cwd(), 'out')
             };
 
             assert.deepStrictEqual(actual, expected);
