@@ -1,5 +1,4 @@
-import { OverridableTask } from './overridable-task.js';
-import { Task } from './task.js';
+import { OverridableTaskOptions, Task } from './task.js';
 
 /**
  * @additionalProperties false
@@ -22,7 +21,7 @@ export interface BeforeBuildCleanOptions {
 /**
  * @additionalProperties false
  */
-export interface AfterEmitCleanOptions {
+export interface AfterBuildCleanOptions {
     /**
      * File or directory paths to delete after build emit assets.
      */
@@ -44,7 +43,7 @@ export interface CleanOptions {
     /**
      * Clean options after emit.
      */
-    afterEmit?: AfterEmitCleanOptions;
+    afterBuild?: AfterBuildCleanOptions;
     /**
      * If true, allow cleaning outside of the output directory.
      */
@@ -234,11 +233,11 @@ export interface PackageJsonOptions {
 /**
  * @additionalProperties false
  */
-export interface BuildTaskOptions {
+export interface BuildTaskOptions extends Task {
     /**
      * The output directory for build results.
      */
-    outputPath?: string;
+    outDir?: string;
     /**
      * Banner text to add at the top of each generated files. It can be file path or raw text.
      */
@@ -269,9 +268,4 @@ export interface BuildTaskOptions {
  * The build task.
  * @additionalProperties false
  */
-export interface BuildTask extends BuildTaskOptions, OverridableTask<BuildTaskOptions>, Task {
-    /**
-     * To override properties based on build environment.
-     */
-    envOverrides?: Record<string, Partial<BuildTaskOptions>>;
-}
+export interface BuildTask extends OverridableTaskOptions<BuildTaskOptions>, BuildTaskOptions {}

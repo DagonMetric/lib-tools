@@ -11,3 +11,10 @@ export interface Task {
      */
     skip?: boolean;
 }
+
+export interface OverridableTaskOptions<TTaskOptions extends Task> {
+    /**
+     * To override task options based on env value passed in command line.
+     */
+    envOverrides?: Record<string, Partial<TTaskOptions>>;
+}

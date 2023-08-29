@@ -1,5 +1,10 @@
 import { BuildTask } from './build-task.js';
-import { Task } from './task.js';
+import { ExternalTask } from './external-task.js';
+
+export interface BuildAndExternalTask {
+    [key: string]: BuildTask | ExternalTask | undefined;
+    build?: BuildTask;
+}
 
 /**
  * @additionalProperties false
@@ -19,10 +24,6 @@ export interface Project {
      * The task configurations.
      */
     tasks?: {
-        [key: string]: Task | undefined;
-        /**
-         * Build task configuration.
-         */
-        build?: BuildTask;
+        [Property in keyof BuildAndExternalTask]: Property extends 'build' ? BuildTask : ExternalTask;
     };
 }
