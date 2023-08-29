@@ -1,7 +1,7 @@
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { runBuildTask } from '../../handlers/build/index.js';
-import { ParsedBuildTaskConfig, getTasks } from '../../helpers/index.js';
+import { ParsedBuildTask, getTasks } from '../../helpers/index.js';
 import { CommandOptions } from '../../models/index.js';
 import { Logger, colors } from '../../utils/index.js';
 
@@ -35,14 +35,14 @@ export function builder(argv: Argv): Argv<CommandOptions> {
 
             // Buuild task options
             .group(
-                ['env', 'outputPath', 'clean', 'copy', 'style', 'script', 'packageVersion'],
+                ['env', 'outDir', 'clean', 'copy', 'style', 'script', 'packageVersion'],
                 colors.cyan('Build task options:')
             )
             .option('env', {
                 describe: 'Set env name to override the build task configuration with `envOverrides[name]` options.',
                 type: 'string'
             })
-            .option('outputPath', {
+            .option('outDir', {
                 describe: 'Set output directory for build results',
                 type: 'string'
             })
@@ -82,8 +82,7 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
         return;
     }
 
-    const allTasks = await getTasks(argv);
-    const tasks = allTasks.filter((t) => !t.skip && t.taskName === taskName);
+    const tasks = await getTasks(argv, taskName);
 
     const logger = new Logger({
         logLevel: argv.logLevel ?? 'info',
@@ -101,11 +100,20 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
     }
 
     for (const task of tasks) {
-        logger.info(`Running [${task.taskName}] task`);
-        if (taskName === 'build') {
-            await runBuildTask(task as ParsedBuildTaskConfig, logger);
+        const taskPath = `[${task._workspaceInfo.projectName ?? '0'}.${task._taskName}]`;
+
+        if (taskName === 'build' && !task._handleTask) {
+            logger.info(`Running ${taskPath} task...`);
+            await runBuildTask(task as ParsedBuildTask, logger);
+        } else {
+            if (!task._handleTask) {
+                logger.warn(`No handler found for ${taskPath} task.`);
+                continue;
+            }
+            logger.info(`Running ${taskPath} task...`);
+            await task._handleTask(task, logger);
         }
-        // TODO:
-        logger.info(`Running [${task.taskName}] task completed`);
+
+        logger.info(`Running ${taskPath} task completed.`);
     }
 }
