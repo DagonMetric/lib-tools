@@ -255,13 +255,16 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                     continue;
                 }
 
+                if (!task.skip) {
+                    applyEnvOverrides(task, parsedCmdOptions._env);
+                }
+
                 if (taskName === 'build') {
                     const buildTask = task as BuildTask;
 
                     let packageJsonInfo: PackageJsonInfo | null = null;
 
                     if (!buildTask.skip) {
-                        applyEnvOverrides(buildTask, parsedCmdOptions._env);
                         packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
                     }
 
