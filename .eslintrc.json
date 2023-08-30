@@ -208,12 +208,6 @@
         "@typescript-eslint/no-unsafe-argument": "off",
         "@typescript-eslint/no-unsafe-call": "off"
       }
-    },
-    {
-      "files": ["tests/test-data/**/*"],
-      "rules": {
-        "no-console": ["off"]
-      }
     }
   ]
 }
