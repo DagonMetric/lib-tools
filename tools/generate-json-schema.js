@@ -7,6 +7,8 @@ import * as tsj from 'ts-json-schema-generator';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const schemaOutputFilePath = path.resolve(__dirname, '../dist/schemas/schema.json');
+
 const generateJsonSchemaFile = async () => {
     const config = {
         // -i, --id
@@ -20,9 +22,24 @@ const generateJsonSchemaFile = async () => {
     };
 
     const schema = tsj.createGenerator(config).createSchema(config.type);
+
+    // Patch
+    if (schema.definitions) {
+        const buildTaskDef = schema.definitions.BuildTask;
+        if (buildTaskDef) {
+            buildTaskDef.anyOf = [
+                {
+                    required: ['clean', 'copy', 'script', 'style']
+                },
+                { required: ['script'] },
+                { required: ['style'] },
+                { required: ['copy'] },
+                { required: ['clean'] }
+            ];
+        }
+    }
     const schemaString = JSON.stringify(schema, null, 2);
 
-    const schemaOutputFilePath = path.resolve(__dirname, '../dist/schemas/schema.json');
     const schemaOutputDir = path.dirname(schemaOutputFilePath);
 
     try {
