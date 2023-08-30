@@ -86,8 +86,6 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
 
     const logger = new Logger({
         logLevel: argv.logLevel ?? 'info',
-        debugPrefix: 'Debug:',
-        infoPrefix: 'Info:',
         warnPrefix: 'Warning:',
         errorPrefix: 'Error:'
     });
@@ -112,7 +110,10 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
             }
 
             logger.info(`Executing ${taskPath} task...`);
-            await task._handleTaskFn(task, logger);
+            const result = task._handleTaskFn(task, logger);
+            if (result && result instanceof Promise) {
+                await result;
+            }
         }
 
         logger.info(`Executing ${taskPath} task completed.`);
