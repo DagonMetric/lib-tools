@@ -16,29 +16,11 @@ export interface WorkspaceInfo {
 export interface ParsedTask extends Task {
     readonly _taskName: string;
     readonly _workspaceInfo: WorkspaceInfo;
-    readonly _handleTask: TaskHandlerFn | null;
+    readonly _handleTaskFn: TaskHandlerFn | null;
 }
 
-export class ParsedTaskImpl implements ParsedTask {
-    readonly _taskName: string;
-    readonly _workspaceInfo: WorkspaceInfo;
-    readonly _handleTask: TaskHandlerFn | null;
-
-    constructor(taskName: string, task: Task, workspaceInfo: WorkspaceInfo, handleTask: TaskHandlerFn | null) {
-        Object.assign(this, task);
-
-        this._taskName = taskName;
-        this._workspaceInfo = workspaceInfo;
-        this._handleTask = handleTask;
-    }
-}
-
-export async function getParsedTask(
-    taskName: string,
-    task: Task,
-    workspaceInfo: WorkspaceInfo
-): Promise<ParsedTaskImpl> {
-    let taskHandler: TaskHandlerFn | null = null;
+export async function getParsedTask(taskName: string, task: Task, workspaceInfo: WorkspaceInfo): Promise<ParsedTask> {
+    let taskHandlerFn: TaskHandlerFn | null = null;
 
     if (task.handler?.trim().length) {
         const projectRoot = workspaceInfo.projectRoot;
@@ -60,10 +42,14 @@ export async function getParsedTask(
             }
         }
 
-        taskHandler = nameTaskHander ?? defaultTaskHander;
+        taskHandlerFn = nameTaskHander ?? defaultTaskHander;
     }
 
-    const parsedTask = new ParsedTaskImpl(taskName, task, workspaceInfo, taskHandler);
+    const parsedTask: ParsedTask = {
+        _taskName: taskName,
+        _workspaceInfo: workspaceInfo,
+        _handleTaskFn: taskHandlerFn
+    };
 
     return parsedTask;
 }

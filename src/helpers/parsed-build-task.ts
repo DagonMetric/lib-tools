@@ -5,7 +5,7 @@ import { BuildTask } from '../models/index.js';
 import { isInFolder } from '../utils/index.js';
 
 import { ParsedCommandOptions } from './parsed-command-options.js';
-import { ParsedTask, ParsedTaskImpl, TaskHandlerFn, WorkspaceInfo, getParsedTask } from './parsed-task.js';
+import { ParsedTask, WorkspaceInfo, getParsedTask } from './parsed-task.js';
 
 export interface PackageJsonInfo {
     readonly packageJson: Record<string, unknown>;
@@ -21,34 +21,7 @@ export interface PackageJsonInfo {
 
 export interface ParsedBuildTask extends BuildTask, ParsedTask {
     readonly _packageJsonInfo: PackageJsonInfo | null;
-    _outDir: string;
-}
-
-export class ParsedBuildTaskImpl extends ParsedTaskImpl implements ParsedBuildTask {
-    readonly _packageJsonInfo: PackageJsonInfo | null;
     readonly _outDir: string;
-
-    constructor(
-        buildTask: BuildTask,
-        workspaceInfo: WorkspaceInfo,
-        cmdOptions: ParsedCommandOptions,
-        packageJsonInfo: PackageJsonInfo | null,
-        taskHandler: TaskHandlerFn | null
-    ) {
-        super('build', buildTask, workspaceInfo, taskHandler);
-
-        Object.assign(this, buildTask);
-
-        this._packageJsonInfo = packageJsonInfo;
-
-        const projectRoot = this._workspaceInfo.projectRoot;
-
-        this._outDir = buildTask.outDir
-            ? path.resolve(projectRoot, buildTask.outDir)
-            : cmdOptions._outDir
-            ? cmdOptions._outDir
-            : path.resolve(projectRoot, 'dist');
-    }
 }
 
 function validateConfig(config: ParsedBuildTask): void {
@@ -87,15 +60,23 @@ export async function getParsedBuildTask(
     cmdOptions: ParsedCommandOptions,
     packageJsonInfo: PackageJsonInfo | null
 ): Promise<ParsedBuildTask> {
-    const parsedTask = await getParsedTask('build', buildTask, workspaceInfo);
+    const { _handleTaskFn } = await getParsedTask('build', buildTask, workspaceInfo);
 
-    const parsedBuildTask = new ParsedBuildTaskImpl(
-        buildTask,
-        workspaceInfo,
-        cmdOptions,
-        packageJsonInfo,
-        parsedTask._handleTask
-    );
+    const projectRoot = workspaceInfo.projectRoot;
+    const outDir = buildTask.outDir
+        ? path.resolve(projectRoot, buildTask.outDir)
+        : cmdOptions._outDir
+        ? cmdOptions._outDir
+        : path.resolve(projectRoot, 'dist');
+
+    const parsedBuildTask: ParsedBuildTask = {
+        _taskName: 'build',
+        _workspaceInfo: workspaceInfo,
+        _packageJsonInfo: packageJsonInfo,
+        _outDir: outDir,
+        _handleTaskFn,
+        ...buildTask
+    };
 
     validateConfig(parsedBuildTask);
 
