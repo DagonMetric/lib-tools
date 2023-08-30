@@ -1,12 +1,8 @@
 import { BuildTask } from './build-task.js';
 import { ExternalTask } from './external-task.js';
 
-export interface BuildAndExternalTask {
-    [key: string]: BuildTask | ExternalTask | undefined;
-    build?: BuildTask;
-}
-
 /**
+ * Project configuration options.
  * @additionalProperties false
  */
 export interface Project {
@@ -14,16 +10,19 @@ export interface Project {
      * Base project name to inherit from.
      */
     extends?: string;
-
     /**
-     * Root folder of the project files.
+     * Root directory of this project.
      */
     root?: string;
-
     /**
-     * The task configurations.
+     * Task configurations.
      */
-    tasks?: {
-        [Property in keyof BuildAndExternalTask]: Property extends 'build' ? BuildTask : ExternalTask;
+    tasks: {
+        [Property in keyof Record<string, ExternalTask> as Exclude<Property, 'build'>]: ExternalTask;
+    } & {
+        /**
+         * Build task configuration.
+         */
+        build?: BuildTask;
     };
 }
