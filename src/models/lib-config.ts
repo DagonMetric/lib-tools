@@ -1,17 +1,15 @@
 import { Project } from './project.js';
 
 /**
- * The library workflow configuration.
- * @additionalProperties true
+ * Library workflow configuration.
  */
 export interface LibConfig {
     /**
-     * Link to schema.
+     * Link to schema file.
      */
     $schema?: string;
-
     /**
-     * The project configurations.
+     * Project configurations.
      */
     projects: Record<string, Project>;
 }
