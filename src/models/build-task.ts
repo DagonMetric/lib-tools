@@ -1,39 +1,40 @@
 import { OverridableTaskOptions, Task } from './task.js';
 
 /**
- * @additionalProperties false
+ * Before build clean options.
  */
 export interface BeforeBuildCleanOptions {
     /**
-     * If true, delete output directory before build. Default is `true`.
+     * If true, delete output directory before build task run.
      */
     cleanOutDir?: boolean;
     /**
-     * Custom file or directory paths to delete.
+     * Extra custom file or directory paths to delete.
      */
     paths?: string[];
     /**
-     * Exclude list of minimatch patterns.
+     * List of minimatch patterns to exclude from clean.
      */
     exclude?: string[];
 }
 
 /**
+ * After build clean options.
  * @additionalProperties false
  */
 export interface AfterBuildCleanOptions {
     /**
-     * File or directory paths to delete after build emit assets.
+     * File or directory paths to delete after build task run.
      */
-    paths?: string[];
+    paths: string[];
     /**
-     * Exclude list of minimatch patterns.
+     * List of minimatch patterns to exclude from clean.
      */
     exclude?: string[];
 }
 
 /**
- * @additionalProperties false
+ * Clean options.
  */
 export interface CleanOptions {
     /**
@@ -41,33 +42,34 @@ export interface CleanOptions {
      */
     beforeBuild?: BeforeBuildCleanOptions;
     /**
-     * Clean options after emit.
+     * Clean options after build task run.
      */
     afterBuild?: AfterBuildCleanOptions;
     /**
-     * If true, allow cleaning outside of the output directory.
+     * If true, allow cleaning outside of the output directory. Default is 'false'.
      */
     allowOutsideOutDir?: boolean;
     /**
-     * If true, allow cleaning outside of the workspace root directory.
+     * If true, allow cleaning outside of the workspace root directory. Default is 'false'.
      */
     allowOutsideWorkspaceRoot?: boolean;
 }
 
 /**
+ * Copy options.
  * @additionalProperties false
  */
 export interface CopyEntry {
     /**
-     * The source file, folder path or minimatch pattern.
+     * Source file, directory or minimatch pattern to copy from.
      */
     from: string;
     /**
-     * Custom output file or folder name.
+     * Custom output file or directory name.
      */
     to?: string;
     /**
-     * Exclude list of minimatch patterns.
+     * List of minimatch patterns to exclude from copy.
      */
     exclude?: string[];
 }
@@ -111,9 +113,9 @@ export interface StyleBundleEntry {
  */
 export interface StyleOptions {
     /**
-     * List of style compilation / bundel entries.
+     * List of style compilation / bundle entries.
      */
-    bundles?: StyleBundleEntry[];
+    bundles: StyleBundleEntry[];
     /**
      * Default sourceMap option to all entries. If true, enable the outputing of sourcemap. Default is `true`.
      */
@@ -179,7 +181,7 @@ export interface ScriptBundleEntry {
 }
 
 /**
- * @additionalProperties false
+ * Script options.
  */
 export interface ScriptOptions {
     /**
@@ -217,31 +219,25 @@ export interface ScriptOptions {
 }
 
 /**
+ * Options for package.json file.
  * @additionalProperties false
  */
 export interface PackageJsonOptions {
     /**
      * Boolean value whether to update package.json file fields with generated build assets.
      */
-    updateFields?: boolean;
+    updateFields: boolean;
     /**
      * Array of field names to be removed from package.json file.
      */
     removeFields?: string[];
 }
 
-/**
- * @additionalProperties false
- */
 export interface BuildTaskOptions extends Task {
     /**
      * The output directory for build results.
      */
     outDir?: string;
-    /**
-     * Banner text to add at the top of each generated files. It can be file path or raw text.
-     */
-    banner?: string;
     /**
      * Clean options for deleting build output files and directories.
      */
@@ -259,13 +255,16 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
+     * Banner text to add at the top of each generated files. It can be file path or raw text.
+     */
+    banner?: string;
+    /**
      * Options for updating package.json file.
      */
     packageJson?: PackageJsonOptions | boolean;
 }
 
 /**
- * The build task.
- * @additionalProperties false
+ * Build task options.
  */
-export interface BuildTask extends OverridableTaskOptions<BuildTaskOptions>, BuildTaskOptions {}
+export interface BuildTask extends BuildTaskOptions, OverridableTaskOptions<BuildTaskOptions> {}

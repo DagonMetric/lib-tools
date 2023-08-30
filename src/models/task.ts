@@ -1,13 +1,10 @@
-/**
- * @additionalProperties false
- */
 export interface Task {
     /**
-     * Handler module to run this task.
+     * Handler script or module to run this task.
      */
     handler?: string;
     /**
-     * If true, this task will be ignore.
+     * If true, this task will be ignored to run.
      */
     skip?: boolean;
 }

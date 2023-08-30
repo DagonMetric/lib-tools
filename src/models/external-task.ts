@@ -5,7 +5,7 @@ import { OverridableTaskOptions, Task } from './task.js';
  */
 export interface ExternalTask extends OverridableTaskOptions<Task>, Task {
     /**
-     * Handler module to run this task.
+     * Handler script or module to run this task.
      */
     handler: string;
 }
