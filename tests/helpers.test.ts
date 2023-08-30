@@ -8,7 +8,7 @@ import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
 import { ParsedBuildTask, getParsedBuildTask } from '../src/helpers/parsed-build-task.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
 import { WorkspaceInfo } from '../src/helpers/parsed-task.js';
-import { BuildAndExternalTask, BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
+import { BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
 
 void describe('Helpers', () => {
     void describe('applyEnvOverrides', () => {
@@ -47,7 +47,7 @@ void describe('Helpers', () => {
 
     void describe('applyProjectExtends', () => {
         void it('should extend', () => {
-            const projectATasks: BuildAndExternalTask = {
+            const projectATasks = {
                 build: {
                     banner: 'a',
                     clean: true,
@@ -58,14 +58,14 @@ void describe('Helpers', () => {
                 }
             };
 
-            const projectBTasks: BuildAndExternalTask = {
+            const projectBTasks = {
                 build: {
                     clean: false,
                     style: ['a.css']
                 }
             };
 
-            const projectCTasks: BuildAndExternalTask = {
+            const projectCTasks = {
                 build: {
                     banner: 'c',
                     script: ['a.js']
@@ -74,15 +74,15 @@ void describe('Helpers', () => {
 
             const projects: Record<string, Project> = {
                 a: {
-                    tasks: projectATasks as Record<string, ExternalTask>
+                    tasks: projectATasks as unknown as Record<string, ExternalTask>
                 },
                 b: {
                     extends: 'a',
-                    tasks: projectBTasks as Record<string, ExternalTask>
+                    tasks: projectBTasks as unknown as Record<string, ExternalTask>
                 },
                 c: {
                     extends: 'b',
-                    tasks: projectCTasks as Record<string, ExternalTask>
+                    tasks: projectCTasks as unknown as Record<string, ExternalTask>
                 }
             };
 
@@ -215,7 +215,7 @@ void describe('Helpers', () => {
 
             const expected: ParsedBuildTask = {
                 ...buildTask,
-                _handleTask: null,
+                _handleTaskFn: null,
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,

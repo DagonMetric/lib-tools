@@ -21,20 +21,32 @@ const runCli = async (args: string) => {
 };
 
 void describe('CLI', () => {
-    void it(`should show help if '--help' option is passed`, async () => {
-        const result = await runCli('--help');
-        const expected = 'Show help';
-        assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
+    void describe('lib --help', () => {
+        void it(`should show help if '--help' option is passed`, async () => {
+            const result = await runCli('--help');
+            const expected = 'Show help';
+            assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
+        });
     });
 
-    void it(`should show version if '--version' option is passed`, async () => {
-        const result = await runCli('--version');
-        assert.strictEqual(result, packageVersion);
+    void describe('lib --version', () => {
+        void it(`should show version if '--version' option is passed`, async () => {
+            const result = await runCli('--version');
+            assert.strictEqual(result, packageVersion);
+        });
     });
 
-    void it('should show warning message if no build task is found', async () => {
-        const result = await runCli('build --workspace=../notfound/dist');
-        const expected = `Warning: No active task found for 'build'.`;
-        assert.strictEqual(result, expected);
+    void describe('lib run <task>', () => {
+        void it('should show Hello! message when run hello task', async () => {
+            const result = await runCli('run hello --workspace=./tests/test-data/libconfig.json --logLevel=warn');
+            const expected = `Hello!`;
+            assert.strictEqual(result, expected);
+        });
+
+        void it('should show warning message if no active task is found', async () => {
+            const result = await runCli('run build --workspace=../notexist --logLevel=warn');
+            const expected = `Warning: No active task found for 'build'.`;
+            assert.strictEqual(result, expected);
+        });
     });
 });

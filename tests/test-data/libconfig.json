@@ -1,0 +1,13 @@
+{
+  "$schema": "../../dist/schemas/schema.json",
+  "projects": {
+    "test-project": {
+      "root": ".",
+      "tasks": {
+        "hello": {
+          "handler": "./tasks.mjs"
+        }
+      }
+    }
+  }
+}
