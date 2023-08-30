@@ -38,9 +38,9 @@ void describe('CLI', () => {
 
     void describe('lib run <task>', () => {
         void it('should show Hello! message when run hello task', async () => {
-            const result = await runCli('run hello --workspace=./tests/test-data/libconfig.json --logLevel=warn');
+            const result = await runCli('run hello --workspace=./tests/test-data/libconfig.json --logLevel=info');
             const expected = `Hello!`;
-            assert.strictEqual(result, expected);
+            assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
         });
 
         void it('should show warning message if no active task is found', async () => {

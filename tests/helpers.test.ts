@@ -7,12 +7,12 @@ import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
 import { ParsedBuildTask, getParsedBuildTask } from '../src/helpers/parsed-build-task.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
-import { WorkspaceInfo } from '../src/helpers/parsed-task.js';
-import { BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
+import { WorkspaceInfo, getParsedTask } from '../src/helpers/parsed-task.js';
+import { BuildTask, CommandOptions, ExternalTask, Project, Task } from '../src/models/index.js';
 
 void describe('Helpers', () => {
     void describe('applyEnvOverrides', () => {
-        void it('should override with env value', () => {
+        void it('should override with env value to build task', () => {
             const config: BuildTask = {
                 banner: 'b1',
                 clean: false,
@@ -43,6 +43,33 @@ void describe('Helpers', () => {
 
             assert.deepStrictEqual(config, expectedConfig);
         });
+
+        void it('should override with env value to external task', () => {
+            const config: ExternalTask = {
+                handler: 'a.js',
+                envOverrides: {
+                    prod: {
+                        handler: 'b.js',
+                        skip: true
+                    }
+                }
+            };
+
+            applyEnvOverrides(config, { prod: true });
+
+            const expectedConfig: BuildTask = {
+                handler: 'b.js',
+                skip: true,
+                envOverrides: {
+                    prod: {
+                        handler: 'b.js',
+                        skip: true
+                    }
+                }
+            };
+
+            assert.deepStrictEqual(config, expectedConfig);
+        });
     });
 
     void describe('applyProjectExtends', () => {
@@ -62,6 +89,9 @@ void describe('Helpers', () => {
                 build: {
                     clean: false,
                     style: ['a.css']
+                },
+                test: {
+                    handler: './handler.mjs'
                 }
             };
 
@@ -101,6 +131,9 @@ void describe('Helpers', () => {
                         script: ['a.js']
                     },
                     lint: {
+                        handler: './handler.mjs'
+                    },
+                    test: {
                         handler: './handler.mjs'
                     }
                 }
@@ -152,27 +185,27 @@ void describe('Helpers', () => {
         });
     });
 
-    void describe('getParsedBuildCommandOptions', () => {
+    void describe('getParsedCommandOptions', () => {
         void it('should parse command options', () => {
             const cmdOptions: CommandOptions = {
-                packageVersion: '1.0.0',
-                workspace: '../notfound',
-                outDir: 'dist',
-                env: 'prod,ci',
+                workspace: '../notexist/libconfig.json',
                 project: 'a,b,c',
+                env: 'prod,ci',
+                outDir: 'dist',
+                clean: true,
                 copy: 'a.txt,**/*.md',
                 style: 'a.css,b.scss',
-                script: 'a.js,b.ts'
+                script: 'a.js,b.ts',
+                packageVersion: '1.0.0'
             };
 
             const result = getParsedCommandOptions(cmdOptions);
-            const actual = JSON.parse(JSON.stringify(result)) as ParsedCommandOptions;
 
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
-                _configPath: null,
-                _workspaceRoot: path.resolve(process.cwd(), '../notfound'),
-                _outDir: path.resolve(process.cwd(), '../notfound/dist'),
+                _configPath: path.resolve(process.cwd(), '../notexist/libconfig.json'),
+                _workspaceRoot: path.resolve(process.cwd(), '../notexist'),
+                _outDir: path.resolve(process.cwd(), '../notexist/dist'),
                 _env: { prod: true, ci: true },
                 _projects: ['a', 'b', 'c'],
                 _copyEntries: ['a.txt', '**/*.md'],
@@ -180,11 +213,35 @@ void describe('Helpers', () => {
                 _scriptEntries: ['a.js', 'b.ts']
             };
 
-            assert.deepStrictEqual(actual, expected);
+            assert.deepStrictEqual(result, expected);
         });
     });
 
-    void describe('getParsedBuildTaskConfig', () => {
+    void describe('getParsedTask', () => {
+        void it('should parse task config', async () => {
+            const task: Task = {
+                handler: 'tasks.mjs',
+                skip: true
+            };
+
+            const workspaceInfo: WorkspaceInfo = {
+                workspaceRoot: process.cwd(),
+                projectRoot: path.resolve(process.cwd(), 'tests/test-data'),
+                projectName: 'test-project',
+                configPath: null
+            };
+
+            const result = await getParsedTask('hello', task, workspaceInfo);
+
+            assert.equal(result.handler, task.handler);
+            assert.equal(result.skip, task.skip);
+            assert.equal(result._taskName, 'hello');
+            assert.deepStrictEqual(result._workspaceInfo, workspaceInfo);
+            assert.equal(typeof result._handleTaskFn, 'function');
+        });
+    });
+
+    void describe('getParsedBuildTask', () => {
         void it('should parse build task config', async () => {
             const buildTask: BuildTask = {
                 outDir: 'out',
@@ -192,26 +249,14 @@ void describe('Helpers', () => {
                 script: ['a.js', 'b.ts']
             };
 
-            const cmdOptions: ParsedCommandOptions = {
-                _env: {},
-                _configPath: null,
-                _workspaceRoot: null,
-                _outDir: null,
-                _projects: [],
-                _copyEntries: [],
-                _scriptEntries: [],
-                _styleEntries: []
-            };
-
             const workspaceInfo: WorkspaceInfo = {
                 workspaceRoot: process.cwd(),
                 projectRoot: process.cwd(),
-                projectName: null,
+                projectName: 'test-project',
                 configPath: null
             };
 
-            const result = await getParsedBuildTask(buildTask, workspaceInfo, cmdOptions, null);
-            const actual = JSON.parse(JSON.stringify(result)) as ParsedBuildTask;
+            const result = await getParsedBuildTask(buildTask, workspaceInfo, null, null);
 
             const expected: ParsedBuildTask = {
                 ...buildTask,
@@ -222,7 +267,36 @@ void describe('Helpers', () => {
                 _outDir: path.resolve(process.cwd(), 'out')
             };
 
-            assert.deepStrictEqual(actual, expected);
+            assert.deepStrictEqual(result, expected);
+        });
+
+        void it('should parse build task config with cmd options outDir', async () => {
+            const buildTask: BuildTask = {
+                clean: true,
+                script: ['a.js', 'b.ts']
+            };
+
+            const workspaceInfo: WorkspaceInfo = {
+                workspaceRoot: process.cwd(),
+                projectRoot: process.cwd(),
+                projectName: 'test-project',
+                configPath: null
+            };
+
+            const cmdOptionsOutDir = path.resolve(process.cwd(), 'dist');
+
+            const result = await getParsedBuildTask(buildTask, workspaceInfo, null, cmdOptionsOutDir);
+
+            const expected: ParsedBuildTask = {
+                ...buildTask,
+                _handleTaskFn: null,
+                _taskName: 'build',
+                _workspaceInfo: workspaceInfo,
+                _packageJsonInfo: null,
+                _outDir: cmdOptionsOutDir
+            };
+
+            assert.deepStrictEqual(result, expected);
         });
     });
 });
