@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { Task } from '../models/index.js';
 import { Logger } from '../utils/index.js';
 
-export type TaskHandlerFn = (taskOptions?: ParsedTask, logger?: Logger) => Promise<void>;
+export type TaskHandlerFn = (taskOptions?: ParsedTask, logger?: Logger) => Promise<void> | void;
 
 export interface WorkspaceInfo {
     readonly workspaceRoot: string;
@@ -46,6 +46,7 @@ export async function getParsedTask(taskName: string, task: Task, workspaceInfo:
     }
 
     const parsedTask: ParsedTask = {
+        ...task,
         _taskName: taskName,
         _workspaceInfo: workspaceInfo,
         _handleTaskFn: taskHandlerFn

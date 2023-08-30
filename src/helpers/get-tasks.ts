@@ -271,8 +271,8 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                     const parsedBuildTask = await getParsedBuildTask(
                         buildTask,
                         workspaceInfo,
-                        parsedCmdOptions,
-                        packageJsonInfo
+                        packageJsonInfo,
+                        parsedCmdOptions._outDir
                     );
 
                     tasks.push(parsedBuildTask);
@@ -304,8 +304,8 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
             const parsedBuildTask = await getParsedBuildTask(
                 firstBuildTask,
                 workspaceInfo,
-                parsedCmdOptions,
-                packageJsonInfo
+                packageJsonInfo,
+                parsedCmdOptions._outDir
             );
 
             tasks.push(parsedBuildTask);

@@ -4,7 +4,6 @@ import { InvalidConfigError } from '../exceptions/index.js';
 import { BuildTask } from '../models/index.js';
 import { isInFolder } from '../utils/index.js';
 
-import { ParsedCommandOptions } from './parsed-command-options.js';
 import { ParsedTask, WorkspaceInfo, getParsedTask } from './parsed-task.js';
 
 export interface PackageJsonInfo {
@@ -57,16 +56,16 @@ function validateConfig(config: ParsedBuildTask): void {
 export async function getParsedBuildTask(
     buildTask: BuildTask,
     workspaceInfo: WorkspaceInfo,
-    cmdOptions: ParsedCommandOptions,
-    packageJsonInfo: PackageJsonInfo | null
+    packageJsonInfo: PackageJsonInfo | null,
+    cmdOptionsOutDirAbs: string | null
 ): Promise<ParsedBuildTask> {
     const { _handleTaskFn } = await getParsedTask('build', buildTask, workspaceInfo);
 
     const projectRoot = workspaceInfo.projectRoot;
     const outDir = buildTask.outDir
         ? path.resolve(projectRoot, buildTask.outDir)
-        : cmdOptions._outDir
-        ? cmdOptions._outDir
+        : cmdOptionsOutDirAbs
+        ? cmdOptionsOutDirAbs
         : path.resolve(projectRoot, 'dist');
 
     const parsedBuildTask: ParsedBuildTask = {
