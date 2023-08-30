@@ -5,14 +5,14 @@
       "root": ".",
       "tasks": {
         "build": {
-          "outputPath": "dist",
+          "outDir": "dist",
           "copy": ["README.md", "LICENSE"]
         },
         "test": {
-          "skip": true
+          "handler": "exec:glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\""
         },
         "lint": {
-          "skip": true
+          "handler": "exec:eslint"
         }
       }
     }
