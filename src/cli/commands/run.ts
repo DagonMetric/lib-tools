@@ -100,20 +100,21 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
     }
 
     for (const task of tasks) {
-        const taskPath = `[${task._workspaceInfo.projectName ?? '0'}.${task._taskName}]`;
+        const taskPath = `'${task._workspaceInfo.projectName ?? '0'} > ${task._taskName}'`;
 
-        if (taskName === 'build' && !task._handleTask) {
-            logger.info(`Running ${taskPath} task...`);
+        if (taskName === 'build' && !task._handleTaskFn) {
+            logger.info(`Executing ${taskPath} task...`);
             await runBuildTask(task as ParsedBuildTask, logger);
         } else {
-            if (!task._handleTask) {
-                logger.warn(`No handler found for ${taskPath} task.`);
+            if (!task._handleTaskFn) {
+                logger.warn(`No handler module found for ${taskPath} task.`);
                 continue;
             }
-            logger.info(`Running ${taskPath} task...`);
-            await task._handleTask(task, logger);
+
+            logger.info(`Executing ${taskPath} task...`);
+            await task._handleTaskFn(task, logger);
         }
 
-        logger.info(`Running ${taskPath} task completed.`);
+        logger.info(`Executing ${taskPath} task completed.`);
     }
 }
