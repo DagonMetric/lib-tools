@@ -45,7 +45,7 @@
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
   "scripts": {
-    "lint": "eslint . --ext .js,.ts",
+    "lint": "eslint .",
     "compile": "tsc --project tsconfig.build.json",
     "generate-json-schema": "node ./tools/generate-json-schema.js --input-type=module",
     "copy-files": "node ./tools/copy-files.js --input-type=module",
