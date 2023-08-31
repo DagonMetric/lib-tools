@@ -6,6 +6,9 @@
       "tasks": {
         "hello": {
           "handler": "./tasks.mjs"
+        },
+        "echo": {
+          "handler": "exec: echo \"Hello exec!\""
         }
       }
     }

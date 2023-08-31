@@ -43,6 +43,12 @@ void describe('CLI', () => {
             assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
         });
 
+        void it('should show Hello exec! message when run echo task', async () => {
+            const result = await runCli('run echo --workspace=./tests/test-data/libconfig.json --logLevel=info');
+            const expected = `Hello exec!`;
+            assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
+        });
+
         void it('should show warning message if no active task is found', async () => {
             const result = await runCli('run build --workspace=../notexist --logLevel=warn');
             const expected = `Warning: No active task found for 'build'.`;
