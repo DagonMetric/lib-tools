@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { ParsedBuildTask, ParsedTask, getTasks } from '../../helpers/index.js';
@@ -106,10 +107,16 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
         if (task.handler?.trim().length) {
             const handlerStr = task.handler?.trim();
             if (handlerStr.toLocaleLowerCase().startsWith('exec:')) {
-                const execCmd = handlerStr.substring(handlerStr.indexOf(':'));
-                logger.info(`Executing ${taskPath} task command: ${execCmd}`);
-                await exec(execCmd);
-                logger.info(`Executing ${taskPath} task command completed.`);
+                const index = handlerStr.indexOf(':') + 1;
+                if (handlerStr.length > index) {
+                    const execCmd = handlerStr.substring(index).trim();
+                    logger.info(`Executing ${taskPath} task command: ${execCmd}`);
+                    await exec(execCmd);
+                    logger.info(`Executing ${taskPath} task command completed.`);
+                } else {
+                    logger.warn(`No command found for ${taskPath} task.`);
+                    continue;
+                }
             } else {
                 const projectRoot = task._workspaceInfo.projectRoot;
                 const handlerPath = path.isAbsolute(handlerStr)
