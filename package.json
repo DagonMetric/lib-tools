@@ -53,9 +53,10 @@
     "test": "glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\"",
     "lib:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --help",
     "lib:version": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --version",
-    "lib:build": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build",
-    "lib:test": "node --no-warnings --enable-source-maps ./dist/bin/lib.js run test",
-    "lib:run:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js run --help"
+    "lib:hello": "node --no-warnings --enable-source-maps ./dist/bin/lib.js hello --logLevel=info",
+    "lib:lint": "node --no-warnings --enable-source-maps ./dist/bin/lib.js lint --logLevel=info",
+    "lib:test": "node --no-warnings --enable-source-maps ./dist/bin/lib.js test",
+    "lib:build": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build"
   },
   "dependencies": {
     "ajv": "^8.12.0",
