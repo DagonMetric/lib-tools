@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
+import { getTasks } from '../src/helpers/get-tasks.js';
 import { ParsedBuildTask, toParsedBuildTask } from '../src/helpers/parsed-build-task.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
 import { ParsedTask, WorkspaceInfo, toParsedTask } from '../src/helpers/parsed-task.js';
@@ -299,6 +300,44 @@ void describe('Helpers', () => {
             };
 
             assert.deepStrictEqual(result, expected);
+        });
+    });
+
+    void describe('getTasks', () => {
+        void it('should return build task from cmd options', async () => {
+            const cmdOptions: CommandOptions = {
+                workspace: '../notexist',
+                outDir: 'dist',
+                clean: true,
+                copy: 'a.txt,**/*.md',
+                style: 'a.css,b.scss',
+                script: 'a.js,b.ts',
+                packageVersion: '1.0.0'
+            };
+
+            const result = await getTasks(cmdOptions);
+
+            const expected: ParsedBuildTask = {
+                _taskName: 'build',
+                _workspaceInfo: {
+                    workspaceRoot: path.resolve(process.cwd(), '../notexist'),
+                    projectRoot: path.resolve(process.cwd(), '../notexist'),
+                    projectName: null,
+                    configPath: null
+                },
+                _packageJsonInfo: null,
+                _outDir: path.resolve(process.cwd(), '../notexist/dist'),
+                clean: true,
+                copy: ['a.txt', '**/*.md'],
+                style: ['a.css', 'b.scss'],
+                script: ['a.js', 'b.ts'],
+                packageJson: {
+                    packageVersion: '1.0.0'
+                }
+            };
+
+            assert.equal(result.length, 1);
+            assert.deepStrictEqual(result[0], expected);
         });
     });
 });
