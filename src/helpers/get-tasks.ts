@@ -133,6 +133,8 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
         return false;
     }
 
+    let merged = false;
+
     // clean
     if (cmdOptions.clean != null) {
         if (buildTask.clean == null || typeof buildTask.clean === 'boolean') {
@@ -146,6 +148,8 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
                 };
             }
         }
+
+        merged = true;
     }
 
     // copy
@@ -155,6 +159,8 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
         } else {
             buildTask.copy = [...buildTask.copy, ...cmdOptions._copyEntries];
         }
+
+        merged = true;
     }
 
     // styles
@@ -170,6 +176,8 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
                 buildTask.style.bundles = bundleEntries;
             }
         }
+
+        merged = true;
     }
 
     // scripts
@@ -185,9 +193,24 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
                 buildTask.script.bundles = bundleEntries;
             }
         }
+
+        merged = true;
     }
 
-    return true;
+    // package.json
+    if (cmdOptions.packageVersion) {
+        if (!buildTask.packageJson || typeof buildTask.packageJson === 'boolean') {
+            buildTask.packageJson = {
+                packageVersion: cmdOptions.packageVersion
+            };
+            merged = true;
+        } else if (!buildTask.packageJson.packageVersion) {
+            buildTask.packageJson.packageVersion = cmdOptions.packageVersion;
+            merged = true;
+        }
+    }
+
+    return merged;
 }
 
 export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Promise<ParsedTask[]> {
@@ -197,7 +220,6 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
     let configPath = parsedCmdOptions._configPath;
     if (!configPath) {
         const workingDir = parsedCmdOptions._workspaceRoot ?? process.cwd();
-
         configPath = await findUp('libconfig.json', workingDir, path.parse(workingDir).root);
     }
 
@@ -213,9 +235,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         const libConfig = await readLibConfigJsonFile(configPath);
         libConfig.projects = libConfig.projects || {};
 
-        for (const projectName of Object.keys(libConfig.projects)) {
-            const project = libConfig.projects[projectName];
-
+        for (const [projectName, project] of Object.entries(libConfig.projects)) {
             applyProjectExtends(projectName, project, libConfig.projects);
 
             const projectRoot = project.root
@@ -251,23 +271,27 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                     continue;
                 }
 
-                if (!task) {
+                if (task == null || !Object.keys(task).length) {
                     continue;
                 }
 
-                if (!task.skip) {
-                    applyEnvOverrides(task, parsedCmdOptions._env);
+                applyEnvOverrides(task, parsedCmdOptions._env);
+
+                if (task.skip) {
+                    continue;
                 }
 
                 if (taskName === 'build') {
                     const buildTask = task as BuildTask;
 
-                    let packageJsonInfo: PackageJsonInfo | null = null;
+                    const packageVersion =
+                        buildTask.packageJson &&
+                        typeof buildTask.packageJson === 'object' &&
+                        buildTask.packageJson.packageVersion
+                            ? buildTask.packageJson.packageVersion
+                            : parsedCmdOptions.packageVersion;
 
-                    if (!buildTask.skip) {
-                        packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
-                    }
-
+                    const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, packageVersion);
                     const parsedBuildTask = toParsedBuildTask(
                         buildTask,
                         workspaceInfo,
@@ -278,7 +302,6 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                     tasks.push(parsedBuildTask);
                 } else {
                     const parsedTask = toParsedTask(taskName, task, workspaceInfo);
-
                     tasks.push(parsedTask);
                 }
             }
