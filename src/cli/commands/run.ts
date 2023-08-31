@@ -5,7 +5,7 @@ import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { ParsedBuildTask, ParsedTask, getTasks } from '../../helpers/index.js';
 import { CommandOptions } from '../../models/index.js';
-import { Logger, colors, exec } from '../../utils/index.js';
+import { Logger, colors, dashCaseToCamelCase, exec } from '../../utils/index.js';
 
 type TaskHandlerFn = (taskOptions: ParsedTask, logger: Logger) => Promise<void> | void;
 
@@ -125,13 +125,14 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
 
                 const handlerModule = (await import(pathToFileURL(handlerPath).toString())) as {};
 
+                const taskNameCamelCase = dashCaseToCamelCase(task._taskName);
                 let defaultTaskHander: TaskHandlerFn | null = null;
                 let nameTaskHander: TaskHandlerFn | null = null;
 
                 for (const [key, value] of Object.entries(handlerModule)) {
                     if (key === 'default') {
                         defaultTaskHander = value as TaskHandlerFn;
-                    } else if (key === taskName) {
+                    } else if (key === taskNameCamelCase) {
                         nameTaskHander = value as TaskHandlerFn;
                         break;
                     }
