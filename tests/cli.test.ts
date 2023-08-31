@@ -44,7 +44,7 @@ void describe('CLI', () => {
         });
 
         void it('should show Hello exec! message when run echo task', async () => {
-            const result = await runCli('run echo --workspace=./tests/test-data/libconfig.json --logLevel=info');
+            const result = await runCli('run echo --workspace=./tests/test-data/libconfig.json --logLevel=warn');
             const expected = `Hello exec!`;
             assert.match(result, new RegExp(expected), `Should contains '${expected}'`);
         });
