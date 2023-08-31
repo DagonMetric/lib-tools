@@ -1,9 +1,12 @@
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
-import { runBuildTask } from '../../handlers/build/index.js';
-import { ParsedBuildTask, getTasks } from '../../helpers/index.js';
+import { ParsedBuildTask, ParsedTask, getTasks } from '../../helpers/index.js';
 import { CommandOptions } from '../../models/index.js';
-import { Logger, colors } from '../../utils/index.js';
+import { Logger, colors, exec } from '../../utils/index.js';
+
+type TaskHandlerFn = (taskOptions: ParsedTask, logger: Logger) => Promise<void> | void;
 
 export const command = 'run <task> [options..]';
 
@@ -100,22 +103,54 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
     for (const task of tasks) {
         const taskPath = `'${task._workspaceInfo.projectName ?? '0'} > ${task._taskName}'`;
 
-        if (taskName === 'build' && !task._handleTaskFn) {
-            logger.info(`Executing ${taskPath} task...`);
-            await runBuildTask(task as ParsedBuildTask, logger);
+        if (task.handler?.trim().length) {
+            const handlerStr = task.handler?.trim();
+            if (handlerStr.toLocaleLowerCase().startsWith('exec:')) {
+                const execCmd = handlerStr.substring(handlerStr.indexOf(':'));
+                logger.info(`Executing ${taskPath} task command: ${execCmd}`);
+                await exec(execCmd);
+                logger.info(`Executing ${taskPath} task command completed.`);
+            } else {
+                const projectRoot = task._workspaceInfo.projectRoot;
+                const handlerPath = path.isAbsolute(handlerStr)
+                    ? path.resolve(handlerStr)
+                    : path.resolve(projectRoot, handlerStr);
+
+                const handlerModule = (await import(pathToFileURL(handlerPath).toString())) as {};
+
+                let defaultTaskHander: TaskHandlerFn | null = null;
+                let nameTaskHander: TaskHandlerFn | null = null;
+
+                for (const [key, value] of Object.entries(handlerModule)) {
+                    if (key === 'default') {
+                        defaultTaskHander = value as TaskHandlerFn;
+                    } else if (key === taskName) {
+                        nameTaskHander = value as TaskHandlerFn;
+                        break;
+                    }
+                }
+
+                const taskHandlerFn = nameTaskHander ?? defaultTaskHander;
+                if (!taskHandlerFn) {
+                    logger.warn(`No handler found for ${taskPath} task.`);
+                    continue;
+                }
+
+                logger.info(`Executing task: ${taskPath}`);
+                const result = taskHandlerFn(task, logger);
+                if (result && result instanceof Promise) {
+                    await result;
+                }
+                logger.info(`Executing ${taskPath} task completed.`);
+            }
+        } else if (task._taskName === 'build') {
+            const buildHandlerModule = await import('../../handlers/build/index.js');
+            logger.info(`Executing task: ${taskPath}`);
+            await buildHandlerModule.default(task as ParsedBuildTask, logger);
+            logger.info(`Executing ${taskPath} task completed.`);
         } else {
-            if (!task._handleTaskFn) {
-                logger.warn(`No handler module found for ${taskPath} task.`);
-                continue;
-            }
-
-            logger.info(`Executing ${taskPath} task...`);
-            const result = task._handleTaskFn(task, logger);
-            if (result && result instanceof Promise) {
-                await result;
-            }
+            logger.warn(`No handler is defined for ${taskPath} task.`);
+            continue;
         }
-
-        logger.info(`Executing ${taskPath} task completed.`);
     }
 }
