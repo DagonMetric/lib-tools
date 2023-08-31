@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-function normalizePath(p: string): string {
+export function normalizePath(p: string): string {
     if (!p) {
         return '';
     }
