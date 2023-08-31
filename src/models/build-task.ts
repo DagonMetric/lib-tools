@@ -224,9 +224,13 @@ export interface ScriptOptions {
  */
 export interface PackageJsonOptions {
     /**
+     * Set version to override the version field of the package.json file/
+     */
+    packageVersion?: string;
+    /**
      * Boolean value whether to update package.json file fields with generated build assets.
      */
-    updateFields: boolean;
+    updateFields?: boolean;
     /**
      * Array of field names to be removed from package.json file.
      */
