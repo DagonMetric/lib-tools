@@ -308,10 +308,9 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         }
     }
 
-    if (forTask === 'build') {
+    if (!forTask || forTask === 'build') {
         const buildTasks = tasks.filter((t) => t._taskName === 'build');
         const firstBuildTask = buildTasks.length ? (buildTasks[0] as ParsedBuildTask) : {};
-
         const hasCommandOptionsBuildTask = mergeBuildTaskFromCommandOptions(parsedCmdOptions, firstBuildTask);
 
         if (hasCommandOptionsBuildTask && !buildTasks.length) {
