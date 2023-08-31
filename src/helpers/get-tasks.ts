@@ -7,9 +7,9 @@ import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
-import { PackageJsonInfo, ParsedBuildTask, getParsedBuildTask } from './parsed-build-task.js';
+import { PackageJsonInfo, ParsedBuildTask, toParsedBuildTask } from './parsed-build-task.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from './parsed-command-options.js';
-import { ParsedTask, WorkspaceInfo, getParsedTask } from './parsed-task.js';
+import { ParsedTask, WorkspaceInfo, toParsedTask } from './parsed-task.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 
 async function validateCommandOptions(cmdOptions: ParsedCommandOptions): Promise<void> {
@@ -268,7 +268,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                         packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
                     }
 
-                    const parsedBuildTask = await getParsedBuildTask(
+                    const parsedBuildTask = toParsedBuildTask(
                         buildTask,
                         workspaceInfo,
                         packageJsonInfo,
@@ -277,7 +277,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
                     tasks.push(parsedBuildTask);
                 } else {
-                    const parsedTask = await getParsedTask(taskName, task, workspaceInfo);
+                    const parsedTask = toParsedTask(taskName, task, workspaceInfo);
 
                     tasks.push(parsedTask);
                 }
@@ -301,7 +301,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
             const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
 
-            const parsedBuildTask = await getParsedBuildTask(
+            const parsedBuildTask = toParsedBuildTask(
                 firstBuildTask,
                 workspaceInfo,
                 packageJsonInfo,
