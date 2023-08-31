@@ -9,10 +9,13 @@
           "copy": ["README.md", "LICENSE"]
         },
         "test": {
-          "handler": "exec:glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\""
+          "handler": "exec: glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\""
         },
         "lint": {
-          "handler": "exec:eslint"
+          "handler": "exec: eslint ."
+        },
+        "hello": {
+          "handler": "exec: echo \"Hello lib-tools!\""
         }
       }
     }
