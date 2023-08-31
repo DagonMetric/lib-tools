@@ -5,9 +5,9 @@ import { describe, it } from 'node:test';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
-import { ParsedBuildTask, getParsedBuildTask } from '../src/helpers/parsed-build-task.js';
+import { ParsedBuildTask, toParsedBuildTask } from '../src/helpers/parsed-build-task.js';
 import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
-import { WorkspaceInfo, getParsedTask } from '../src/helpers/parsed-task.js';
+import { ParsedTask, WorkspaceInfo, toParsedTask } from '../src/helpers/parsed-task.js';
 import { BuildTask, CommandOptions, ExternalTask, Project, Task } from '../src/models/index.js';
 
 void describe('Helpers', () => {
@@ -218,7 +218,7 @@ void describe('Helpers', () => {
     });
 
     void describe('getParsedTask', () => {
-        void it('should parse task config', async () => {
+        void it('should parse task config', () => {
             const task: Task = {
                 handler: 'tasks.mjs',
                 skip: true
@@ -231,18 +231,22 @@ void describe('Helpers', () => {
                 configPath: null
             };
 
-            const result = await getParsedTask('hello', task, workspaceInfo);
+            const taskName = 'hello';
 
-            assert.equal(result.handler, task.handler);
-            assert.equal(result.skip, task.skip);
-            assert.equal(result._taskName, 'hello');
-            assert.deepStrictEqual(result._workspaceInfo, workspaceInfo);
-            assert.equal(typeof result._handleTaskFn, 'function');
+            const result = toParsedTask(taskName, task, workspaceInfo);
+
+            const expected: ParsedTask = {
+                ...task,
+                _taskName: taskName,
+                _workspaceInfo: workspaceInfo
+            };
+
+            assert.deepStrictEqual(result, expected);
         });
     });
 
     void describe('getParsedBuildTask', () => {
-        void it('should parse build task config', async () => {
+        void it('should parse build task config', () => {
             const buildTask: BuildTask = {
                 outDir: 'out',
                 clean: true,
@@ -256,11 +260,10 @@ void describe('Helpers', () => {
                 configPath: null
             };
 
-            const result = await getParsedBuildTask(buildTask, workspaceInfo, null, null);
+            const result = toParsedBuildTask(buildTask, workspaceInfo, null, null);
 
             const expected: ParsedBuildTask = {
                 ...buildTask,
-                _handleTaskFn: null,
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
@@ -270,7 +273,7 @@ void describe('Helpers', () => {
             assert.deepStrictEqual(result, expected);
         });
 
-        void it('should parse build task config with cmd options outDir', async () => {
+        void it('should parse build task config with cmd options outDir', () => {
             const buildTask: BuildTask = {
                 clean: true,
                 script: ['a.js', 'b.ts']
@@ -285,11 +288,10 @@ void describe('Helpers', () => {
 
             const cmdOptionsOutDir = path.resolve(process.cwd(), 'dist');
 
-            const result = await getParsedBuildTask(buildTask, workspaceInfo, null, cmdOptionsOutDir);
+            const result = toParsedBuildTask(buildTask, workspaceInfo, null, cmdOptionsOutDir);
 
             const expected: ParsedBuildTask = {
                 ...buildTask,
-                _handleTaskFn: null,
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
