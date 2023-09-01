@@ -22,7 +22,7 @@ export interface CleanTaskRunnerOptions {
 export class CleanTaskRunner {
     private readonly logger: Logger;
 
-    constructor(private readonly options: CleanTaskRunnerOptions) {
+    constructor(readonly options: CleanTaskRunnerOptions) {
         this.logger = this.options.logger;
     }
 
@@ -71,7 +71,9 @@ export class CleanTaskRunner {
 
             if (beforeBuildCleanOptions.cleanOutDir) {
                 rawPathsToClean.push(outDir);
-                rawPathsToClean.push('**/*');
+                if (beforeBuildCleanOptions.paths?.length ?? beforeBuildCleanOptions.exclude?.length) {
+                    rawPathsToClean.push('**/*');
+                }
             }
         } else {
             const afterBuildCleanOptions = cleanOptions as AfterBuildCleanOptions;
@@ -282,6 +284,7 @@ export function getCleanTaskRunner(
     if (!buildTask.clean) {
         return null;
     }
+
     if (runFor === 'before') {
         if (
             typeof buildTask.clean === 'object' &&
