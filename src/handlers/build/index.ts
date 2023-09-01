@@ -4,7 +4,19 @@ import { Logger } from '../../utils/index.js';
 import { getCleanTaskRunner } from './clean/index.js';
 import { getCopyTaskRunner } from './copy/index.js';
 
+export async function runBuildTask(buildTask: ParsedBuildTask, logger: Logger): Promise<void> {
+    // Copy
+    const copyTaskRunner = getCopyTaskRunner(buildTask, logger, false);
+    if (copyTaskRunner) {
+        const copiedPaths = await copyTaskRunner.run();
+        if (copiedPaths.length) {
+            logger.info(`Total ${copiedPaths.length} files are copied.`);
+        }
+    }
+}
+
 export default async function (buildTask: ParsedBuildTask, logger: Logger): Promise<void> {
+    // Before clean
     const beforeCleanTaskRunner = getCleanTaskRunner(buildTask, logger, 'before', false);
     if (beforeCleanTaskRunner) {
         const cleandPaths = await beforeCleanTaskRunner.run();
@@ -13,14 +25,9 @@ export default async function (buildTask: ParsedBuildTask, logger: Logger): Prom
         }
     }
 
-    const copyTaskRunner = getCopyTaskRunner(buildTask, logger, false);
-    if (copyTaskRunner) {
-        const copiedPaths = await copyTaskRunner.run();
-        if (copiedPaths.length) {
-            logger.info(`Total ${copiedPaths.length} files are copied.`);
-        }
-    }
+    await runBuildTask(buildTask, logger);
 
+    // After clean
     const afterCleanTaskRunner = getCleanTaskRunner(buildTask, logger, 'after', false);
     if (afterCleanTaskRunner) {
         const cleandPaths = await afterCleanTaskRunner.run();
