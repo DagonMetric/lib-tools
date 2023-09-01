@@ -307,7 +307,7 @@ export function getCleanTaskRunner(
 
         const beforeBuildCleanOptions = cleanOptions.beforeBuild ?? {};
 
-        const cleanTaskHandler = new CleanTaskRunner({
+        const cleanTaskRunner = new CleanTaskRunner({
             runFor: 'before',
             beforeOrAfterCleanOptions: beforeBuildCleanOptions,
             dryRun,
@@ -318,12 +318,12 @@ export function getCleanTaskRunner(
             logger
         });
 
-        return cleanTaskHandler;
+        return cleanTaskRunner;
     } else if (typeof buildTask.clean === 'object' && buildTask.clean.afterBuild?.paths?.length) {
         const cleanOptions = buildTask.clean;
         const afterBuildCleanOptions = cleanOptions.afterBuild ?? {};
 
-        const cleanTaskHandler = new CleanTaskRunner({
+        const cleanTaskRunner = new CleanTaskRunner({
             runFor: 'after',
             beforeOrAfterCleanOptions: afterBuildCleanOptions,
             dryRun,
@@ -334,7 +334,7 @@ export function getCleanTaskRunner(
             logger
         });
 
-        return cleanTaskHandler;
+        return cleanTaskRunner;
     }
 
     return null;
