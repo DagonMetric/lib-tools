@@ -8,16 +8,16 @@ import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/models/i
 import { Logger } from '../src/utils/index.js';
 
 void describe('CleanTaskRunner', () => {
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'clean-project',
+        configPath: null
+    };
+
     void describe('getCleanTaskRunner', () => {
         void it('should not get runner when clean=false options is passed', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
@@ -32,14 +32,6 @@ void describe('CleanTaskRunner', () => {
         });
 
         void it('should get before build clean options', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const beforeBuildCleanOptions: BeforeBuildCleanOptions = {
                 cleanOutDir: true,
                 paths: ['a.txt', '**/*.md'],
@@ -69,14 +61,6 @@ void describe('CleanTaskRunner', () => {
         });
 
         void it('should get before build clean options with cleanOutDir=true when clean=true options is passed', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
@@ -98,14 +82,6 @@ void describe('CleanTaskRunner', () => {
         });
 
         void it('should get after build clean options', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const afterBuildCleanOptions: AfterBuildCleanOptions = {
                 paths: ['a.txt', '**/*.md'],
                 exclude: ['c.md']
@@ -132,16 +108,10 @@ void describe('CleanTaskRunner', () => {
             assert.equal(runner.options.allowOutsideWorkspaceRoot, true);
             assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, afterBuildCleanOptions);
         });
+    });
 
+    void describe('run', () => {
         void it('should delete output directory when clean=true', async () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
@@ -155,20 +125,12 @@ void describe('CleanTaskRunner', () => {
             assert.ok(runner != null);
 
             const cleanedPaths = await runner.run();
-            const expected = [path.resolve(buildTask._outDir)];
+            const expected = [buildTask._outDir];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expected.sort());
         });
 
         void it('should respect exclude when cleaning', async () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
@@ -199,14 +161,6 @@ void describe('CleanTaskRunner', () => {
         });
 
         void it('should delete with after build clean options', async () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null
-            };
-
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
@@ -232,6 +186,25 @@ void describe('CleanTaskRunner', () => {
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expected.sort());
+        });
+
+        void it('should throw an error if delete workspace directory', async () => {
+            const buildTask: ParsedBuildTask = {
+                _taskName: 'build',
+                _workspaceInfo: workspaceInfo,
+                _outDir: path.resolve(workspaceRoot, 'theout'),
+                _packageJsonInfo: null,
+                clean: {
+                    afterBuild: {
+                        paths: ['../']
+                    }
+                }
+            };
+
+            const runner = getCleanTaskRunner(buildTask, new Logger({ logLevel: 'debug' }), 'after', true);
+
+            assert.ok(runner != null);
+            await assert.rejects(async () => await runner.run());
         });
     });
 });
