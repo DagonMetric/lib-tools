@@ -4,53 +4,69 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { InvalidConfigError } from '../../../exceptions/index.js';
-import { WorkspaceInfo } from '../../../helpers/index.js';
-import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../../../models/index.js';
+import { ParsedBuildTask, WorkspaceInfo } from '../../../helpers/index.js';
+import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../models/index.js';
 import { Logger, isInFolder, isSamePaths, normalizePath, pathExists } from '../../../utils/index.js';
 
-export interface CleanTaskHandlerOptions {
-    workspaceInfo: WorkspaceInfo;
+export interface CleanTaskRunnerOptions {
+    runFor: 'before' | 'after';
     beforeOrAfterCleanOptions: BeforeBuildCleanOptions | AfterBuildCleanOptions;
-    forBeforeBuildClean: boolean;
+    dryRun: boolean;
+    workspaceInfo: WorkspaceInfo;
     outDir: string;
     allowOutsideWorkspaceRoot: boolean;
     allowOutsideOutDir: boolean;
     logger: Logger;
 }
 
-export class CleanTaskHandler {
+export class CleanTaskRunner {
     private readonly logger: Logger;
-    private cleaned = false;
 
-    constructor(private readonly options: CleanTaskHandlerOptions) {
+    constructor(private readonly options: CleanTaskRunnerOptions) {
         this.logger = this.options.logger;
     }
 
-    async run(): Promise<void> {
-        if (this.cleaned || !this.options.beforeOrAfterCleanOptions) {
-            return;
-        }
+    async run(): Promise<string[]> {
+        const cleanedPaths: string[] = [];
 
-        await this.cleanInternal();
-    }
-
-    private async cleanInternal(): Promise<void> {
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
         const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+        const projectRoot = this.options.workspaceInfo.projectRoot;
         const outDir = this.options.outDir;
-        const forBeforeBuildClean = this.options.forBeforeBuildClean;
         const rawPathsToClean: string[] = [];
 
-        if (forBeforeBuildClean) {
+        const configLocationPrefix = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build`;
+
+        // Validation
+        if (outDir === path.parse(outDir).root || outDir === path.parse(projectRoot).root) {
+            throw new InvalidConfigError(
+                `The 'outDir' must not be system root directory.`,
+                `${configLocationPrefix}.outDir`
+            );
+        }
+
+        if (isInFolder(outDir, workspaceRoot)) {
+            throw new InvalidConfigError(
+                `The 'outDir' must not be the parent of current working directory.`,
+                `${configLocationPrefix}.outDir`
+            );
+        }
+
+        if (isInFolder(outDir, projectRoot)) {
+            throw new InvalidConfigError(
+                `The 'outDir' must not be the parent of project root directory.`,
+                `${configLocationPrefix}.outDir`
+            );
+        }
+
+        if (this.options.runFor === 'before') {
             const beforeBuildCleanOptions = cleanOptions as BeforeBuildCleanOptions;
             if (
                 !beforeBuildCleanOptions.cleanOutDir &&
                 (!beforeBuildCleanOptions.paths ||
                     (beforeBuildCleanOptions.paths && !beforeBuildCleanOptions.paths.length))
             ) {
-                this.cleaned = true;
-
-                return;
+                return [];
             }
 
             if (beforeBuildCleanOptions.cleanOutDir) {
@@ -63,9 +79,7 @@ export class CleanTaskHandler {
                 !afterBuildCleanOptions.paths ||
                 (afterBuildCleanOptions.paths && !afterBuildCleanOptions.paths.length)
             ) {
-                this.cleaned = true;
-
-                return;
+                return [];
             }
         }
 
@@ -82,7 +96,7 @@ export class CleanTaskHandler {
         const existedDirsToExclude: string[] = [];
 
         if (cleanOptions.exclude) {
-            cleanOptions.exclude.forEach((excludePath) => {
+            for (const excludePath of cleanOptions.exclude) {
                 if (glob.hasMagic(excludePath)) {
                     if (!patternsToExclude.includes(excludePath)) {
                         patternsToExclude.push(excludePath);
@@ -95,7 +109,7 @@ export class CleanTaskHandler {
                         pathsToExclude.push(absPath);
                     }
                 }
-            });
+            }
         }
 
         if (pathsToExclude.length > 0) {
@@ -143,7 +157,7 @@ export class CleanTaskHandler {
             );
         }
 
-        const pathsToClean: string[] = [];
+        const realPathsToClean: string[] = [];
 
         await Promise.all(
             rawPathsToClean.map(async (cleanPattern: string) => {
@@ -152,22 +166,22 @@ export class CleanTaskHandler {
                         ? path.resolve(cleanPattern)
                         : path.resolve(outDir, cleanPattern);
 
-                    if (!pathsToClean.includes(absolutePath)) {
-                        pathsToClean.push(absolutePath);
+                    if (!realPathsToClean.includes(absolutePath)) {
+                        realPathsToClean.push(absolutePath);
                     }
                 } else {
                     const foundPaths = await glob(cleanPattern, { cwd: outDir, dot: true });
                     foundPaths.forEach((p) => {
                         const absolutePath = path.isAbsolute(p) ? path.resolve(p) : path.resolve(outDir, p);
-                        if (!pathsToClean.includes(absolutePath)) {
-                            pathsToClean.push(absolutePath);
+                        if (!realPathsToClean.includes(absolutePath)) {
+                            realPathsToClean.push(absolutePath);
                         }
                     });
                 }
             })
         );
 
-        for (const pathToClean of pathsToClean) {
+        for (const pathToClean of realPathsToClean) {
             if (
                 existedFilesToExclude.includes(pathToClean) ||
                 existedDirsToExclude.includes(pathToClean) ||
@@ -209,25 +223,24 @@ export class CleanTaskHandler {
             if (!isSamePaths(pathToClean, outDir)) {
                 cleanOutDir = false;
 
-                const configLocation = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build.clean`;
                 if (isSamePaths(path.parse(pathToClean).root, pathToClean)) {
                     throw new InvalidConfigError(
                         `Deleting root directory is not permitted, path: ${pathToClean}.`,
-                        configLocation
+                        `${configLocationPrefix}.clean`
                     );
                 }
 
                 if (isInFolder(pathToClean, workspaceRoot) || isSamePaths(pathToClean, workspaceRoot)) {
                     throw new InvalidConfigError(
                         `Deleting current working directory is not permitted, path: ${pathToClean}.`,
-                        configLocation
+                        `${configLocationPrefix}.clean`
                     );
                 }
 
                 if (!isInFolder(workspaceRoot, pathToClean) && this.options.allowOutsideWorkspaceRoot === false) {
                     throw new InvalidConfigError(
-                        `Deleting outside of current working root directory is disabled. To enable cleaning, set 'allowOutsideWorkspaceRoot' to 'true' in clean option.`,
-                        configLocation
+                        `Deleting outside of current working directory is disabled. To enable it, set 'allowOutsideWorkspaceRoot' to 'true' in clean option.`,
+                        `${configLocationPrefix}.clean`
                     );
                 }
 
@@ -236,8 +249,8 @@ export class CleanTaskHandler {
                     !this.options.allowOutsideOutDir
                 ) {
                     throw new InvalidConfigError(
-                        `Cleaning outside of the output directory is disabled. To enable cleaning, set 'allowOutsideOutDir' to 'true' in clean option.`,
-                        configLocation
+                        `Cleaning outside of the output directory is disabled. To enable it, set 'allowOutsideOutDir' to 'true' in clean option.`,
+                        `${configLocationPrefix}.clean`
                     );
                 }
             }
@@ -248,8 +261,78 @@ export class CleanTaskHandler {
                 const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
                 this.logger.info(`${msgPrefix} ${relToWorkspace}`);
 
-                await fs.unlink(pathToClean);
+                if (!this.options.dryRun) {
+                    await fs.unlink(pathToClean);
+                }
+
+                cleanedPaths.push(pathToClean);
             }
         }
+
+        return cleanedPaths;
     }
+}
+
+export function getCleanTaskRunner(
+    buildTask: ParsedBuildTask,
+    logger: Logger,
+    runFor: 'before' | 'after',
+    dryRun: boolean
+): CleanTaskRunner | null {
+    if (!buildTask.clean) {
+        return null;
+    }
+    if (runFor === 'before') {
+        if (
+            typeof buildTask.clean === 'object' &&
+            (!buildTask.clean.beforeBuild ||
+                (!buildTask.clean.beforeBuild.cleanOutDir &&
+                    (!buildTask.clean.beforeBuild.paths ||
+                        (buildTask.clean.beforeBuild.paths && !buildTask.clean.beforeBuild.paths.length))))
+        ) {
+            return null;
+        }
+
+        const cleanOptions =
+            typeof buildTask.clean === 'object'
+                ? buildTask.clean
+                : ({
+                      beforeBuild: {
+                          cleanOutDir: true
+                      }
+                  } as CleanOptions);
+
+        const beforeBuildCleanOptions = cleanOptions.beforeBuild ?? {};
+
+        const cleanTaskHandler = new CleanTaskRunner({
+            runFor: 'before',
+            beforeOrAfterCleanOptions: beforeBuildCleanOptions,
+            dryRun,
+            workspaceInfo: buildTask._workspaceInfo,
+            outDir: buildTask._outDir,
+            allowOutsideWorkspaceRoot: cleanOptions.allowOutsideWorkspaceRoot ? true : false,
+            allowOutsideOutDir: cleanOptions.allowOutsideOutDir ? true : false,
+            logger
+        });
+
+        return cleanTaskHandler;
+    } else if (typeof buildTask.clean === 'object' && buildTask.clean.afterBuild?.paths?.length) {
+        const cleanOptions = buildTask.clean;
+        const afterBuildCleanOptions = cleanOptions.afterBuild ?? {};
+
+        const cleanTaskHandler = new CleanTaskRunner({
+            runFor: 'after',
+            beforeOrAfterCleanOptions: afterBuildCleanOptions,
+            dryRun,
+            workspaceInfo: buildTask._workspaceInfo,
+            outDir: buildTask._outDir,
+            allowOutsideWorkspaceRoot: cleanOptions.allowOutsideWorkspaceRoot ? true : false,
+            allowOutsideOutDir: cleanOptions.allowOutsideOutDir ? true : false,
+            logger
+        });
+
+        return cleanTaskHandler;
+    }
+
+    return null;
 }
