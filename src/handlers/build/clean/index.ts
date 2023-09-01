@@ -219,46 +219,42 @@ export class CleanTaskRunner {
                 continue;
             }
 
-            let cleanOutDir = true;
+            // Validation
+            if (isSamePaths(path.parse(pathToClean).root, pathToClean)) {
+                throw new InvalidConfigError(
+                    `Deleting root directory is not permitted, path: ${pathToClean}.`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
 
-            // validation
-            if (!isSamePaths(pathToClean, outDir)) {
-                cleanOutDir = false;
+            if (isInFolder(pathToClean, workspaceRoot) || isSamePaths(pathToClean, workspaceRoot)) {
+                throw new InvalidConfigError(
+                    `Deleting current working directory is not permitted, path: ${pathToClean}.`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
 
-                if (isSamePaths(path.parse(pathToClean).root, pathToClean)) {
-                    throw new InvalidConfigError(
-                        `Deleting root directory is not permitted, path: ${pathToClean}.`,
-                        `${configLocationPrefix}.clean`
-                    );
-                }
+            if (!isInFolder(workspaceRoot, pathToClean) && this.options.allowOutsideWorkspaceRoot === false) {
+                throw new InvalidConfigError(
+                    `Deleting outside of current working directory is disabled. To enable it, set 'allowOutsideWorkspaceRoot' to 'true' in clean option. Path: ${pathToClean}/`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
 
-                if (isInFolder(pathToClean, workspaceRoot) || isSamePaths(pathToClean, workspaceRoot)) {
-                    throw new InvalidConfigError(
-                        `Deleting current working directory is not permitted, path: ${pathToClean}.`,
-                        `${configLocationPrefix}.clean`
-                    );
-                }
-
-                if (!isInFolder(workspaceRoot, pathToClean) && this.options.allowOutsideWorkspaceRoot === false) {
-                    throw new InvalidConfigError(
-                        `Deleting outside of current working directory is disabled. To enable it, set 'allowOutsideWorkspaceRoot' to 'true' in clean option.`,
-                        `${configLocationPrefix}.clean`
-                    );
-                }
-
-                if (
-                    (!isInFolder(outDir, pathToClean) || isSamePaths(outDir, pathToClean)) &&
-                    !this.options.allowOutsideOutDir
-                ) {
-                    throw new InvalidConfigError(
-                        `Cleaning outside of the output directory is disabled. To enable it, set 'allowOutsideOutDir' to 'true' in clean option.`,
-                        `${configLocationPrefix}.clean`
-                    );
-                }
+            if (
+                !isSamePaths(outDir, pathToClean) &&
+                !isInFolder(outDir, pathToClean) &&
+                !this.options.allowOutsideOutDir
+            ) {
+                throw new InvalidConfigError(
+                    `Cleaning outside of the output directory is disabled. To enable it, set 'allowOutsideOutDir' to 'true' in clean option. Path: ${pathToClean}.`,
+                    `${configLocationPrefix}.clean`
+                );
             }
 
             const exists = await pathExists(pathToClean);
             if (exists) {
+                const cleanOutDir = isSamePaths(pathToClean, outDir) ? true : false;
                 const relToWorkspace = normalizePath(path.relative(workspaceRoot, pathToClean));
                 const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
                 this.logger.info(`${msgPrefix} ${relToWorkspace}`);
