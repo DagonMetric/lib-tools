@@ -21,7 +21,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: false
             };
@@ -49,7 +49,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: {
                     beforeBuild: beforeBuildCleanOptions,
@@ -80,7 +80,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: true
             };
@@ -114,7 +114,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: {
                     afterBuild: afterBuildCleanOptions,
@@ -145,7 +145,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: true
             };
@@ -172,7 +172,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: {
                     beforeBuild: {
@@ -210,7 +210,7 @@ void describe('CleanTaskRunner', () => {
             const buildTask: ParsedBuildTask = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'dist'),
+                _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: {
                     afterBuild: {
