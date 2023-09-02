@@ -17,22 +17,18 @@ export async function runBuildTask(buildTask: ParsedBuildTask, logger: Logger, d
 
 export default async function (buildTask: ParsedBuildTask, logger: Logger, dryRun = false): Promise<void> {
     // Before clean
-    const beforeCleanTaskRunner = getCleanTaskRunner(buildTask, logger, 'before', dryRun);
+    const beforeCleanTaskRunner = getCleanTaskRunner('before', buildTask, logger, dryRun);
     if (beforeCleanTaskRunner) {
         const cleandPaths = await beforeCleanTaskRunner.run();
-        if (cleandPaths.length) {
-            logger.info(`Total ${cleandPaths.length} files or directories are cleaned.`);
-        }
+        logger.info(`Total ${cleandPaths.length} files and directories are cleaned.`);
     }
 
     await runBuildTask(buildTask, logger, dryRun);
 
     // After clean
-    const afterCleanTaskRunner = getCleanTaskRunner(buildTask, logger, 'after', dryRun);
+    const afterCleanTaskRunner = getCleanTaskRunner('after', buildTask, logger, dryRun);
     if (afterCleanTaskRunner) {
         const cleandPaths = await afterCleanTaskRunner.run();
-        if (cleandPaths.length) {
-            logger.info(`Total ${cleandPaths.length} files or directories are cleaned.`);
-        }
+        logger.info(`Total ${cleandPaths.length} files and directories are cleaned.`);
     }
 }
