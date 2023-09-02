@@ -5,7 +5,7 @@ import * as path from 'node:path';
 
 import { ParsedBuildTask, WorkspaceInfo } from '../../../helpers/index.js';
 import { CopyEntry } from '../../../models/index.js';
-import { Logger, isSamePaths, normalizePath, pathExists } from '../../../utils/index.js';
+import { Logger, isSamePaths, normalizePathToPOSIXStyle, pathExists } from '../../../utils/index.js';
 
 function excludeMatch(filePathRel: string, excludes: string[]): boolean {
     let il = excludes.length;
@@ -56,7 +56,7 @@ export class CopyTaskRunner {
                     dot: true
                 });
 
-                foundPaths = foundPaths.filter((p) => !excludeMatch(normalizePath(p), excludes));
+                foundPaths = foundPaths.filter((p) => !excludeMatch(normalizePathToPOSIXStyle(p), excludes));
 
                 if (!foundPaths.length) {
                     this.logger.warn(`There is no matched file to copy, pattern: ${copyEntry.from}`);
@@ -64,7 +64,8 @@ export class CopyTaskRunner {
                 }
 
                 let fromRoot = projectRoot;
-                const parts = normalizePath(copyEntry.from).split('/');
+                // TODO:
+                const parts = normalizePathToPOSIXStyle(copyEntry.from).split('/');
                 for (const p of parts) {
                     if (await pathExists(path.resolve(fromRoot, p))) {
                         fromRoot = path.resolve(fromRoot, p);
@@ -79,7 +80,7 @@ export class CopyTaskRunner {
                         const toFileRel = path.relative(fromRoot, fromFilePath);
                         const toFilePath = path.resolve(toPath, toFileRel);
 
-                        this.logger.debug(`Copying ${normalizePath(foundFileRel)} file`);
+                        this.logger.debug(`Copying ${normalizePathToPOSIXStyle(foundFileRel)} file`);
 
                         if (!this.options.dryRun) {
                             if (!(await pathExists(path.dirname(toFilePath)))) {
@@ -108,7 +109,7 @@ export class CopyTaskRunner {
 
                 const stats = await fs.stat(fromPath);
                 if (stats.isFile()) {
-                    const fromPathRel = normalizePath(path.relative(projectRoot, fromPath));
+                    const fromPathRel = normalizePathToPOSIXStyle(path.relative(projectRoot, fromPath));
                     if (excludeMatch(fromPathRel, excludes)) {
                         this.logger.warn(`Excluded from copy, path: ${fromPath}`);
                         continue;
@@ -149,7 +150,8 @@ export class CopyTaskRunner {
                         dot: true
                     });
 
-                    foundPaths = foundPaths.filter((p) => !excludeMatch(normalizePath(p), excludes));
+                    // TODO:
+                    foundPaths = foundPaths.filter((p) => !excludeMatch(normalizePathToPOSIXStyle(p), excludes));
 
                     if (!foundPaths.length) {
                         this.logger.warn(`There is no matched file to copy, path: ${fromPath}`);
@@ -162,7 +164,9 @@ export class CopyTaskRunner {
                             const foundFromFilePath = path.resolve(fromPath, foundFileRel);
 
                             this.logger.debug(
-                                `Copying ${normalizePath(path.relative(projectRoot, foundFromFilePath))} file`
+                                `Copying ${normalizePathToPOSIXStyle(
+                                    path.relative(projectRoot, foundFromFilePath)
+                                )} file`
                             );
 
                             if (!this.options.dryRun) {
