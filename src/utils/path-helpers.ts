@@ -1,55 +1,81 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-export function normalizePath(p: string): string {
-    if (!p) {
-        return '';
-    }
+export function normalizePathToPOSIXStyle(p: string): string {
+    const replace: [RegExp, string][] = [
+        [/\\/g, '/'],
+        // [/(\w):/, '/$1'],
+        // [/(\w+)\/\.\.\/?/g, ''], // already in path.posix.normalize(p)
+        [/^\.\//, ''], // same
+        // [/\/\.\//, '/'], // already in path.posix.normalize(p)
+        // [/\/\.$/, ''], // already in path.posix.normalize(p)
+        [/\/$/, ''], // same
+        [/^\.$/, ''] // same
+    ];
 
-    p = path
-        .normalize(p)
-        .replace(/\\/g, '/')
-        .replace(/^\.\//, '')
-        .replace(/(\/|\\)+$/, '');
+    p = path.posix.normalize(p);
 
-    if (p === '.' || p === './' || p === '/') {
-        return '';
+    replace.forEach((array) => {
+        while (array[0].test(p)) {
+            p = p.replace(array[0], array[1]);
+        }
+    });
+
+    if (/^\w:$/.test(p)) {
+        return p + '/';
     }
 
     return p;
 }
 
-export function isSamePaths(p1: string, p2: string): boolean {
+export function isSamePaths(p1: string, p2: string, ignoreCase = false): boolean {
     if (p1 === p2) {
         return true;
     }
 
-    p1 = normalizePath(p1);
-    p2 = normalizePath(p2);
+    let normalizedP1 = normalizePathToPOSIXStyle(p1);
+    let normalizedP2 = normalizePathToPOSIXStyle(p2);
 
-    return p1.toLowerCase() === p2.toLowerCase();
-}
-
-export function isInFolder(parentDir: string, checkDir: string): boolean {
-    parentDir = normalizePath(parentDir).toLowerCase();
-    checkDir = normalizePath(checkDir).toLowerCase();
-
-    if (!checkDir || parentDir === checkDir) {
-        return false;
+    if (ignoreCase || process.platform === 'win32') {
+        normalizedP1 = normalizedP1.toLowerCase();
+        normalizedP2 = normalizedP2.toLowerCase();
     }
 
-    const checkDirHome = normalizePath(path.parse(checkDir).root);
-    if (checkDir === checkDirHome || checkDir === checkDirHome || checkDir === '.' || checkDir === './') {
+    if (normalizedP1 === normalizedP2) {
+        return true;
+    }
+
+    return path.relative(normalizedP1, normalizedP2) === '';
+}
+
+export function isInFolder(parentDir: string, checkDir: string, ignoreCase = false): boolean {
+    parentDir = normalizePathToPOSIXStyle(parentDir);
+    checkDir = normalizePathToPOSIXStyle(checkDir);
+
+    if (ignoreCase || process.platform === 'win32') {
+        parentDir = parentDir.toLowerCase();
+        checkDir = checkDir.toLowerCase();
+    }
+
+    const checkDirRoot = normalizePathToPOSIXStyle(path.parse(checkDir).root);
+
+    if (!checkDir || parentDir === checkDir || checkDir === checkDirRoot || path.relative(parentDir, checkDir) === '') {
         return false;
     }
 
     let tempCheckDir = checkDir;
     let prevTempCheckDir = '';
-    while (tempCheckDir && tempCheckDir !== checkDirHome && tempCheckDir !== '.' && tempCheckDir !== prevTempCheckDir) {
+    while (
+        tempCheckDir &&
+        tempCheckDir !== checkDirRoot &&
+        tempCheckDir !== prevTempCheckDir &&
+        tempCheckDir !== '.' &&
+        tempCheckDir !== '/'
+    ) {
         prevTempCheckDir = tempCheckDir;
-        tempCheckDir = normalizePath(path.dirname(tempCheckDir));
+        tempCheckDir = normalizePathToPOSIXStyle(path.dirname(tempCheckDir));
 
-        if (tempCheckDir === parentDir || tempCheckDir === parentDir) {
+        if (tempCheckDir === parentDir || path.relative(parentDir, tempCheckDir) === '') {
             return true;
         }
     }
