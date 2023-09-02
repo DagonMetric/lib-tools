@@ -27,6 +27,6 @@
     "types": ["node"],
     "baseUrl": ".",
     "rootDir": ".",
-    "outDir": "./dist"
+    "outDir": "dist"
   }
 }
