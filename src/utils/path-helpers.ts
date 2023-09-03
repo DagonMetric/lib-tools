@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-export function normalizePathToPOSIXStyle(p: string): string {
+export function normalizePathToPOSIXStyle(p: string, removeStartingSlash = true): string {
     const replace: [RegExp, string][] = [
         [/\\/g, '/'],
         // [/(\w):/, '/$1'],
@@ -21,11 +21,21 @@ export function normalizePathToPOSIXStyle(p: string): string {
         }
     });
 
+    if (removeStartingSlash && p.startsWith('/') && !/^[/]{2,}/.test(p)) {
+        p = p.substring(1);
+    }
+
     if (/^\w:$/.test(p)) {
-        return p + '/';
+        p = p + '/';
     }
 
     return p;
+}
+
+export function isWindowsStyleAbsolute(p: string, ignoreStartingSlash = true): boolean {
+    p = normalizePathToPOSIXStyle(p, ignoreStartingSlash);
+
+    return path.win32.isAbsolute(p);
 }
 
 export function isSamePaths(p1: string, p2: string, ignoreCase = false): boolean {
