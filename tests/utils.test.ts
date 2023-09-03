@@ -3,7 +3,12 @@ import * as path from 'node:path';
 
 import { describe, it } from 'node:test';
 
-import { isInFolder, isSamePaths, normalizePathToPOSIXStyle } from '../src/utils/path-helpers.js';
+import {
+    isInFolder,
+    isSamePaths,
+    isWindowsStyleAbsolute,
+    normalizePathToPOSIXStyle
+} from '../src/utils/path-helpers.js';
 
 void describe('node:path', () => {
     void describe('normalize', () => {
@@ -26,6 +31,20 @@ void describe('node:path', () => {
             assert.equal(path.posix.normalize('\\\\server'), '\\\\server');
             // ** TO NOTE **
             assert.equal(path.win32.normalize('\\\\server'), '\\server');
+        });
+
+        void it("normalize '//server'", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.normalize('//server'), '/server');
+            // ** TO NOTE **
+            assert.equal(path.win32.normalize('//server'), '\\server');
+        });
+
+        void it("normalize '////server'", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.normalize('////server'), '/server');
+            // ** TO NOTE **
+            assert.equal(path.win32.normalize('////server'), '\\server');
         });
 
         void it("normalize 'C:\\'", () => {
@@ -172,6 +191,25 @@ void describe('node:path', () => {
             assert.equal(path.win32.resolve('C:/'), 'C:\\');
         });
 
+        void it("resolve 'C:\\'", () => {
+            assert.equal(path.win32.resolve('C:\\'), 'C:\\');
+        });
+
+        void it("resolve '\\\\server\\public'", () => {
+            // ** TO NOTE
+            assert.equal(path.win32.resolve('\\\\server\\public'), '\\\\server\\public\\');
+            // ** TO NOTE
+            // /Users/Current Working Directory/\\\\server\\public
+            // assert.equal(path.posix.resolve('\\\\server\\public'), '\\\\server\\public\\');
+        });
+
+        void it("resolve '//server/public'", () => {
+            // ** TO NOTE
+            assert.equal(path.win32.resolve('//server/public'), '\\\\server\\public\\');
+            // ** TO NOTE
+            assert.equal(path.posix.resolve('//server/public'), '/server/public');
+        });
+
         // ** TO NOTE - Different result on different OS **
         // On Ubuntu - 'C:\\\\home\\\\runner\\\\work\\\\lib-tools\\\\lib-tools'
         // void it("resolve 'C:'", () => {
@@ -216,12 +254,24 @@ void describe('Utils', () => {
             assert.equal(normalizePathToPOSIXStyle('C:'), 'C:/');
         });
 
+        void it("should be 'C:.' -> 'C:.'", () => {
+            assert.equal(normalizePathToPOSIXStyle('C:.'), 'C:.');
+        });
+
+        void it("should be 'C:tmp.txt' -> 'C:tmp.txt'", () => {
+            assert.equal(normalizePathToPOSIXStyle('C:tmp.txt'), 'C:tmp.txt');
+        });
+
         void it("should be 'C:\\' -> 'C:/'", () => {
             assert.equal(normalizePathToPOSIXStyle('C:\\'), 'C:/');
         });
 
         void it("should be 'C:\\\\' -> 'C:/'", () => {
             assert.equal(normalizePathToPOSIXStyle('C:\\\\'), 'C:/');
+        });
+
+        void it("should be 'C://' -> 'C:/'", () => {
+            assert.equal(normalizePathToPOSIXStyle('C://'), 'C:/');
         });
 
         void it("should be '\\server' -> 'server'", () => {
@@ -235,6 +285,10 @@ void describe('Utils', () => {
         void it("should be '\\\\\\server' -> '///server'", () => {
             assert.equal(normalizePathToPOSIXStyle('\\\\\\server'), '///server');
         });
+
+        // void it("should be '//server' -> '//server'", () => {
+        //     assert.equal(normalizePathToPOSIXStyle('//server'), '//server');
+        // });
 
         void it("should be '.\\' -> ''", () => {
             assert.equal(normalizePathToPOSIXStyle('.\\'), '');
@@ -270,6 +324,64 @@ void describe('Utils', () => {
 
         void it("should be 'path-1/(a_p.a,t `~h)-2!@#$%^&=+[]{};'/../' -> 'path-1'", () => {
             assert.equal(normalizePathToPOSIXStyle("path-1/(a_p.a,t `~h)-2!@#$%^&=+[]{};'/../"), 'path-1');
+        });
+    });
+
+    void describe('isWindowsStyleAbsolute', () => {
+        void it("should be false '.'", () => {
+            assert.equal(isWindowsStyleAbsolute('.'), false);
+        });
+
+        void it("should be false '/'", () => {
+            assert.equal(isWindowsStyleAbsolute('/'), false);
+        });
+
+        void it("should be false './'", () => {
+            assert.equal(isWindowsStyleAbsolute('./'), false);
+        });
+
+        void it("should be false ''", () => {
+            assert.equal(isWindowsStyleAbsolute(''), false);
+        });
+
+        void it("should be true '\\\\server'", () => {
+            assert.equal(isWindowsStyleAbsolute('\\\\server'), true);
+        });
+
+        void it("should be false '\\server'", () => {
+            assert.equal(isWindowsStyleAbsolute('\\server'), false);
+        });
+
+        // void it("should be true '//server'", () => {
+        //     assert.equal(isWindowsStyleAbsolute('//server'), true);
+        // });
+
+        void it("should be false '/server'", () => {
+            assert.equal(isWindowsStyleAbsolute('/server'), false);
+        });
+
+        void it("should be false 'foo/bar'", () => {
+            assert.equal(isWindowsStyleAbsolute('foo/bar'), false);
+        });
+
+        void it("should be true 'C:\\'", () => {
+            assert.equal(isWindowsStyleAbsolute('C:\\'), true);
+        });
+
+        void it("should be true 'C://'", () => {
+            assert.equal(isWindowsStyleAbsolute('C://'), true);
+        });
+
+        void it("should be true 'C:/'", () => {
+            assert.equal(isWindowsStyleAbsolute('C:/'), true);
+        });
+
+        void it("should be true 'C:'", () => {
+            assert.equal(isWindowsStyleAbsolute('C:'), true);
+        });
+
+        void it("should be false 'C:.'", () => {
+            assert.equal(isWindowsStyleAbsolute('C:.'), false);
         });
     });
 
