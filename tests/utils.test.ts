@@ -4,10 +4,12 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
+    findUp,
     isInFolder,
     isSamePaths,
     isWindowsStyleAbsolute,
-    normalizePathToPOSIXStyle
+    normalizePathToPOSIXStyle,
+    pathExists
 } from '../src/utils/path-helpers.js';
 
 void describe('node:path', () => {
@@ -450,6 +452,21 @@ void describe('Utils', () => {
 
         void it(`should not be 'c:/' in 'c:/foo/bar'  folder`, () => {
             assert.equal(isInFolder('c:/foo/bar', 'c:/'), false);
+        });
+    });
+
+    void describe('pathExists', () => {
+        void it(`should exist 'libconfig.json'`, async () => {
+            const existed = await pathExists(path.resolve(process.cwd(), 'libconfig.json'));
+            assert.equal(existed, true);
+        });
+    });
+
+    void describe('findUp', () => {
+        void it(`should find 'libconfig.json' in current working directory`, async () => {
+            const foundFilePath = await findUp('libconfig.json', path.resolve(process.cwd(), 'dist'), process.cwd());
+            assert.ok(foundFilePath);
+            assert.match(foundFilePath, /(\\|\/)libconfig.json$/);
         });
     });
 });
