@@ -274,7 +274,13 @@ export class CleanTaskRunner {
                 this.logger.info(`${msgPrefix} ${relToWorkspace}`);
 
                 if (!this.options.dryRun) {
-                    await fs.unlink(pathToClean);
+                    const stats = await fs.stat(pathToClean);
+
+                    if (stats.isDirectory() && !stats.isSymbolicLink()) {
+                        await fs.rm(pathToClean, { recursive: true, force: true, maxRetries: 2, retryDelay: 1000 });
+                    } else {
+                        await fs.unlink(pathToClean);
+                    }
                 }
 
                 cleanedPaths.push(pathToClean);
