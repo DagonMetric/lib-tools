@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import { minimatch } from 'minimatch';
+import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -15,14 +15,79 @@ import {
     pathExists
 } from '../../../utils/index.js';
 
+interface PathInfo {
+    readonly absolutePath: string;
+    readonly isSystemRoot: boolean;
+    readonly stats: Stats | null;
+}
+
+async function getPathInfoes(paths: string[], outDir: string): Promise<PathInfo[]> {
+    if (!paths?.length) {
+        return [];
+    }
+
+    const pathInfoes: PathInfo[] = [];
+    const processedPaths: string[] = [];
+
+    for (let pathOrPattern of paths) {
+        if (!pathOrPattern?.trim().length) {
+            continue;
+        }
+
+        pathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
+
+        if (!pathOrPattern) {
+            continue;
+        }
+
+        if (glob.hasMagic(pathOrPattern)) {
+            const foundPaths = await glob(pathOrPattern, { cwd: outDir, dot: true, absolute: true });
+            for (const absolutePath of foundPaths) {
+                if (!processedPaths.includes(absolutePath)) {
+                    const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+                    let stats: Stats | null = null;
+                    if (!isSystemRoot) {
+                        stats = await fs.stat(absolutePath);
+                    }
+
+                    processedPaths.push(absolutePath);
+                    pathInfoes.push({
+                        absolutePath,
+                        isSystemRoot,
+                        stats
+                    });
+                }
+            }
+        } else {
+            const absolutePath = isWindowsStyleAbsolute(pathOrPattern)
+                ? path.resolve(normalizePathToPOSIXStyle(pathOrPattern))
+                : path.resolve(outDir, normalizePathToPOSIXStyle(pathOrPattern));
+            if (!processedPaths.includes(absolutePath)) {
+                const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+                let stats: Stats | null = null;
+                if (!isSystemRoot && (await pathExists(absolutePath))) {
+                    stats = await fs.stat(absolutePath);
+                }
+
+                processedPaths.push(absolutePath);
+                pathInfoes.push({
+                    absolutePath,
+                    isSystemRoot,
+                    stats
+                });
+            }
+        }
+    }
+
+    return pathInfoes;
+}
+
 export interface CleanTaskRunnerOptions {
     readonly runFor: 'before' | 'after';
     readonly beforeOrAfterCleanOptions: BeforeBuildCleanOptions | AfterBuildCleanOptions;
     readonly dryRun: boolean;
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
-    readonly allowOutsideWorkspaceRoot: boolean;
-    readonly allowOutsideOutDir: boolean;
     readonly logger: Logger;
 }
 
@@ -34,17 +99,18 @@ export class CleanTaskRunner {
     }
 
     async run(): Promise<string[]> {
-        const cleanedPaths: string[] = [];
-
-        const cleanOptions = this.options.beforeOrAfterCleanOptions;
         const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
         const projectRoot = this.options.workspaceInfo.projectRoot;
         const outDir = this.options.outDir;
-        const cleanPathsOrPatterns: string[] = [];
         const configLocationPrefix = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build`;
 
-        // Validations
-        if (isSamePaths(outDir, path.parse(outDir).root)) {
+        // Validating outDir
+        //
+        if (!outDir?.trim().length) {
+            throw new InvalidConfigError(`The 'outDir' must not be empty.`, `${configLocationPrefix}.outDir`);
+        }
+
+        if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
             throw new InvalidConfigError(
                 `The 'outDir' must not be system root directory.`,
                 `${configLocationPrefix}.outDir`
@@ -65,229 +131,129 @@ export class CleanTaskRunner {
             );
         }
 
-        if (this.options.runFor === 'before') {
-            const beforeBuildCleanOptions = cleanOptions as BeforeBuildCleanOptions;
-            if (
-                !beforeBuildCleanOptions.cleanOutDir &&
-                (!beforeBuildCleanOptions.paths ||
-                    (beforeBuildCleanOptions.paths && !beforeBuildCleanOptions.paths.length))
-            ) {
-                return [];
-            }
-
-            if (beforeBuildCleanOptions.cleanOutDir) {
-                cleanPathsOrPatterns.push(outDir);
-                if (beforeBuildCleanOptions.paths?.length ?? beforeBuildCleanOptions.exclude?.length) {
-                    cleanPathsOrPatterns.push('**/*');
-                }
-            }
-        } else {
-            const afterBuildCleanOptions = cleanOptions as AfterBuildCleanOptions;
-            if (
-                !afterBuildCleanOptions.paths ||
-                (afterBuildCleanOptions.paths && !afterBuildCleanOptions.paths.length)
-            ) {
-                return [];
-            }
+        if (!(await pathExists(outDir))) {
+            return [];
+        }
+        const outDirStats = await fs.stat(outDir);
+        if (outDirStats.isFile()) {
+            throw new InvalidConfigError(`The 'outDir' must be directory.`, `${configLocationPrefix}.outDir`);
         }
 
-        if (cleanOptions.paths?.length) {
-            cleanOptions.paths.forEach((p) => {
-                cleanPathsOrPatterns.push(p);
-            });
-        }
-
-        // calculate excludes
-        const patternsToExclude: string[] = [];
-        const pathsToExclude: string[] = [];
-        const existedFilesToExclude: string[] = [];
-        const existedDirsToExclude: string[] = [];
-
-        if (cleanOptions.exclude?.length) {
-            for (const excludePath of cleanOptions.exclude) {
-                if (glob.hasMagic(excludePath)) {
-                    if (!patternsToExclude.includes(excludePath)) {
-                        patternsToExclude.push(excludePath);
-                    }
-                } else {
-                    const absPath =
-                        isWindowsStyleAbsolute(excludePath) && process.platform === 'win32'
-                            ? path.resolve(normalizePathToPOSIXStyle(excludePath))
-                            : path.resolve(outDir, excludePath);
-                    if (!pathsToExclude.includes(absPath)) {
-                        pathsToExclude.push(absPath);
-                    }
-                }
+        const cleanOptions = this.options.beforeOrAfterCleanOptions;
+        const cleanOutDir = this.options.runFor === 'before' && (cleanOptions as BeforeBuildCleanOptions).cleanOutDir;
+        const combinedPaths: string[] = [];
+        if (cleanOutDir) {
+            combinedPaths.push(outDir);
+            if (cleanOptions.exclude?.length) {
+                combinedPaths.push('**/*');
             }
         }
+        combinedPaths.push(...(cleanOptions.paths ?? []));
 
-        if (pathsToExclude.length) {
-            await Promise.all(
-                pathsToExclude.map(async (excludePath: string) => {
-                    const isExists = await pathExists(excludePath);
-                    if (isExists) {
-                        const statInfo = await fs.stat(excludePath);
-                        if (statInfo.isDirectory()) {
-                            if (!existedDirsToExclude.includes(excludePath)) {
-                                existedDirsToExclude.push(excludePath);
-                            }
-                        } else {
-                            if (!existedFilesToExclude.includes(excludePath)) {
-                                existedFilesToExclude.push(excludePath);
-                            }
-                        }
-                    }
-                })
-            );
+        if (!combinedPaths.length) {
+            return [];
         }
 
-        if (patternsToExclude.length) {
-            await Promise.all(
-                patternsToExclude.map(async (excludePattern: string) => {
-                    const foundExcludePaths = await glob(excludePattern, {
-                        cwd: outDir,
-                        dot: true,
-                        absolute: true
-                    });
-                    for (const p of foundExcludePaths) {
-                        const absPath =
-                            isWindowsStyleAbsolute(p) && process.platform === 'win32'
-                                ? path.resolve(normalizePathToPOSIXStyle(p))
-                                : path.resolve(outDir, p);
-                        const statInfo = await fs.stat(absPath);
-                        if (statInfo.isDirectory()) {
-                            if (!existedDirsToExclude.includes(absPath)) {
-                                existedDirsToExclude.push(absPath);
-                            }
-                        } else {
-                            if (!existedFilesToExclude.includes(absPath)) {
-                                existedFilesToExclude.push(absPath);
-                            }
-                        }
-                    }
-                })
-            );
+        const cleanPathInfoes = await getPathInfoes(combinedPaths, outDir);
+
+        const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir);
+
+        if (cleanOutDir && !excludePathInfoes.length) {
+            await this.delete({ absolutePath: outDir, stats: outDirStats, isSystemRoot: false });
+
+            return [outDir];
         }
 
-        const realCleanPaths: string[] = [];
+        const cleanedPaths: string[] = [];
 
-        await Promise.all(
-            cleanPathsOrPatterns.map(async (cleanPathOrPattern: string) => {
-                if (glob.hasMagic(cleanPathOrPattern)) {
-                    const foundPaths = await glob(cleanPathOrPattern, { cwd: outDir, dot: true });
-                    foundPaths.forEach((p) => {
-                        const absolutePath =
-                            isWindowsStyleAbsolute(p) && process.platform === 'win32'
-                                ? path.resolve(normalizePathToPOSIXStyle(p))
-                                : path.resolve(outDir, p);
-                        if (!realCleanPaths.includes(absolutePath)) {
-                            realCleanPaths.push(absolutePath);
-                        }
-                    });
-                } else {
-                    const absolutePath =
-                        isWindowsStyleAbsolute(cleanPathOrPattern) && process.platform === 'win32'
-                            ? path.resolve(normalizePathToPOSIXStyle(cleanPathOrPattern))
-                            : path.resolve(outDir, cleanPathOrPattern);
-
-                    if (!realCleanPaths.includes(absolutePath)) {
-                        realCleanPaths.push(absolutePath);
-                    }
-                }
-            })
-        );
-
-        for (const pathToClean of realCleanPaths) {
-            if (
-                existedFilesToExclude.includes(pathToClean) ||
-                existedDirsToExclude.includes(pathToClean) ||
-                pathsToExclude.includes(pathToClean) ||
-                existedDirsToExclude.find((e) => isInFolder(e, pathToClean))
-            ) {
-                continue;
-            }
-
+        for (const cleanPathInfo of cleanPathInfoes) {
             // Validation
-            if (isSamePaths(path.parse(pathToClean).root, pathToClean)) {
+            //
+            if (cleanPathInfo.isSystemRoot) {
                 throw new InvalidConfigError(
-                    `Deleting root directory is not permitted, path: ${pathToClean}.`,
-                    `${configLocationPrefix}.clean`
-                );
-            }
-
-            if (isInFolder(pathToClean, workspaceRoot) || isSamePaths(pathToClean, workspaceRoot)) {
-                throw new InvalidConfigError(
-                    `Deleting current working directory is not permitted, path: ${pathToClean}.`,
-                    `${configLocationPrefix}.clean`
-                );
-            }
-
-            if (!isInFolder(workspaceRoot, pathToClean) && this.options.allowOutsideWorkspaceRoot === false) {
-                throw new InvalidConfigError(
-                    `Deleting outside of current working directory is disabled. To enable it, set 'allowOutsideWorkspaceRoot' to 'true' in clean option. Path: ${pathToClean}/`,
+                    `Deleting root directory is not permitted, path: ${cleanPathInfo.absolutePath}.`,
                     `${configLocationPrefix}.clean`
                 );
             }
 
             if (
-                !isSamePaths(outDir, pathToClean) &&
-                !isInFolder(outDir, pathToClean) &&
-                !this.options.allowOutsideOutDir
+                isInFolder(cleanPathInfo.absolutePath, workspaceRoot) ||
+                isSamePaths(cleanPathInfo.absolutePath, workspaceRoot)
             ) {
                 throw new InvalidConfigError(
-                    `Cleaning outside of the output directory is disabled. To enable it, set 'allowOutsideOutDir' to 'true' in clean option. Path: ${pathToClean}.`,
+                    `Deleting current working directory is not permitted, path: ${cleanPathInfo.absolutePath}.`,
                     `${configLocationPrefix}.clean`
                 );
             }
 
-            const relToOutDir = normalizePathToPOSIXStyle(path.relative(outDir, pathToClean));
+            if (!isInFolder(workspaceRoot, cleanPathInfo.absolutePath)) {
+                throw new InvalidConfigError(
+                    `Deleting outside of current working directory is disabled. Path: ${cleanPathInfo.absolutePath}/`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
 
-            if (relToOutDir) {
-                let il = patternsToExclude.length;
-                let foundExclude = false;
-                while (il--) {
-                    const ignoreGlob = patternsToExclude[il];
-                    if (minimatch(relToOutDir, ignoreGlob, { dot: true, matchBase: true })) {
-                        foundExclude = true;
-                        break;
-                    }
-                }
+            if (!isSamePaths(outDir, cleanPathInfo.absolutePath) && !isInFolder(outDir, cleanPathInfo.absolutePath)) {
+                throw new InvalidConfigError(
+                    `Cleaning outside of the output directory is disabled. Path: ${cleanPathInfo.absolutePath}.`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
 
-                if (foundExclude) {
-                    continue;
-                }
+            if (!cleanPathInfo.stats) {
+                continue;
+            }
+
+            const pathToClean = cleanPathInfo.absolutePath;
+
+            if (cleanedPaths.includes(pathToClean) || cleanedPaths.find((p) => isSamePaths(p, pathToClean))) {
+                continue;
+            }
+
+            if (excludePathInfoes.find((i) => isSamePaths(i.absolutePath, pathToClean))) {
+                continue;
             }
 
             if (
-                path.extname(pathToClean) === '' &&
-                (existedFilesToExclude.find((e) => isInFolder(pathToClean, e)) ??
-                    existedDirsToExclude.find((e) => isInFolder(pathToClean, e)))
+                cleanPathInfo.stats.isDirectory() &&
+                excludePathInfoes.find((i) => isInFolder(pathToClean, i.absolutePath))
             ) {
                 continue;
             }
 
-            const exists = await pathExists(pathToClean);
-            if (exists) {
-                const cleanOutDir = isSamePaths(pathToClean, outDir) ? true : false;
-                const relToWorkspace = normalizePathToPOSIXStyle(path.relative(workspaceRoot, pathToClean));
-                const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
-                this.logger.info(`${msgPrefix} ${relToWorkspace}`);
-
-                if (!this.options.dryRun) {
-                    const stats = await fs.stat(pathToClean);
-
-                    if (stats.isDirectory() && !stats.isSymbolicLink()) {
-                        await fs.rm(pathToClean, { recursive: true, force: true, maxRetries: 2, retryDelay: 1000 });
-                    } else {
-                        await fs.unlink(pathToClean);
-                    }
-                }
-
-                cleanedPaths.push(pathToClean);
-            }
+            await this.delete(cleanPathInfo);
+            cleanedPaths.push(pathToClean);
         }
 
         return cleanedPaths;
+    }
+
+    private async delete(cleanPathInfo: PathInfo): Promise<void> {
+        const stats = cleanPathInfo.stats;
+        if (!stats) {
+            return;
+        }
+
+        const cleanOutDir = isSamePaths(cleanPathInfo.absolutePath, this.options.outDir) ? true : false;
+        const relToWorkspace = normalizePathToPOSIXStyle(
+            path.relative(this.options.workspaceInfo.workspaceRoot, cleanPathInfo.absolutePath)
+        );
+
+        const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
+        this.logger.info(`${msgPrefix} ${relToWorkspace}`);
+
+        if (!this.options.dryRun) {
+            if (stats.isDirectory() && !stats.isSymbolicLink()) {
+                await fs.rm(cleanPathInfo.absolutePath, {
+                    recursive: true,
+                    force: true,
+                    maxRetries: 2,
+                    retryDelay: 1000
+                });
+            } else {
+                await fs.unlink(cleanPathInfo.absolutePath);
+            }
+        }
     }
 }
 
@@ -329,8 +295,6 @@ export function getCleanTaskRunner(
             dryRun,
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
-            allowOutsideWorkspaceRoot: cleanOptions.allowOutsideWorkspaceRoot ? true : false,
-            allowOutsideOutDir: cleanOptions.allowOutsideOutDir ? true : false,
             logger
         });
 
@@ -345,8 +309,6 @@ export function getCleanTaskRunner(
             dryRun,
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
-            allowOutsideWorkspaceRoot: cleanOptions.allowOutsideWorkspaceRoot ? true : false,
-            allowOutsideOutDir: cleanOptions.allowOutsideOutDir ? true : false,
             logger
         });
 
