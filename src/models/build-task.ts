@@ -45,14 +45,6 @@ export interface CleanOptions {
      * Clean options after build task run.
      */
     afterBuild?: AfterBuildCleanOptions;
-    /**
-     * If true, allow cleaning outside of the output directory. Default is 'false'.
-     */
-    allowOutsideOutDir?: boolean;
-    /**
-     * If true, allow cleaning outside of the workspace root directory. Default is 'false'.
-     */
-    allowOutsideWorkspaceRoot?: boolean;
 }
 
 /**
