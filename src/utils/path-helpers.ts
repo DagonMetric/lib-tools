@@ -2,8 +2,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash = true): string {
+    const backToForwardSlash: [RegExp, string] = [/\\/g, '/'];
     const replace: [RegExp, string][] = [
-        [/\\/g, '/'],
+        [...backToForwardSlash],
         // [/(\w):/, '/$1'],
         // [/(\w+)\/\.\.\/?/g, ''], // already in path.posix.normalize(p)
         [/^\.\//, ''], // same
@@ -12,6 +13,17 @@ export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash =
         [/\/$/, ''], // same
         [/^\.$/, ''] // same
     ];
+
+    p = p.replace(backToForwardSlash[0], backToForwardSlash[1]);
+
+    let uncSlashes = '';
+    for (const c of p) {
+        if (c === '/') {
+            uncSlashes += c;
+        } else {
+            break;
+        }
+    }
 
     p = path.posix.normalize(p);
 
@@ -23,10 +35,12 @@ export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash =
 
     if (removeStartingSingleSlash && p.startsWith('/') && !/^\/{2,}/.test(p)) {
         p = p.substring(1);
+    } else if (/^\w:$/.test(p)) {
+        p = p + '/';
     }
 
-    if (/^\w:$/.test(p)) {
-        p = p + '/';
+    if (uncSlashes.length > 1 && !p.startsWith('/')) {
+        p = uncSlashes + p;
     }
 
     return p;
