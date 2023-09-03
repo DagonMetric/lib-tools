@@ -27,7 +27,7 @@ yarn-error.log*
 
 # Build results
 dist/
-out-tsc/
+temp-out/
 
 # sass
 .sass-cache/
