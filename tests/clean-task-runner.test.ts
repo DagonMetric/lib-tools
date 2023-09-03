@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
+import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../src/helpers/index.js';
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/models/index.js';
 import { Logger } from '../src/utils/index.js';
@@ -50,8 +50,6 @@ void describe('CleanTaskRunner', () => {
             assert.ok(runner != null);
             assert.equal(runner.options.dryRun, true);
             assert.equal(runner.options.runFor, 'before');
-            assert.equal(runner.options.allowOutsideOutDir, false);
-            assert.equal(runner.options.allowOutsideWorkspaceRoot, false);
             assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, expectedBeforeBuildCleanOptions);
         });
 
@@ -68,9 +66,7 @@ void describe('CleanTaskRunner', () => {
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: {
-                    beforeBuild: beforeBuildCleanOptions,
-                    allowOutsideOutDir: false,
-                    allowOutsideWorkspaceRoot: true
+                    beforeBuild: beforeBuildCleanOptions
                 }
             };
 
@@ -79,8 +75,6 @@ void describe('CleanTaskRunner', () => {
             assert.ok(runner != null);
             assert.equal(runner.options.dryRun, false);
             assert.equal(runner.options.runFor, 'before');
-            assert.equal(runner.options.allowOutsideOutDir, false);
-            assert.equal(runner.options.allowOutsideWorkspaceRoot, true);
             assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, beforeBuildCleanOptions);
         });
 
@@ -96,9 +90,7 @@ void describe('CleanTaskRunner', () => {
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 clean: {
-                    afterBuild: afterBuildCleanOptions,
-                    allowOutsideOutDir: true,
-                    allowOutsideWorkspaceRoot: false
+                    afterBuild: afterBuildCleanOptions
                 }
             };
 
@@ -107,279 +99,381 @@ void describe('CleanTaskRunner', () => {
             assert.ok(runner != null);
             assert.equal(runner.options.dryRun, false);
             assert.equal(runner.options.runFor, 'after');
-            assert.equal(runner.options.allowOutsideOutDir, true);
-            assert.equal(runner.options.allowOutsideWorkspaceRoot, false);
             assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, afterBuildCleanOptions);
         });
     });
 
-    void describe('run', () => {
-        void it('should delete output directory when clean=true [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: true
-            };
+    void describe('CleanTaskRunner:run', () => {
+        void it('should throw an error if outDir is empty', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: ' ',
+                logger: new Logger({ logLevel: 'error' })
+            });
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [buildTask._outDir];
-
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            await assert.rejects(async () => await runner.run());
         });
 
-        void it('should respect exclude when cleaning [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    beforeBuild: {
-                        cleanOutDir: true,
-                        exclude: ['LICENSE', 'README.md']
-                    }
-                }
-            };
+        void it('should throw an error if outDir is system root directory - C:\\', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve('C:\\'),
+                logger: new Logger({ logLevel: 'error' })
+            });
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if outDir is system root directory - /', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve('/'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if outDir is unc root directory - \\\\server\\public', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve('\\\\server\\public'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if outDir is unc root directory - //server/public', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve('//server/public'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if outDir is parent of workspace root', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, '../'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if outDir is parent of project root', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceInfo.projectRoot, '../'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning system root directory - C:\\', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['C:\\']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning system root directory - C:/', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['C:/']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning unc root directory - \\\\server', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['\\\\server']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning unc root directory - \\\\server\\public', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['\\\\server\\public']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning unc root directory - //erver//public', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['//erver//public']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning workspace directory', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['../']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning outside of workspace directory', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['../../dist']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if cleaning outside of output directory', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['../']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout/src'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should delete output directory when cleanOutDir=true [Dry Run]', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
 
             const cleanedPaths = await runner.run();
+
+            assert.deepStrictEqual(cleanedPaths.sort(), [runner.options.outDir].sort());
+        });
+
+        void it('should respect exclude when cleaning output directory [Dry Run]', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true,
+                    exclude: ['LICENSE', '**/*.md', 'src/a.js']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const cleanedPaths = await runner.run();
+
             const expectedCleanPaths = [
-                path.resolve(buildTask._outDir, 'src'),
-                path.resolve(buildTask._outDir, 'index.js'),
-                path.resolve(buildTask._outDir, 'src/c.js'),
-                path.resolve(buildTask._outDir, 'src/b.js'),
-                path.resolve(buildTask._outDir, 'src/a.js')
+                path.resolve(runner.options.outDir, 'path-1/p1.ts'),
+                path.resolve(runner.options.outDir, 'path-1'),
+                path.resolve(runner.options.outDir, 'path-2/p2.ts'),
+                path.resolve(runner.options.outDir, 'path-2'),
+                path.resolve(runner.options.outDir, 'index.js'),
+                path.resolve(runner.options.outDir, 'src/c.js'),
+                path.resolve(runner.options.outDir, 'src/b.js')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
 
         void it('should delete with after build clean options [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: {
-                        paths: ['**/*.js'],
-                        exclude: ['src/a.js']
-                    }
-                }
-            };
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['**/*.js', '**/*.md', 'src', 'path-1'],
+                    exclude: ['README.md', 'path-*/**']
+                },
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'theout'),
+                logger: new Logger({ logLevel: 'error' })
+            });
 
             const cleanedPaths = await runner.run();
             const expectedCleanPaths = [
-                path.resolve(buildTask._outDir, 'index.js'),
-                path.resolve(buildTask._outDir, 'src/c.js'),
-                path.resolve(buildTask._outDir, 'src/b.js')
+                path.resolve(runner.options.outDir, 'index.js'),
+                path.resolve(runner.options.outDir, 'src/c.js'),
+                path.resolve(runner.options.outDir, 'src/b.js'),
+                path.resolve(runner.options.outDir, 'src/a.js'),
+                path.resolve(runner.options.outDir, 'src/README.md'),
+                path.resolve(runner.options.outDir, 'src')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
 
-        void it('should throw an error if outDir is system root directory [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve('c:'),
-                _packageJsonInfo: null,
-                clean: true
-            };
+        void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun: false,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'temp-out'),
+                logger: new Logger({ logLevel: 'error' })
+            });
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should throw an error if outDir is parent of workspace root [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, '../'),
-                _packageJsonInfo: null,
-                clean: true
-            };
-
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should throw an error if outDir is parent of project root [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceInfo.projectRoot, '../'),
-                _packageJsonInfo: null,
-                clean: true
-            };
-
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should throw an error if cleaning system root directory [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: {
-                        paths: ['C:\\']
-                    }
-                }
-            };
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should throw an error if cleaning workspace directory [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: {
-                        paths: ['../']
-                    }
-                }
-            };
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should throw an error if cleaning outside of workspace directory [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: {
-                        paths: ['../../dist']
-                    }
-                }
-            };
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should throw an error if cleaning outside of outDir [Dry Run]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'path1/path2/theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: {
-                        paths: ['../']
-                    }
-                }
-            };
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'error' }), true);
-            assert.ok(runner);
-
-            await assert.rejects(async () => await runner.run());
-        });
-
-        void it('should delete output directory when clean=true [Actual Delete]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'temp-out'),
-                _packageJsonInfo: null,
-                clean: true
-            };
-
-            await fs.mkdir(buildTask._outDir, {
+            await fs.mkdir(runner.options.outDir, {
                 mode: 0o777,
                 recursive: true
             });
             await fs.copyFile(
                 path.resolve(workspaceRoot, 'theout/README.md'),
-                path.resolve(buildTask._outDir, 'README.md')
+                path.resolve(runner.options.outDir, 'README.md')
             );
-
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), false);
-            assert.ok(runner != null);
 
             const cleanedPaths = await runner.run();
 
             const outDirDeleted = await fs
-                .access(buildTask._outDir)
+                .access(runner.options.outDir)
                 .then(() => false)
                 .catch(() => true);
 
-            assert.equal(outDirDeleted, true, "'outDir' file should be deleted.");
-            assert.deepStrictEqual(cleanedPaths.sort(), [buildTask._outDir].sort());
+            assert.equal(outDirDeleted, true, "'outDir' should be deleted.");
+            assert.deepStrictEqual(cleanedPaths.sort(), [runner.options.outDir].sort());
         });
 
         void it('should delete with after build clean options [Actual Delete]', async () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'temp-out'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: {
-                        paths: ['LICENSE']
-                    }
-                }
-            };
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['**/*.js', '**/*.md']
+                },
+                dryRun: false,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, 'temp-out'),
+                logger: new Logger({ logLevel: 'error' })
+            });
 
-            const filePathToDelete = path.resolve(buildTask._outDir, 'LICENSE');
-
-            await fs.mkdir(buildTask._outDir, {
+            await fs.mkdir(runner.options.outDir, {
                 mode: 0o777,
                 recursive: true
             });
-            await fs.copyFile(path.resolve(workspaceRoot, 'theout/LICENSE'), filePathToDelete);
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'error' }), false);
-            assert.ok(runner);
+            await fs.copyFile(
+                path.resolve(workspaceRoot, 'theout/README.md'),
+                path.resolve(runner.options.outDir, 'README.md')
+            );
+            await fs.copyFile(
+                path.resolve(workspaceRoot, 'theout/index.js'),
+                path.resolve(runner.options.outDir, 'index.js')
+            );
 
             const cleanedPaths = await runner.run();
-
-            const outDirDeleted = await fs
-                .access(buildTask._outDir)
+            const expectedCleanPaths = [
+                path.resolve(runner.options.outDir, 'index.js'),
+                path.resolve(runner.options.outDir, 'README.md')
+            ];
+            const file1Deleted = await fs
+                .access(path.resolve(runner.options.outDir, 'index.js'))
                 .then(() => false)
                 .catch(() => true);
-            const fileDeleted = await fs
-                .access(filePathToDelete)
+            const file2Deleted = await fs
+                .access(path.resolve(runner.options.outDir, 'README.md'))
                 .then(() => false)
                 .catch(() => true);
 
-            assert.equal(outDirDeleted, false, "'outDir' file should NOT be deleted.");
-            assert.equal(fileDeleted, true, "'LICENSE' file should be deleted.");
-
-            assert.deepStrictEqual(cleanedPaths.sort(), [filePathToDelete].sort());
+            assert.equal(file1Deleted, true, `'index.js' should be deleted.`);
+            assert.equal(file2Deleted, true, `'README.md' should be deleted.`);
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
     });
 });

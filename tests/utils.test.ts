@@ -197,6 +197,12 @@ void describe('node:path', () => {
             assert.equal(path.win32.resolve('C:\\'), 'C:\\');
         });
 
+        // void it("resolve '\\\\server'", () => {
+        //     // ** TO NOTE
+        //     // C:\\server
+        //     assert.equal(path.win32.resolve('\\\\server'), '\\\\server');
+        // });
+
         void it("resolve '\\\\server\\public'", () => {
             // ** TO NOTE
             assert.equal(path.win32.resolve('\\\\server\\public'), '\\\\server\\public\\');
@@ -246,6 +252,99 @@ void describe('node:path', () => {
         void it("dirname '/abc'", () => {
             assert.equal(path.posix.dirname('/abc'), '/');
             assert.equal(path.win32.dirname('/abc'), '/');
+        });
+    });
+
+    void describe('parse', () => {
+        void it("parse 'C:/' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('C:/').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('C:/').root, 'C:/');
+        });
+
+        void it("parse 'C://' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('C://').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('C://').root, 'C:/');
+        });
+
+        void it("parse 'C:\\' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('C:\\').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('C:\\').root, 'C:\\');
+        });
+
+        void it("parse 'C:' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('C:').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('C:').root, 'C:');
+        });
+
+        void it("parse '//server' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('//server').root, '/');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('//server').root, '/');
+        });
+
+        void it("parse '//server//public' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('//server//public').root, '/');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('//server//public').root, '//server//public');
+        });
+
+        void it("parse '//server//public/path-1' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('//server//public/path-1').root, '/');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('//server//public/path-1').root, '//server//public/');
+        });
+
+        void it("parse '\\server' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('\\server').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('\\server').root, '\\');
+        });
+
+        void it("parse '\\\\server' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('\\\\server').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('\\\\server').root, '\\');
+        });
+
+        void it("parse '\\\\server\\public' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('\\\\server\\public').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('\\\\server\\public').root, '\\\\server\\public');
+        });
+
+        void it("parse '/foo/bar' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('/foo/bar').root, '/');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('/foo/bar').root, '/');
+        });
+
+        void it("parse 'foo/bar' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('foo/bar').root, '');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('foo/bar').root, '');
+        });
+
+        void it("parse '/' root", () => {
+            // ** TO NOTE **
+            assert.equal(path.posix.parse('/').root, '/');
+            // ** TO NOTE **
+            assert.equal(path.win32.parse('/').root, '/');
         });
     });
 });
