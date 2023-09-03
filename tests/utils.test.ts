@@ -286,9 +286,17 @@ void describe('Utils', () => {
             assert.equal(normalizePathToPOSIXStyle('\\\\\\server'), '///server');
         });
 
-        // void it("should be '//server' -> '//server'", () => {
-        //     assert.equal(normalizePathToPOSIXStyle('//server'), '//server');
-        // });
+        void it("should be '/server' -> 'server'", () => {
+            assert.equal(normalizePathToPOSIXStyle('/server'), 'server');
+        });
+
+        void it("should be '//server' -> '//server'", () => {
+            assert.equal(normalizePathToPOSIXStyle('//server'), '//server');
+        });
+
+        void it("should be '////server/public' -> '//server'", () => {
+            assert.equal(normalizePathToPOSIXStyle('////server/public'), '////server/public');
+        });
 
         void it("should be '.\\' -> ''", () => {
             assert.equal(normalizePathToPOSIXStyle('.\\'), '');
@@ -352,9 +360,13 @@ void describe('Utils', () => {
             assert.equal(isWindowsStyleAbsolute('\\server'), false);
         });
 
-        // void it("should be true '//server'", () => {
-        //     assert.equal(isWindowsStyleAbsolute('//server'), true);
-        // });
+        void it("should be true '//server'", () => {
+            assert.equal(isWindowsStyleAbsolute('//server'), true);
+        });
+
+        void it("should be true '//server/public'", () => {
+            assert.equal(isWindowsStyleAbsolute('//server/public'), true);
+        });
 
         void it("should be false '/server'", () => {
             assert.equal(isWindowsStyleAbsolute('/server'), false);
