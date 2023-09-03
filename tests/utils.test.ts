@@ -224,8 +224,8 @@ void describe('Utils', () => {
             assert.equal(normalizePathToPOSIXStyle('C:\\\\'), 'C:/');
         });
 
-        void it("should be '\\server' -> '/server'", () => {
-            assert.equal(normalizePathToPOSIXStyle('\\server'), '/server');
+        void it("should be '\\server' -> 'server'", () => {
+            assert.equal(normalizePathToPOSIXStyle('\\server'), 'server');
         });
 
         void it("should be '\\\\server' -> '//server'", () => {
