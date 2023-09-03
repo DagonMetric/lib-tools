@@ -6,7 +6,14 @@ import * as path from 'node:path';
 import { InvalidConfigError } from '../../../exceptions/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../../../helpers/index.js';
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../models/index.js';
-import { Logger, isInFolder, isSamePaths, normalizePathToPOSIXStyle, pathExists } from '../../../utils/index.js';
+import {
+    Logger,
+    isInFolder,
+    isSamePaths,
+    isWindowsStyleAbsolute,
+    normalizePathToPOSIXStyle,
+    pathExists
+} from '../../../utils/index.js';
 
 export interface CleanTaskRunnerOptions {
     readonly runFor: 'before' | 'after';
@@ -103,9 +110,10 @@ export class CleanTaskRunner {
                         patternsToExclude.push(excludePath);
                     }
                 } else {
-                    const absPath = path.isAbsolute(excludePath)
-                        ? path.resolve(excludePath)
-                        : path.resolve(outDir, excludePath);
+                    const absPath =
+                        isWindowsStyleAbsolute(excludePath) && process.platform === 'win32'
+                            ? path.resolve(normalizePathToPOSIXStyle(excludePath))
+                            : path.resolve(outDir, excludePath);
                     if (!pathsToExclude.includes(absPath)) {
                         pathsToExclude.push(absPath);
                     }
@@ -142,7 +150,10 @@ export class CleanTaskRunner {
                         absolute: true
                     });
                     for (const p of foundExcludePaths) {
-                        const absPath = path.isAbsolute(p) ? path.resolve(p) : path.resolve(outDir, p);
+                        const absPath =
+                            isWindowsStyleAbsolute(p) && process.platform === 'win32'
+                                ? path.resolve(normalizePathToPOSIXStyle(p))
+                                : path.resolve(outDir, p);
                         const statInfo = await fs.stat(absPath);
                         if (statInfo.isDirectory()) {
                             if (!existedDirsToExclude.includes(absPath)) {
@@ -165,15 +176,19 @@ export class CleanTaskRunner {
                 if (glob.hasMagic(cleanPathOrPattern)) {
                     const foundPaths = await glob(cleanPathOrPattern, { cwd: outDir, dot: true });
                     foundPaths.forEach((p) => {
-                        const absolutePath = path.isAbsolute(p) ? path.resolve(p) : path.resolve(outDir, p);
+                        const absolutePath =
+                            isWindowsStyleAbsolute(p) && process.platform === 'win32'
+                                ? path.resolve(normalizePathToPOSIXStyle(p))
+                                : path.resolve(outDir, p);
                         if (!realCleanPaths.includes(absolutePath)) {
                             realCleanPaths.push(absolutePath);
                         }
                     });
                 } else {
-                    const absolutePath = path.isAbsolute(cleanPathOrPattern)
-                        ? path.resolve(cleanPathOrPattern)
-                        : path.resolve(outDir, cleanPathOrPattern);
+                    const absolutePath =
+                        isWindowsStyleAbsolute(cleanPathOrPattern) && process.platform === 'win32'
+                            ? path.resolve(normalizePathToPOSIXStyle(cleanPathOrPattern))
+                            : path.resolve(outDir, cleanPathOrPattern);
 
                     if (!realCleanPaths.includes(absolutePath)) {
                         realCleanPaths.push(absolutePath);
