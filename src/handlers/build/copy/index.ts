@@ -5,7 +5,13 @@ import * as path from 'node:path';
 
 import { ParsedBuildTask, WorkspaceInfo } from '../../../helpers/index.js';
 import { CopyEntry } from '../../../models/index.js';
-import { Logger, isSamePaths, normalizePathToPOSIXStyle, pathExists } from '../../../utils/index.js';
+import {
+    Logger,
+    isSamePaths,
+    isWindowsStyleAbsolute,
+    normalizePathToPOSIXStyle,
+    pathExists
+} from '../../../utils/index.js';
 
 function excludeMatch(filePathRel: string, excludes: string[]): boolean {
     let il = excludes.length;
@@ -20,11 +26,11 @@ function excludeMatch(filePathRel: string, excludes: string[]): boolean {
 }
 
 export interface CopyTaskRunnerOptions {
-    logger: Logger;
-    copyEntries: CopyEntry[];
-    workspaceInfo: WorkspaceInfo;
-    outDir: string;
-    dryRun: boolean;
+    readonly logger: Logger;
+    readonly copyEntries: CopyEntry[];
+    readonly workspaceInfo: WorkspaceInfo;
+    readonly outDir: string;
+    readonly dryRun: boolean;
 }
 
 export class CopyTaskRunner {
@@ -64,7 +70,6 @@ export class CopyTaskRunner {
                 }
 
                 let fromRoot = projectRoot;
-                // TODO:
                 const parts = normalizePathToPOSIXStyle(copyEntry.from).split('/');
                 for (const p of parts) {
                     if (await pathExists(path.resolve(fromRoot, p))) {
@@ -99,9 +104,9 @@ export class CopyTaskRunner {
                     })
                 );
             } else {
-                const fromPath = path.isAbsolute(copyEntry.from)
-                    ? path.resolve(copyEntry.from)
-                    : path.resolve(projectRoot, copyEntry.from);
+                const fromPath = isWindowsStyleAbsolute(normalizePathToPOSIXStyle(copyEntry.from))
+                    ? path.resolve(normalizePathToPOSIXStyle(copyEntry.from))
+                    : path.resolve(projectRoot, normalizePathToPOSIXStyle(copyEntry.from));
                 if (!(await pathExists(fromPath))) {
                     this.logger.warn(`Path doesn't exist to copy, path: ${fromPath}`);
                     continue;
@@ -111,7 +116,7 @@ export class CopyTaskRunner {
                 if (stats.isFile()) {
                     const fromPathRel = normalizePathToPOSIXStyle(path.relative(projectRoot, fromPath));
                     if (excludeMatch(fromPathRel, excludes)) {
-                        this.logger.warn(`Excluded from copy, path: ${fromPath}`);
+                        this.logger.debug(`Excluded from copy, path: ${fromPath}`);
                         continue;
                     }
 
