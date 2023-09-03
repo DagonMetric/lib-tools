@@ -2,6 +2,10 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash = true): string {
+    if (!p?.trim().length) {
+        return '';
+    }
+
     const backToForwardSlash: [RegExp, string] = [/\\/g, '/'];
     const replaces: [RegExp, string][] = [
         // [...backToForwardSlash],
@@ -14,6 +18,7 @@ export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash =
         [/^\.$/, ''] // same
     ];
 
+    p = p.trim();
     p = p.replace(backToForwardSlash[0], backToForwardSlash[1]);
 
     let uncSlashes = '';
