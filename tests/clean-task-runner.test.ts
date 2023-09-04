@@ -119,7 +119,7 @@ void describe('CleanTaskRunner', () => {
             await assert.rejects(async () => await runner.run());
         });
 
-        void it('should throw an error if outDir is system root directory - C:\\', async () => {
+        void it('should throw an error if outDir is system root directory - C:\\ on Windows and / on Others', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
@@ -127,7 +127,7 @@ void describe('CleanTaskRunner', () => {
                 },
                 dryRun: true,
                 workspaceInfo,
-                outDir: path.resolve('C:\\'),
+                outDir: process.platform === 'win32' ? path.resolve('C:\\') : path.resolve('/'),
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -149,7 +149,7 @@ void describe('CleanTaskRunner', () => {
             await assert.rejects(async () => await runner.run());
         });
 
-        void it('should throw an error if outDir is unc root directory - \\\\server\\public', async () => {
+        void it('should throw an error if outDir is unc root directory - \\\\server\\public on Windows and / on others', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
@@ -157,14 +157,14 @@ void describe('CleanTaskRunner', () => {
                 },
                 dryRun: true,
                 workspaceInfo,
-                outDir: path.resolve('\\\\server\\public'),
+                outDir: process.platform === 'win32' ? path.resolve('\\\\server\\public') : path.resolve('/'),
                 logger: new Logger({ logLevel: 'error' })
             });
 
             await assert.rejects(async () => await runner.run());
         });
 
-        void it('should throw an error if outDir is unc root directory - //server/public', async () => {
+        void it('should throw an error if outDir is unc root directory - //server/public on Windows and / on others', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
@@ -172,7 +172,7 @@ void describe('CleanTaskRunner', () => {
                 },
                 dryRun: true,
                 workspaceInfo,
-                outDir: path.resolve('//server/public'),
+                outDir: process.platform === 'win32' ? path.resolve('//server/public') : path.resolve('/'),
                 logger: new Logger({ logLevel: 'error' })
             });
 
