@@ -474,7 +474,8 @@ void describe('CleanTaskRunner', () => {
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
                     cleanOutDir: true,
-                    exclude: ['path-*', 'src/**/*.md']
+                    // exclude: ['path-*', 'src/**/*.md']
+                    exclude: ['src/**/*.md']
                 },
                 dryRun: true,
                 workspaceInfo,
