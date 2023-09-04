@@ -178,6 +178,10 @@ export class CleanTaskRunner {
                 dirPathsToClean.push(pathInfo.absolutePath);
             }
         }
+        this.logger.debug('*******************************');
+        this.logger.debug('dirPathsToClean:');
+        this.logger.debug(JSON.stringify(dirPathsToClean));
+        this.logger.debug('*******************************');
         const sortedDirPathsToClean = dirPathsToClean.sort((a, b) => b.length - a.length);
         const processedCleanDirs: string[] = [];
         const extraCleanDirPatterns: string[] = [];
@@ -193,10 +197,20 @@ export class CleanTaskRunner {
             extraCleanDirPatterns.push(path.join(dirPathToClean, '**/*'));
         }
 
+        this.logger.debug('*******************************');
+        this.logger.debug('extraCleanDirPatterns:');
+        this.logger.debug(JSON.stringify(extraCleanDirPatterns));
+        this.logger.debug('*******************************');
+
         const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, outDir, false);
         if (extraCleanPathInfoes.length) {
             cleanPathInfoes.push(...extraCleanPathInfoes);
         }
+
+        this.logger.debug('*******************************');
+        this.logger.debug('extraCleanPathInfoes:');
+        this.logger.debug(JSON.stringify(extraCleanPathInfoes.length));
+        this.logger.debug('*******************************');
 
         const cleanedPaths: string[] = [];
 
