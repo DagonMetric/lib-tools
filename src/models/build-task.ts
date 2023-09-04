@@ -20,7 +20,6 @@ export interface BeforeBuildCleanOptions {
 
 /**
  * After build clean options.
- * @additionalProperties false
  */
 export interface AfterBuildCleanOptions {
     /**
@@ -48,8 +47,7 @@ export interface CleanOptions {
 }
 
 /**
- * Copy options.
- * @additionalProperties false
+ * Copy entry options.
  */
 export interface CopyEntry {
     /**
