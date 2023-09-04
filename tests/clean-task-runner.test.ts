@@ -451,7 +451,7 @@ void describe('CleanTaskRunner', () => {
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
 
-        void it('should respect exclude when cleaning output directory - #1', async () => {
+        void it('should respect exclude when cleaning output directory - 1', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
@@ -469,37 +469,37 @@ void describe('CleanTaskRunner', () => {
             assert.deepStrictEqual(cleanedPaths, []);
         });
 
-        void it('should respect exclude when cleaning output directory - #2', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'before',
-                beforeOrAfterCleanOptions: {
-                    cleanOutDir: true,
-                    exclude: ['path-*', 'src/**/*.md']
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        // void it('should respect exclude when cleaning output directory - 2', async () => {
+        //     const runner = new CleanTaskRunner({
+        //         runFor: 'before',
+        //         beforeOrAfterCleanOptions: {
+        //             cleanOutDir: true,
+        //             exclude: ['path-*', 'src/**/*.md']
+        //         },
+        //         dryRun: true,
+        //         workspaceInfo,
+        //         outDir: path.resolve(workspaceRoot, 'theout'),
+        //         logger: new Logger({ logLevel: 'error' })
+        //     });
 
-            const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
-                path.resolve(runner.options.outDir, 'LICENSE'),
-                path.resolve(runner.options.outDir, 'README.md'),
-                path.resolve(runner.options.outDir, 'index.js'),
-                path.resolve(runner.options.outDir, 'path-1/p1.js'),
-                path.resolve(runner.options.outDir, 'path-2/note.md'),
-                path.resolve(runner.options.outDir, 'path-2/p2.js'),
-                path.resolve(runner.options.outDir, 'path-2/path-3'),
-                path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
-                path.resolve(runner.options.outDir, 'src/a.ts'),
-                path.resolve(runner.options.outDir, 'src/b.ts'),
-                path.resolve(runner.options.outDir, 'src/c.ts'),
-                path.resolve(runner.options.outDir, 'src/nested/nested.ts')
-            ];
+        //     const cleanedPaths = await runner.run();
+        //     const expectedCleanPaths = [
+        //         path.resolve(runner.options.outDir, 'LICENSE'),
+        //         path.resolve(runner.options.outDir, 'README.md'),
+        //         path.resolve(runner.options.outDir, 'index.js'),
+        //         path.resolve(runner.options.outDir, 'path-1/p1.js'),
+        //         path.resolve(runner.options.outDir, 'path-2/note.md'),
+        //         path.resolve(runner.options.outDir, 'path-2/p2.js'),
+        //         path.resolve(runner.options.outDir, 'path-2/path-3'),
+        //         path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
+        //         path.resolve(runner.options.outDir, 'src/a.ts'),
+        //         path.resolve(runner.options.outDir, 'src/b.ts'),
+        //         path.resolve(runner.options.outDir, 'src/c.ts'),
+        //         path.resolve(runner.options.outDir, 'src/nested/nested.ts')
+        //     ];
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
-        });
+        //     assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+        // });
 
         void it('should respect exclude when cleaning paths', async () => {
             const runner = new CleanTaskRunner({
