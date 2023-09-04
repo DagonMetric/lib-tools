@@ -21,15 +21,12 @@ interface PathInfo {
     readonly isSystemRoot?: boolean;
 }
 
-async function getPathInfoes(
-    paths: string[],
-    cwd: string,
-    forExclude: boolean,
-    processedPaths: string[] = []
-): Promise<PathInfo[]> {
+async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean): Promise<PathInfo[]> {
     if (!paths?.length) {
         return [];
     }
+
+    const processedPaths: string[] = [];
 
     const pathInfoes: PathInfo[] = [];
 
@@ -175,30 +172,28 @@ export class CleanTaskRunner {
             return [outDir];
         }
 
+        const dirPathsToClean: string[] = [];
+        for (const pathInfo of cleanPathInfoes) {
+            if (pathInfo.stats?.isDirectory()) {
+                dirPathsToClean.push(pathInfo.absolutePath);
+            }
+        }
+        const sortedDirPathsToClean = dirPathsToClean.sort((a, b) => b.length - a.length);
         const processedCleanDirs: string[] = [];
         const extraCleanDirPatterns: string[] = [];
-        const dirsToClean = cleanPathInfoes
-            .filter((i) => i.stats && i.stats.isDirectory())
-            .map((i) => i.absolutePath)
-            .sort((a, b) => b.length - a.length);
-        for (const dirToClean of dirsToClean) {
+        for (const dirPathToClean of sortedDirPathsToClean) {
             if (
-                processedCleanDirs.find((p) => isInFolder(p, dirToClean)) ??
-                !excludePathInfoes.find((i) => isInFolder(dirToClean, i.absolutePath))
+                processedCleanDirs.find((p) => isInFolder(p, dirPathToClean)) ??
+                !excludePathInfoes.find((i) => isInFolder(dirPathToClean, i.absolutePath))
             ) {
                 continue;
             }
 
-            processedCleanDirs.push(dirToClean);
-            extraCleanDirPatterns.push(path.join(dirToClean, '**/*'));
+            processedCleanDirs.push(dirPathToClean);
+            extraCleanDirPatterns.push(path.join(dirPathToClean, '**/*'));
         }
 
-        const extraCleanPathInfoes = await getPathInfoes(
-            extraCleanDirPatterns,
-            outDir,
-            false,
-            cleanPathInfoes.map((i) => i.absolutePath)
-        );
+        const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, outDir, false);
         if (extraCleanPathInfoes.length) {
             cleanPathInfoes.push(...extraCleanPathInfoes);
         }
