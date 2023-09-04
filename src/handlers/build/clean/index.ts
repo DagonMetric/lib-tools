@@ -38,7 +38,7 @@ async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean):
         let normalizedPathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
 
         if (!normalizedPathOrPattern && /^[./\\]/.test(pathOrPattern)) {
-            normalizedPathOrPattern = '/';
+            normalizedPathOrPattern = './';
         }
 
         if (!normalizedPathOrPattern) {
@@ -152,27 +152,17 @@ export class CleanTaskRunner {
         const cleanOutDir = this.options.runFor === 'before' && (cleanOptions as BeforeBuildCleanOptions).cleanOutDir;
         const allCleanPaths = cleanOptions.paths ?? [];
         if (cleanOutDir) {
-            allCleanPaths.push(outDir);
+            allCleanPaths.push('./');
         }
 
         if (!allCleanPaths.length) {
             return [];
         }
 
-        this.logger.debug('*******************************');
-        this.logger.debug('allCleanPaths:');
-        this.logger.debug(JSON.stringify(allCleanPaths));
-        this.logger.debug('*******************************');
-
         const cleanPathInfoes = await getPathInfoes(allCleanPaths, outDir, false);
         if (!cleanPathInfoes.length) {
             return [];
         }
-
-        this.logger.debug('*******************************');
-        this.logger.debug('cleanPathInfoes:');
-        this.logger.debug(JSON.stringify(cleanPathInfoes));
-        this.logger.debug('*******************************');
 
         const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir, true);
 
@@ -204,7 +194,8 @@ export class CleanTaskRunner {
             }
 
             processedCleanDirs.push(dirPathToClean);
-            extraCleanDirPatterns.push(path.join(dirPathToClean, '**/*'));
+            const relToOutDir = normalizePathToPOSIXStyle(path.relative(outDir, dirPathToClean));
+            extraCleanDirPatterns.push(`${relToOutDir}/**/*`);
         }
 
         this.logger.debug('*******************************');
