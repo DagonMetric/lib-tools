@@ -198,7 +198,7 @@ export class CopyTaskRunner {
     }
 }
 
-export function getCopyTaskRunner(buildTask: ParsedBuildTask, logger: Logger, dryRun: boolean): CopyTaskRunner | null {
+export function getCopyTaskRunner(buildTask: ParsedBuildTask, logger: Logger, dryRun = false): CopyTaskRunner | null {
     if (!buildTask.copy?.length) {
         return null;
     }
