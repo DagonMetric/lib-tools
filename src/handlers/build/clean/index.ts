@@ -160,7 +160,7 @@ export class CleanTaskRunner {
         }
 
         this.logger.debug('*******************************');
-        this.logger.debug('dirPathsToClean:');
+        this.logger.debug('allCleanPaths:');
         this.logger.debug(JSON.stringify(allCleanPaths));
         this.logger.debug('*******************************');
 
@@ -168,6 +168,11 @@ export class CleanTaskRunner {
         if (!cleanPathInfoes.length) {
             return [];
         }
+
+        this.logger.debug('*******************************');
+        this.logger.debug('cleanPathInfoes:');
+        this.logger.debug(JSON.stringify(cleanPathInfoes));
+        this.logger.debug('*******************************');
 
         const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir, true);
 
