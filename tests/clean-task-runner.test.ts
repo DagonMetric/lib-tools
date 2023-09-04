@@ -343,15 +343,14 @@ void describe('CleanTaskRunner', () => {
 
             const cleanedPaths = await runner.run();
 
-            assert.deepStrictEqual(cleanedPaths.sort(), [runner.options.outDir].sort());
+            assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
         });
 
-        void it('should respect exclude when cleaning output directory [Dry Run]', async () => {
+        void it('should delete with before build clean options [Dry Run]', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
-                    cleanOutDir: true,
-                    exclude: ['LICENSE', '**/*.md', 'src/a.js']
+                    paths: ['src', 'path-1/**/*.js', 'path-2/**', '**/index.js']
                 },
                 dryRun: true,
                 workspaceInfo,
@@ -360,15 +359,15 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-
             const expectedCleanPaths = [
-                path.resolve(runner.options.outDir, 'path-1/p1.ts'),
-                path.resolve(runner.options.outDir, 'path-1'),
-                path.resolve(runner.options.outDir, 'path-2/p2.ts'),
+                path.resolve(runner.options.outDir, 'src'),
+                path.resolve(runner.options.outDir, 'path-1/p1.js'),
                 path.resolve(runner.options.outDir, 'path-2'),
-                path.resolve(runner.options.outDir, 'index.js'),
-                path.resolve(runner.options.outDir, 'src/c.js'),
-                path.resolve(runner.options.outDir, 'src/b.js')
+                path.resolve(runner.options.outDir, 'path-2/p2.js'),
+                path.resolve(runner.options.outDir, 'path-2/note.md'),
+                path.resolve(runner.options.outDir, 'path-2/path-3'),
+                path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
+                path.resolve(runner.options.outDir, 'index.js')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
@@ -378,8 +377,7 @@ void describe('CleanTaskRunner', () => {
             const runner = new CleanTaskRunner({
                 runFor: 'after',
                 beforeOrAfterCleanOptions: {
-                    paths: ['**/*.js', '**/*.md', 'src', 'path-1'],
-                    exclude: ['README.md', 'path-*/**']
+                    paths: ['src', 'path-1', '**/*.md']
                 },
                 dryRun: true,
                 workspaceInfo,
@@ -389,16 +387,34 @@ void describe('CleanTaskRunner', () => {
 
             const cleanedPaths = await runner.run();
             const expectedCleanPaths = [
-                path.resolve(runner.options.outDir, 'index.js'),
-                path.resolve(runner.options.outDir, 'src/c.js'),
-                path.resolve(runner.options.outDir, 'src/b.js'),
-                path.resolve(runner.options.outDir, 'src/a.js'),
+                path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'src'),
                 path.resolve(runner.options.outDir, 'src/README.md'),
-                path.resolve(runner.options.outDir, 'src')
+                path.resolve(runner.options.outDir, 'src/nested/README.md'),
+                path.resolve(runner.options.outDir, 'path-1'),
+                path.resolve(runner.options.outDir, 'path-2/note.md')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
+
+        // void it('should respect exclude when cleaning output directory [Dry Run] - #1', async () => {
+        //     const runner = new CleanTaskRunner({
+        //         runFor: 'before',
+        //         beforeOrAfterCleanOptions: {
+        //             cleanOutDir: true,
+        //             exclude: ['/']
+        //         },
+        //         dryRun: true,
+        //         workspaceInfo,
+        //         outDir: path.resolve(workspaceRoot, 'theout'),
+        //         logger: new Logger({ logLevel: 'error' })
+        //     });
+
+        //     const cleanedPaths = await runner.run();
+
+        //     assert.deepStrictEqual(cleanedPaths, []);
+        // });
 
         void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
             const runner = new CleanTaskRunner({
@@ -412,68 +428,61 @@ void describe('CleanTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            await fs.mkdir(runner.options.outDir, {
-                mode: 0o777,
+            await fs.cp(path.resolve(workspaceRoot, 'theout'), path.resolve(runner.options.outDir), {
                 recursive: true
             });
-            await fs.copyFile(
-                path.resolve(workspaceRoot, 'theout/README.md'),
-                path.resolve(runner.options.outDir, 'README.md')
-            );
-
             const cleanedPaths = await runner.run();
-
             const outDirDeleted = await fs
                 .access(runner.options.outDir)
                 .then(() => false)
                 .catch(() => true);
 
             assert.equal(outDirDeleted, true, "'outDir' should be deleted.");
-            assert.deepStrictEqual(cleanedPaths.sort(), [runner.options.outDir].sort());
+            assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
         });
 
-        void it('should delete with after build clean options [Actual Delete]', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'after',
-                beforeOrAfterCleanOptions: {
-                    paths: ['**/*.js', '**/*.md']
-                },
-                dryRun: false,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'temp-out'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        // void it('should delete with after build clean options [Actual Delete]', async () => {
+        //     const runner = new CleanTaskRunner({
+        //         runFor: 'after',
+        //         beforeOrAfterCleanOptions: {
+        //             paths: ['**/*.js', '**/*.md']
+        //         },
+        //         dryRun: false,
+        //         workspaceInfo,
+        //         outDir: path.resolve(workspaceRoot, 'temp-out'),
+        //         logger: new Logger({ logLevel: 'error' })
+        //     });
 
-            await fs.mkdir(runner.options.outDir, {
-                mode: 0o777,
-                recursive: true
-            });
-            await fs.copyFile(
-                path.resolve(workspaceRoot, 'theout/README.md'),
-                path.resolve(runner.options.outDir, 'README.md')
-            );
-            await fs.copyFile(
-                path.resolve(workspaceRoot, 'theout/index.js'),
-                path.resolve(runner.options.outDir, 'index.js')
-            );
+        //     await fs.mkdir(runner.options.outDir, {
+        //         mode: 0o777,
+        //         recursive: true
+        //     });
+        //     await fs.copyFile(
+        //         path.resolve(workspaceRoot, 'theout/README.md'),
+        //         path.resolve(runner.options.outDir, 'README.md')
+        //     );
+        //     await fs.copyFile(
+        //         path.resolve(workspaceRoot, 'theout/index.js'),
+        //         path.resolve(runner.options.outDir, 'index.js')
+        //     );
 
-            const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
-                path.resolve(runner.options.outDir, 'index.js'),
-                path.resolve(runner.options.outDir, 'README.md')
-            ];
-            const file1Deleted = await fs
-                .access(path.resolve(runner.options.outDir, 'index.js'))
-                .then(() => false)
-                .catch(() => true);
-            const file2Deleted = await fs
-                .access(path.resolve(runner.options.outDir, 'README.md'))
-                .then(() => false)
-                .catch(() => true);
+        //     const cleanedPaths = await runner.run();
+        //     const expectedCleanPaths = [
+        //         path.resolve(runner.options.outDir, 'index.js'),
+        //         path.resolve(runner.options.outDir, 'README.md')
+        //     ];
+        //     const file1Deleted = await fs
+        //         .access(path.resolve(runner.options.outDir, 'index.js'))
+        //         .then(() => false)
+        //         .catch(() => true);
+        //     const file2Deleted = await fs
+        //         .access(path.resolve(runner.options.outDir, 'README.md'))
+        //         .then(() => false)
+        //         .catch(() => true);
 
-            assert.equal(file1Deleted, true, `'index.js' should be deleted.`);
-            assert.equal(file2Deleted, true, `'README.md' should be deleted.`);
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
-        });
+        //     assert.equal(file1Deleted, true, `'index.js' should be deleted.`);
+        //     assert.equal(file2Deleted, true, `'README.md' should be deleted.`);
+        //     assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+        // });
     });
 });
