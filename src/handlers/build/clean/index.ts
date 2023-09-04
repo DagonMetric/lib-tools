@@ -17,20 +17,24 @@ import {
 
 interface PathInfo {
     readonly absolutePath: string;
-    readonly isSystemRoot: boolean;
     readonly stats: Stats | null;
+    readonly isSystemRoot?: boolean;
 }
 
-async function getPathInfoes(paths: string[], outDir: string): Promise<PathInfo[]> {
+async function getPathInfoes(
+    paths: string[],
+    cwd: string,
+    forExclude: boolean,
+    processedPaths: string[] = []
+): Promise<PathInfo[]> {
     if (!paths?.length) {
         return [];
     }
 
     const pathInfoes: PathInfo[] = [];
-    const processedPaths: string[] = [];
 
     for (let pathOrPattern of paths) {
-        if (!pathOrPattern?.trim().length) {
+        if (!pathOrPattern.trim().length) {
             continue;
         }
 
@@ -41,31 +45,15 @@ async function getPathInfoes(paths: string[], outDir: string): Promise<PathInfo[
         }
 
         if (glob.hasMagic(pathOrPattern)) {
-            const foundPaths = await glob(pathOrPattern, { cwd: outDir, dot: true, absolute: true });
+            const foundPaths = await glob(pathOrPattern, { cwd, dot: true, absolute: true });
             for (const absolutePath of foundPaths) {
-                if (!processedPaths.includes(absolutePath)) {
-                    const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-                    let stats: Stats | null = null;
-                    if (!isSystemRoot) {
-                        stats = await fs.stat(absolutePath);
-                    }
-
-                    processedPaths.push(absolutePath);
-                    pathInfoes.push({
-                        absolutePath,
-                        isSystemRoot,
-                        stats
-                    });
+                if (processedPaths.includes(absolutePath)) {
+                    continue;
                 }
-            }
-        } else {
-            const absolutePath = isWindowsStyleAbsolute(pathOrPattern)
-                ? path.resolve(normalizePathToPOSIXStyle(pathOrPattern))
-                : path.resolve(outDir, normalizePathToPOSIXStyle(pathOrPattern));
-            if (!processedPaths.includes(absolutePath)) {
+
                 const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
                 let stats: Stats | null = null;
-                if (!isSystemRoot && (await pathExists(absolutePath))) {
+                if (!isSystemRoot && !forExclude) {
                     stats = await fs.stat(absolutePath);
                 }
 
@@ -76,6 +64,26 @@ async function getPathInfoes(paths: string[], outDir: string): Promise<PathInfo[
                     stats
                 });
             }
+        } else {
+            const absolutePath = isWindowsStyleAbsolute(pathOrPattern)
+                ? path.resolve(normalizePathToPOSIXStyle(pathOrPattern))
+                : path.resolve(cwd, normalizePathToPOSIXStyle(pathOrPattern));
+            if (processedPaths.includes(absolutePath)) {
+                continue;
+            }
+
+            const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+            let stats: Stats | null = null;
+            if (!isSystemRoot && !forExclude && (await pathExists(absolutePath))) {
+                stats = await fs.stat(absolutePath);
+            }
+
+            processedPaths.push(absolutePath);
+            pathInfoes.push({
+                absolutePath,
+                isSystemRoot,
+                stats
+            });
         }
     }
 
@@ -141,27 +149,54 @@ export class CleanTaskRunner {
 
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
         const cleanOutDir = this.options.runFor === 'before' && (cleanOptions as BeforeBuildCleanOptions).cleanOutDir;
-        const combinedPaths: string[] = [];
+        const allCleanPaths = cleanOptions.paths ?? [];
         if (cleanOutDir) {
-            combinedPaths.push(outDir);
-            if (cleanOptions.exclude?.length) {
-                combinedPaths.push('**/*');
-            }
+            allCleanPaths.push(outDir);
         }
-        combinedPaths.push(...(cleanOptions.paths ?? []));
 
-        if (!combinedPaths.length) {
+        if (!allCleanPaths.length) {
             return [];
         }
 
-        const cleanPathInfoes = await getPathInfoes(combinedPaths, outDir);
+        const cleanPathInfoes = await getPathInfoes(allCleanPaths, outDir, false);
+        if (!cleanPathInfoes.length) {
+            return [];
+        }
 
-        const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir);
+        const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir, true);
 
         if (cleanOutDir && !excludePathInfoes.length) {
-            await this.delete({ absolutePath: outDir, stats: outDirStats, isSystemRoot: false });
+            await this.delete({ absolutePath: outDir, stats: outDirStats });
 
             return [outDir];
+        }
+
+        const processedCleanDirs: string[] = [];
+        const extraCleanDirPatterns: string[] = [];
+        const dirsToClean = cleanPathInfoes
+            .filter((i) => i.stats && i.stats.isDirectory())
+            .map((i) => i.absolutePath)
+            .sort((a, b) => b.length - a.length);
+        for (const dirToClean of dirsToClean) {
+            if (
+                processedCleanDirs.find((p) => isInFolder(p, dirToClean)) ??
+                !excludePathInfoes.find((i) => isInFolder(dirToClean, i.absolutePath))
+            ) {
+                continue;
+            }
+
+            processedCleanDirs.push(dirToClean);
+            extraCleanDirPatterns.push(normalizePathToPOSIXStyle(path.relative(outDir, `${dirToClean}/**/*`)));
+        }
+
+        const extraCleanPathInfoes = await getPathInfoes(
+            extraCleanDirPatterns,
+            outDir,
+            false,
+            cleanPathInfoes.map((i) => i.absolutePath)
+        );
+        if (extraCleanPathInfoes.length) {
+            cleanPathInfoes.push(...extraCleanPathInfoes);
         }
 
         const cleanedPaths: string[] = [];
