@@ -8,7 +8,7 @@ import { ParsedBuildTask, WorkspaceInfo } from '../src/helpers/index.js';
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/models/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('CleanTaskRunner', () => {
+void describe('getCleanTaskRunner', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
@@ -17,91 +17,99 @@ void describe('CleanTaskRunner', () => {
         configPath: null
     };
 
-    void describe('getCleanTaskRunner', () => {
-        void it('should not get runner when clean=false', () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: false
-            };
+    void it('should not get runner when clean=false', () => {
+        const buildTask: ParsedBuildTask = {
+            _taskName: 'build',
+            _workspaceInfo: workspaceInfo,
+            _outDir: path.resolve(workspaceRoot, 'theout'),
+            _packageJsonInfo: null,
+            clean: false
+        };
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
+        const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
 
-            assert.equal(runner, null);
-        });
-
-        void it('should get runner with before build clean options when clean=true', () => {
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: true
-            };
-
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
-
-            const expectedBeforeBuildCleanOptions: BeforeBuildCleanOptions = {
-                cleanOutDir: true
-            };
-
-            assert.ok(runner != null);
-            assert.equal(runner.options.dryRun, true);
-            assert.equal(runner.options.runFor, 'before');
-            assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, expectedBeforeBuildCleanOptions);
-        });
-
-        void it('should get runner with before build clean options', () => {
-            const beforeBuildCleanOptions: BeforeBuildCleanOptions = {
-                cleanOutDir: true,
-                paths: ['a.txt', '**/*.md'],
-                exclude: ['c.md']
-            };
-
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    beforeBuild: beforeBuildCleanOptions
-                }
-            };
-
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
-
-            assert.ok(runner != null);
-            assert.equal(runner.options.dryRun, false);
-            assert.equal(runner.options.runFor, 'before');
-            assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, beforeBuildCleanOptions);
-        });
-
-        void it('should get runner with after build clean options', () => {
-            const afterBuildCleanOptions: AfterBuildCleanOptions = {
-                paths: ['a.txt', '**/*.md'],
-                exclude: ['c.md']
-            };
-
-            const buildTask: ParsedBuildTask = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                clean: {
-                    afterBuild: afterBuildCleanOptions
-                }
-            };
-
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'info' }));
-
-            assert.ok(runner != null);
-            assert.equal(runner.options.dryRun, false);
-            assert.equal(runner.options.runFor, 'after');
-            assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, afterBuildCleanOptions);
-        });
+        assert.equal(runner, null);
     });
+
+    void it('should get runner with before build clean options when clean=true', () => {
+        const buildTask: ParsedBuildTask = {
+            _taskName: 'build',
+            _workspaceInfo: workspaceInfo,
+            _outDir: path.resolve(workspaceRoot, 'theout'),
+            _packageJsonInfo: null,
+            clean: true
+        };
+
+        const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
+
+        const expectedBeforeBuildCleanOptions: BeforeBuildCleanOptions = {
+            cleanOutDir: true
+        };
+
+        assert.ok(runner != null);
+        assert.equal(runner.options.dryRun, true);
+        assert.equal(runner.options.runFor, 'before');
+        assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, expectedBeforeBuildCleanOptions);
+    });
+
+    void it('should get runner with before build clean options', () => {
+        const beforeBuildCleanOptions: BeforeBuildCleanOptions = {
+            cleanOutDir: true,
+            paths: ['a.txt', '**/*.md'],
+            exclude: ['c.md']
+        };
+
+        const buildTask: ParsedBuildTask = {
+            _taskName: 'build',
+            _workspaceInfo: workspaceInfo,
+            _outDir: path.resolve(workspaceRoot, 'theout'),
+            _packageJsonInfo: null,
+            clean: {
+                beforeBuild: beforeBuildCleanOptions
+            }
+        };
+
+        const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
+
+        assert.ok(runner != null);
+        assert.equal(runner.options.dryRun, false);
+        assert.equal(runner.options.runFor, 'before');
+        assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, beforeBuildCleanOptions);
+    });
+
+    void it('should get runner with after build clean options', () => {
+        const afterBuildCleanOptions: AfterBuildCleanOptions = {
+            paths: ['a.txt', '**/*.md'],
+            exclude: ['c.md']
+        };
+
+        const buildTask: ParsedBuildTask = {
+            _taskName: 'build',
+            _workspaceInfo: workspaceInfo,
+            _outDir: path.resolve(workspaceRoot, 'theout'),
+            _packageJsonInfo: null,
+            clean: {
+                afterBuild: afterBuildCleanOptions
+            }
+        };
+
+        const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'info' }));
+
+        assert.ok(runner != null);
+        assert.equal(runner.options.dryRun, false);
+        assert.equal(runner.options.runFor, 'after');
+        assert.deepStrictEqual(runner.options.beforeOrAfterCleanOptions, afterBuildCleanOptions);
+    });
+});
+
+void describe('CleanTaskRunner', () => {
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'clean-project',
+        configPath: null
+    };
 
     void describe('CleanTaskRunner:run [Validation]', () => {
         void it('should throw an error if outDir is empty', async () => {
