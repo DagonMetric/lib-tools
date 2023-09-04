@@ -33,19 +33,23 @@ async function getPathInfoes(
 
     const pathInfoes: PathInfo[] = [];
 
-    for (let pathOrPattern of paths) {
+    for (const pathOrPattern of paths) {
         if (!pathOrPattern.trim().length) {
             continue;
         }
 
-        pathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
+        let normalizedPathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
 
-        if (!pathOrPattern) {
+        if (!normalizedPathOrPattern && /^[./\\]/.test(pathOrPattern)) {
+            normalizedPathOrPattern = '/';
+        }
+
+        if (!normalizedPathOrPattern) {
             continue;
         }
 
-        if (glob.hasMagic(pathOrPattern)) {
-            const foundPaths = await glob(pathOrPattern, { cwd, dot: true, absolute: true });
+        if (glob.hasMagic(normalizedPathOrPattern)) {
+            const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
             for (const absolutePath of foundPaths) {
                 if (processedPaths.includes(absolutePath)) {
                     continue;
@@ -65,9 +69,9 @@ async function getPathInfoes(
                 });
             }
         } else {
-            const absolutePath = isWindowsStyleAbsolute(pathOrPattern)
-                ? path.resolve(normalizePathToPOSIXStyle(pathOrPattern))
-                : path.resolve(cwd, normalizePathToPOSIXStyle(pathOrPattern));
+            const absolutePath = isWindowsStyleAbsolute(normalizedPathOrPattern)
+                ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
+                : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
             if (processedPaths.includes(absolutePath)) {
                 continue;
             }
