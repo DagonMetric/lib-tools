@@ -331,15 +331,18 @@ void describe('CleanTaskRunner', () => {
     });
 
     void describe('CleanTaskRunner:run [Dry Run]', () => {
+        const outDir = path.resolve(workspaceRoot, 'theout');
+        const dryRun = true;
+
         void it('should delete output directory when cleanOutDir=true', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
                     cleanOutDir: true
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -354,9 +357,9 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     paths: ['/']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -371,9 +374,9 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     paths: ['\\']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -388,9 +391,9 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     paths: ['.']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -405,9 +408,9 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     paths: ['src', 'path-1/**/*.js', 'path-2/**', '**/index.js']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -432,9 +435,9 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     paths: ['src', 'path-1', '**/*.md']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -458,9 +461,9 @@ void describe('CleanTaskRunner', () => {
                     cleanOutDir: true,
                     exclude: ['/']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -474,29 +477,28 @@ void describe('CleanTaskRunner', () => {
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
                     cleanOutDir: true,
-                    // exclude: ['path-*', 'src/**/*.md']
-                    exclude: ['src/**/*.md']
+                    exclude: ['path-*', 'src/**/*.md']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
             const cleanedPaths = await runner.run();
             const expectedCleanPaths: string[] = [
-                // path.resolve(runner.options.outDir, 'LICENSE'),
-                // path.resolve(runner.options.outDir, 'README.md'),
-                // path.resolve(runner.options.outDir, 'index.js'),
-                // path.resolve(runner.options.outDir, 'path-1/p1.js'),
-                // path.resolve(runner.options.outDir, 'path-2/note.md'),
-                // path.resolve(runner.options.outDir, 'path-2/p2.js'),
-                // path.resolve(runner.options.outDir, 'path-2/path-3'),
-                // path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
-                // path.resolve(runner.options.outDir, 'src/a.ts'),
-                // path.resolve(runner.options.outDir, 'src/b.ts'),
-                // path.resolve(runner.options.outDir, 'src/c.ts'),
-                // path.resolve(runner.options.outDir, 'src/nested/nested.ts')
+                path.resolve(runner.options.outDir, 'LICENSE'),
+                path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'index.js'),
+                path.resolve(runner.options.outDir, 'path-1/p1.js'),
+                path.resolve(runner.options.outDir, 'path-2/note.md'),
+                path.resolve(runner.options.outDir, 'path-2/p2.js'),
+                path.resolve(runner.options.outDir, 'path-2/path-3'),
+                path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
+                path.resolve(runner.options.outDir, 'src/a.ts'),
+                path.resolve(runner.options.outDir, 'src/b.ts'),
+                path.resolve(runner.options.outDir, 'src/c.ts'),
+                path.resolve(runner.options.outDir, 'src/nested/nested.ts')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
@@ -509,9 +511,9 @@ void describe('CleanTaskRunner', () => {
                     paths: ['src'],
                     exclude: ['**/*.md', 'src/a.ts']
                 },
-                dryRun: true,
+                dryRun,
                 workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
+                outDir,
                 logger: new Logger({ logLevel: 'error' })
             });
 
@@ -528,6 +530,7 @@ void describe('CleanTaskRunner', () => {
 
     void describe('CleanTaskRunner:run [Actual Remove]', () => {
         const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
+        const dryRun = false;
 
         beforeEach(async () => {
             await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
@@ -555,7 +558,7 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     cleanOutDir: true
                 },
-                dryRun: false,
+                dryRun,
                 workspaceInfo,
                 outDir: tempOutDir,
                 logger: new Logger({ logLevel: 'error' })
@@ -577,7 +580,7 @@ void describe('CleanTaskRunner', () => {
                 beforeOrAfterCleanOptions: {
                     paths: ['**/README.md']
                 },
-                dryRun: false,
+                dryRun,
                 workspaceInfo,
                 outDir: tempOutDir,
                 logger: new Logger({ logLevel: 'error' })
