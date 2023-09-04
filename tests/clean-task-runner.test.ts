@@ -119,20 +119,24 @@ void describe('CleanTaskRunner', () => {
             await assert.rejects(async () => await runner.run());
         });
 
-        void it('should throw an error if outDir is system root directory - C:\\ on Windows and / on Others', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'before',
-                beforeOrAfterCleanOptions: {
-                    cleanOutDir: true
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: process.platform === 'win32' ? path.resolve('C:\\') : path.resolve('/'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if outDir is system root directory - C:\\ on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'before',
+                    beforeOrAfterCleanOptions: {
+                        cleanOutDir: true
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve('C:\\'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
         void it('should throw an error if outDir is system root directory - /', async () => {
             const runner = new CleanTaskRunner({
@@ -149,35 +153,43 @@ void describe('CleanTaskRunner', () => {
             await assert.rejects(async () => await runner.run());
         });
 
-        void it('should throw an error if outDir is unc root directory - \\\\server\\public on Windows and / on others', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'before',
-                beforeOrAfterCleanOptions: {
-                    cleanOutDir: true
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: process.platform === 'win32' ? path.resolve('\\\\server\\public') : path.resolve('/'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if outDir is unc root directory - \\\\server\\public on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'before',
+                    beforeOrAfterCleanOptions: {
+                        cleanOutDir: true
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve('\\\\server\\public'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
-        void it('should throw an error if outDir is unc root directory - //server/public on Windows and / on others', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'before',
-                beforeOrAfterCleanOptions: {
-                    cleanOutDir: true
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: process.platform === 'win32' ? path.resolve('//server/public') : path.resolve('/'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if outDir is unc root directory - //server/public on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'before',
+                    beforeOrAfterCleanOptions: {
+                        cleanOutDir: true
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve('//server/public'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
         void it('should throw an error if outDir is parent of workspace root', async () => {
             const runner = new CleanTaskRunner({
@@ -209,80 +221,100 @@ void describe('CleanTaskRunner', () => {
             await assert.rejects(async () => await runner.run());
         });
 
-        void it('should throw an error if cleaning system root directory - C:\\', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'after',
-                beforeOrAfterCleanOptions: {
-                    paths: ['C:\\']
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if cleaning system root directory - C:\\ on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['C:\\']
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve(workspaceRoot, 'theout'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
-        void it('should throw an error if cleaning system root directory - C:/', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'after',
-                beforeOrAfterCleanOptions: {
-                    paths: ['C:/']
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if cleaning system root directory - C:/',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['C:/']
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve(workspaceRoot, 'theout'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
-        void it('should throw an error if cleaning unc root directory - \\\\server', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'after',
-                beforeOrAfterCleanOptions: {
-                    paths: ['\\\\server']
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if cleaning unc root directory - \\\\server',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['\\\\server']
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve(workspaceRoot, 'theout'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
-        void it('should throw an error if cleaning unc root directory - \\\\server\\public', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'after',
-                beforeOrAfterCleanOptions: {
-                    paths: ['\\\\server\\public']
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if cleaning unc root directory - \\\\server\\public',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['\\\\server\\public']
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve(workspaceRoot, 'theout'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
-        void it('should throw an error if cleaning unc root directory - //erver//public', async () => {
-            const runner = new CleanTaskRunner({
-                runFor: 'after',
-                beforeOrAfterCleanOptions: {
-                    paths: ['//erver//public']
-                },
-                dryRun: true,
-                workspaceInfo,
-                outDir: path.resolve(workspaceRoot, 'theout'),
-                logger: new Logger({ logLevel: 'error' })
-            });
+        void it(
+            'should throw an error if cleaning unc root directory - //erver//public',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['//erver//public']
+                    },
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve(workspaceRoot, 'theout'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            await assert.rejects(async () => await runner.run());
-        });
+                await assert.rejects(async () => await runner.run());
+            }
+        );
 
         void it('should throw an error if cleaning workspace directory', async () => {
             const runner = new CleanTaskRunner({
