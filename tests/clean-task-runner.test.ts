@@ -482,7 +482,7 @@ void describe('CleanTaskRunner', () => {
                 dryRun,
                 workspaceInfo,
                 outDir,
-                logger: new Logger({ logLevel: 'error' })
+                logger: new Logger({ logLevel: 'debug' })
             });
 
             const cleanedPaths = await runner.run();
