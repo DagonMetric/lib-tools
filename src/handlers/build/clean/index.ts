@@ -159,6 +159,11 @@ export class CleanTaskRunner {
             return [];
         }
 
+        this.logger.debug('*******************************');
+        this.logger.debug('dirPathsToClean:');
+        this.logger.debug(JSON.stringify(allCleanPaths));
+        this.logger.debug('*******************************');
+
         const cleanPathInfoes = await getPathInfoes(allCleanPaths, outDir, false);
         if (!cleanPathInfoes.length) {
             return [];
