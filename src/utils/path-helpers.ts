@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash = true): string {
+export function normalizePathToPOSIXStyle(p: string): string {
     if (!p?.trim().length) {
         return '';
     }
@@ -11,20 +11,20 @@ export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash =
         // [...backToForwardSlash],
         // [/(\w):/, '/$1'],
         // [/(\w+)\/\.\.\/?/g, ''], // already in path.posix.normalize(p)
-        [/^\.\//, ''], // same
+        [/^\.\//, ''],
         // [/\/\.\//, '/'], // already in path.posix.normalize(p)
         // [/\/\.$/, ''], // already in path.posix.normalize(p)
-        [/\/$/, ''], // same
-        [/^\.$/, ''] // same
+        [/\/$/, ''],
+        [/^\.$/, '']
     ];
 
     p = p.trim();
     p = p.replace(backToForwardSlash[0], backToForwardSlash[1]);
 
-    let uncSlashes = '';
+    let startingSlashes = '';
     for (const c of p) {
         if (c === '/') {
-            uncSlashes += c;
+            startingSlashes += c;
         } else {
             break;
         }
@@ -38,25 +38,25 @@ export function normalizePathToPOSIXStyle(p: string, removeStartingSingleSlash =
         }
     });
 
-    if ((removeStartingSingleSlash || uncSlashes.length > 1) && p.startsWith('/') && !/^\/{2,}/.test(p)) {
+    if (p.startsWith('/') && !/^\/{2,}/.test(p)) {
         p = p.substring(1);
-    } else if (/^\w:$/.test(p)) {
-        p = p + '/';
     }
 
-    if (uncSlashes.length > 1 && !p.startsWith('/')) {
-        p = uncSlashes + p;
+    if (/^\w:$/.test(p)) {
+        p = p + '/';
+    } else if (startingSlashes.length > 1 && !p.startsWith('/')) {
+        p = startingSlashes + p;
     }
 
     return p;
 }
 
-export function isWindowsStyleAbsolute(p: string, ignoreStartingSlash = true): boolean {
+export function isWindowsStyleAbsolute(p: string): boolean {
     if (!p) {
         return false;
     }
 
-    p = normalizePathToPOSIXStyle(p, ignoreStartingSlash);
+    p = normalizePathToPOSIXStyle(p);
 
     return path.win32.isAbsolute(p);
 }
