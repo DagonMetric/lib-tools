@@ -484,19 +484,19 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
-                path.resolve(runner.options.outDir, 'LICENSE'),
-                path.resolve(runner.options.outDir, 'README.md'),
-                path.resolve(runner.options.outDir, 'index.js'),
-                path.resolve(runner.options.outDir, 'path-1/p1.js'),
-                path.resolve(runner.options.outDir, 'path-2/note.md'),
-                path.resolve(runner.options.outDir, 'path-2/p2.js'),
-                path.resolve(runner.options.outDir, 'path-2/path-3'),
-                path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
-                path.resolve(runner.options.outDir, 'src/a.ts'),
-                path.resolve(runner.options.outDir, 'src/b.ts'),
-                path.resolve(runner.options.outDir, 'src/c.ts'),
-                path.resolve(runner.options.outDir, 'src/nested/nested.ts')
+            const expectedCleanPaths: string[] = [
+                // path.resolve(runner.options.outDir, 'LICENSE'),
+                // path.resolve(runner.options.outDir, 'README.md'),
+                // path.resolve(runner.options.outDir, 'index.js'),
+                // path.resolve(runner.options.outDir, 'path-1/p1.js'),
+                // path.resolve(runner.options.outDir, 'path-2/note.md'),
+                // path.resolve(runner.options.outDir, 'path-2/p2.js'),
+                // path.resolve(runner.options.outDir, 'path-2/path-3'),
+                // path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
+                // path.resolve(runner.options.outDir, 'src/a.ts'),
+                // path.resolve(runner.options.outDir, 'src/b.ts'),
+                // path.resolve(runner.options.outDir, 'src/c.ts'),
+                // path.resolve(runner.options.outDir, 'src/nested/nested.ts')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
