@@ -190,7 +190,7 @@ export class CleanTaskRunner {
             }
 
             processedCleanDirs.push(dirToClean);
-            extraCleanDirPatterns.push(normalizePathToPOSIXStyle(path.relative(outDir, `${dirToClean}/**/*`)));
+            extraCleanDirPatterns.push(path.join(dirToClean, '**/*'));
         }
 
         const extraCleanPathInfoes = await getPathInfoes(
