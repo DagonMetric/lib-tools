@@ -21,6 +21,12 @@ interface PathInfo {
     readonly isSystemRoot?: boolean;
 }
 
+/**
+ *
+ * @param paths Relative paths. We allow absolute paths on Windows only.
+ * @param cwd Output directory.
+ * @param forExclude For exclude or clean purpose.
+ */
 async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean): Promise<PathInfo[]> {
     if (!paths?.length) {
         return [];
@@ -66,9 +72,11 @@ async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean):
                 });
             }
         } else {
-            const absolutePath = isWindowsStyleAbsolute(normalizedPathOrPattern)
-                ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
-                : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
+            // We allow absolute path on Windows only.
+            const absolutePath =
+                isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
+                    ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
+                    : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
             if (processedPaths.includes(absolutePath)) {
                 continue;
             }
@@ -148,6 +156,8 @@ export class CleanTaskRunner {
             throw new InvalidConfigError(`The 'outDir' must be directory.`, `${configLocationPrefix}.outDir`);
         }
 
+        // cleanPathInfoes
+        //
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
         const cleanOutDir = this.options.runFor === 'before' && (cleanOptions as BeforeBuildCleanOptions).cleanOutDir;
         const allCleanPaths = cleanOptions.paths ?? [];
@@ -165,14 +175,17 @@ export class CleanTaskRunner {
             return [];
         }
 
+        // excludePathInfoes
         const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir, true);
 
         if (cleanOutDir && !excludePathInfoes.length) {
-            await this.delete({ absolutePath: outDir, stats: outDirStats });
+            await this.delete(outDir, outDirStats);
 
             return [outDir];
         }
 
+        // extraCleanPathInfoes
+        //
         const dirPathsToClean: string[] = [];
         for (const pathInfo of cleanPathInfoes) {
             if (pathInfo.stats?.isDirectory()) {
@@ -258,22 +271,17 @@ export class CleanTaskRunner {
                 continue;
             }
 
-            await this.delete(cleanPathInfo);
+            await this.delete(cleanPathInfo.absolutePath, cleanPathInfo.stats);
             cleanedPaths.push(pathToClean);
         }
 
         return cleanedPaths;
     }
 
-    private async delete(cleanPathInfo: PathInfo): Promise<void> {
-        const stats = cleanPathInfo.stats;
-        if (!stats) {
-            return;
-        }
-
-        const cleanOutDir = isSamePaths(cleanPathInfo.absolutePath, this.options.outDir) ? true : false;
+    private async delete(pathToDelete: string, stats: Stats): Promise<void> {
+        const cleanOutDir = isSamePaths(pathToDelete, this.options.outDir) ? true : false;
         const relToWorkspace = normalizePathToPOSIXStyle(
-            path.relative(this.options.workspaceInfo.workspaceRoot, cleanPathInfo.absolutePath)
+            path.relative(this.options.workspaceInfo.workspaceRoot, pathToDelete)
         );
 
         const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
@@ -281,14 +289,14 @@ export class CleanTaskRunner {
 
         if (!this.options.dryRun) {
             if (stats.isDirectory() && !stats.isSymbolicLink()) {
-                await fs.rm(cleanPathInfo.absolutePath, {
+                await fs.rm(pathToDelete, {
                     recursive: true,
                     force: true,
                     maxRetries: 2,
                     retryDelay: 1000
                 });
             } else {
-                await fs.unlink(cleanPathInfo.absolutePath);
+                await fs.unlink(pathToDelete);
             }
         }
     }
