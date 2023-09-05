@@ -110,8 +110,14 @@ export interface CleanTaskRunnerOptions {
 
 export class CleanTaskRunner {
     private readonly logger: Logger;
+    private readonly cleanOutDir: boolean;
 
     constructor(readonly options: CleanTaskRunnerOptions) {
+        this.cleanOutDir =
+            this.options.runFor === 'before' &&
+            (this.options.beforeOrAfterCleanOptions as BeforeBuildCleanOptions).cleanOutDir
+                ? true
+                : false;
         this.logger = this.options.logger;
     }
 
@@ -151,41 +157,118 @@ export class CleanTaskRunner {
         if (!(await pathExists(outDir))) {
             return [];
         }
+
         const outDirStats = await fs.stat(outDir);
         if (outDirStats.isFile()) {
             throw new InvalidConfigError(`The 'outDir' must be directory.`, `${configLocationPrefix}.outDir`);
         }
 
         // cleanPathInfoes
-        //
-        const cleanOptions = this.options.beforeOrAfterCleanOptions;
-        const cleanOutDir = this.options.runFor === 'before' && (cleanOptions as BeforeBuildCleanOptions).cleanOutDir;
-        const allCleanPaths = cleanOptions.paths ?? [];
-        if (cleanOutDir) {
-            // Must be relative path
-            allCleanPaths.push('./');
-        }
-
-        if (!allCleanPaths.length) {
-            return [];
-        }
-
-        const cleanPathInfoes = await getPathInfoes(allCleanPaths, outDir, false);
+        const cleanPathInfoes = await this.getCleanPathInfoes();
         if (!cleanPathInfoes.length) {
             return [];
         }
 
         // excludePathInfoes
-        const excludePathInfoes = await getPathInfoes(cleanOptions.exclude ?? [], outDir, true);
+        const excludePathInfoes = await this.getExcludePathInfoes();
 
-        if (cleanOutDir && !excludePathInfoes.length) {
+        // Delete output path only
+        if (this.cleanOutDir && !excludePathInfoes.length) {
             await this.delete(outDir, outDirStats);
 
             return [outDir];
         }
 
-        // extraCleanPathInfoes
-        //
+        // addMagicAllFilesToCleanPathInfoes
+        await this.addMagicAllFilesToCleanPathInfoes(cleanPathInfoes, excludePathInfoes);
+
+        const cleanedPaths: string[] = [];
+
+        for (const cleanPathInfo of cleanPathInfoes) {
+            const pathToClean = cleanPathInfo.absolutePath;
+
+            // Validation
+            //
+            if (cleanPathInfo.isSystemRoot) {
+                throw new InvalidConfigError(
+                    `Deleting root directory is not permitted, path: ${pathToClean}.`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
+
+            if (isInFolder(pathToClean, workspaceRoot) || isSamePaths(pathToClean, workspaceRoot)) {
+                throw new InvalidConfigError(
+                    `Deleting current working directory is not permitted, path: ${pathToClean}.`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
+
+            if (!isInFolder(workspaceRoot, pathToClean)) {
+                throw new InvalidConfigError(
+                    `Deleting outside of current working directory is disabled. Path: ${pathToClean}/`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
+
+            if (!isSamePaths(outDir, pathToClean) && !isInFolder(outDir, pathToClean)) {
+                throw new InvalidConfigError(
+                    `Cleaning outside of the output directory is disabled. Path: ${pathToClean}.`,
+                    `${configLocationPrefix}.clean`
+                );
+            }
+
+            if (!cleanPathInfo.stats) {
+                continue;
+            }
+
+            // If already cleaned
+            if (cleanedPaths.includes(pathToClean) || cleanedPaths.find((p) => isSamePaths(p, pathToClean))) {
+                continue;
+            }
+
+            // If excluded
+            if (excludePathInfoes.find((i) => isSamePaths(i.absolutePath, pathToClean))) {
+                this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
+                continue;
+            }
+
+            // If excluded
+            if (
+                cleanPathInfo.stats.isDirectory() &&
+                excludePathInfoes.find((i) => isInFolder(pathToClean, i.absolutePath))
+            ) {
+                this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
+                continue;
+            }
+
+            await this.delete(pathToClean, cleanPathInfo.stats);
+            cleanedPaths.push(pathToClean);
+        }
+
+        return cleanedPaths;
+    }
+
+    private async getCleanPathInfoes(): Promise<PathInfo[]> {
+        const cleanOptions = this.options.beforeOrAfterCleanOptions;
+        const combinedCleanPaths = cleanOptions.paths ?? [];
+        if (this.cleanOutDir) {
+            // Must be relative path
+            combinedCleanPaths.push('./');
+        }
+
+        if (!combinedCleanPaths.length) {
+            return [];
+        }
+
+        const cleanPathInfoes = await getPathInfoes(combinedCleanPaths, this.options.outDir, false);
+
+        return cleanPathInfoes;
+    }
+
+    private async addMagicAllFilesToCleanPathInfoes(
+        cleanPathInfoes: PathInfo[],
+        excludePathInfoes: PathInfo[]
+    ): Promise<void> {
         const dirPathsToClean: string[] = [];
         for (const pathInfo of cleanPathInfoes) {
             if (pathInfo.stats?.isDirectory()) {
@@ -204,78 +287,21 @@ export class CleanTaskRunner {
             }
 
             processedCleanDirs.push(dirPathToClean);
-            const relToOutDir = normalizePathToPOSIXStyle(path.relative(outDir, dirPathToClean));
+            const relToOutDir = normalizePathToPOSIXStyle(path.relative(this.options.outDir, dirPathToClean));
             // Must be relative path
             extraCleanDirPatterns.push(`${relToOutDir}/**/*`);
         }
 
-        const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, outDir, false);
+        const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, this.options.outDir, false);
         if (extraCleanPathInfoes.length) {
             cleanPathInfoes.push(...extraCleanPathInfoes);
         }
+    }
 
-        const cleanedPaths: string[] = [];
+    private getExcludePathInfoes(): Promise<PathInfo[]> {
+        const cleanOptions = this.options.beforeOrAfterCleanOptions;
 
-        for (const cleanPathInfo of cleanPathInfoes) {
-            // Validation
-            //
-            if (cleanPathInfo.isSystemRoot) {
-                throw new InvalidConfigError(
-                    `Deleting root directory is not permitted, path: ${cleanPathInfo.absolutePath}.`,
-                    `${configLocationPrefix}.clean`
-                );
-            }
-
-            if (
-                isInFolder(cleanPathInfo.absolutePath, workspaceRoot) ||
-                isSamePaths(cleanPathInfo.absolutePath, workspaceRoot)
-            ) {
-                throw new InvalidConfigError(
-                    `Deleting current working directory is not permitted, path: ${cleanPathInfo.absolutePath}.`,
-                    `${configLocationPrefix}.clean`
-                );
-            }
-
-            if (!isInFolder(workspaceRoot, cleanPathInfo.absolutePath)) {
-                throw new InvalidConfigError(
-                    `Deleting outside of current working directory is disabled. Path: ${cleanPathInfo.absolutePath}/`,
-                    `${configLocationPrefix}.clean`
-                );
-            }
-
-            if (!isSamePaths(outDir, cleanPathInfo.absolutePath) && !isInFolder(outDir, cleanPathInfo.absolutePath)) {
-                throw new InvalidConfigError(
-                    `Cleaning outside of the output directory is disabled. Path: ${cleanPathInfo.absolutePath}.`,
-                    `${configLocationPrefix}.clean`
-                );
-            }
-
-            if (!cleanPathInfo.stats) {
-                continue;
-            }
-
-            const pathToClean = cleanPathInfo.absolutePath;
-
-            if (cleanedPaths.includes(pathToClean) || cleanedPaths.find((p) => isSamePaths(p, pathToClean))) {
-                continue;
-            }
-
-            if (excludePathInfoes.find((i) => isSamePaths(i.absolutePath, pathToClean))) {
-                continue;
-            }
-
-            if (
-                cleanPathInfo.stats.isDirectory() &&
-                excludePathInfoes.find((i) => isInFolder(pathToClean, i.absolutePath))
-            ) {
-                continue;
-            }
-
-            await this.delete(cleanPathInfo.absolutePath, cleanPathInfo.stats);
-            cleanedPaths.push(pathToClean);
-        }
-
-        return cleanedPaths;
+        return getPathInfoes(cleanOptions.exclude ?? [], this.options.outDir, true);
     }
 
     private async delete(pathToDelete: string, stats: Stats): Promise<void> {
@@ -318,7 +344,8 @@ export function getCleanTaskRunner(
             (!buildTask.clean.beforeBuild ||
                 (!buildTask.clean.beforeBuild.cleanOutDir &&
                     (!buildTask.clean.beforeBuild.paths ||
-                        (buildTask.clean.beforeBuild.paths && !buildTask.clean.beforeBuild.paths.length))))
+                        (buildTask.clean.beforeBuild.paths &&
+                            !buildTask.clean.beforeBuild.paths.filter((p) => p.trim().length).length))))
         ) {
             return null;
         }
@@ -344,7 +371,10 @@ export function getCleanTaskRunner(
         });
 
         return cleanTaskRunner;
-    } else if (typeof buildTask.clean === 'object' && buildTask.clean.afterBuild?.paths?.length) {
+    } else if (
+        typeof buildTask.clean === 'object' &&
+        buildTask.clean.afterBuild?.paths?.filter((p) => p.trim().length).length
+    ) {
         const cleanOptions = buildTask.clean;
         const afterBuildCleanOptions = cleanOptions.afterBuild ?? {};
 
