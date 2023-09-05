@@ -3,14 +3,21 @@ import * as path from 'node:path';
 
 import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
 import { BuildTask, CommandOptions } from '../models/index.js';
+import {
+    PackageJsonInfo,
+    ParsedBuildTask,
+    ParsedCommandOptions,
+    ParsedTask,
+    WorkspaceInfo
+} from '../models/parsed/index.js';
 import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
-import { PackageJsonInfo, ParsedBuildTask, toParsedBuildTask } from './parsed-build-task.js';
-import { ParsedCommandOptions, getParsedCommandOptions } from './parsed-command-options.js';
-import { ParsedTask, WorkspaceInfo, toParsedTask } from './parsed-task.js';
+import { getParsedCommandOptions } from './get-parsed-command-options.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
+import { toParsedBuildTask } from './to-parsed-build-task.js';
+import { toParsedTask } from './to-parsed-task.js';
 
 async function validateCommandOptions(cmdOptions: ParsedCommandOptions): Promise<void> {
     if (cmdOptions._configPath && !(await pathExists(cmdOptions._configPath))) {

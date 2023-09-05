@@ -1,19 +1,7 @@
 import * as path from 'node:path';
 
 import { CommandOptions } from '../models/index.js';
-
-export interface ParsedCommandOptions extends CommandOptions {
-    readonly _projects: string[];
-    readonly _workspaceRoot: string | null;
-    readonly _configPath: string | null;
-    readonly _env: Record<string, boolean>;
-
-    // For build
-    readonly _outDir: string | null;
-    readonly _copyEntries: string[];
-    readonly _styleEntries: string[];
-    readonly _scriptEntries: string[];
-}
+import { ParsedCommandOptions } from '../models/parsed/index.js';
 
 export function getParsedCommandOptions(cmdOptions: CommandOptions): ParsedCommandOptions {
     let workspaceRoot: string | null = null;

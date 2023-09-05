@@ -2,26 +2,8 @@ import * as path from 'node:path';
 
 import { InvalidConfigError } from '../exceptions/index.js';
 import { BuildTask } from '../models/index.js';
+import { PackageJsonInfo, ParsedBuildTask, WorkspaceInfo } from '../models/parsed/index.js';
 import { isInFolder } from '../utils/index.js';
-
-import { ParsedTask, WorkspaceInfo } from './parsed-task.js';
-
-export interface PackageJsonInfo {
-    readonly packageJson: Record<string, unknown>;
-    readonly packageJsonPath: string;
-    readonly packageName: string;
-    readonly packageNameWithoutScope: string;
-    readonly packageScope: string | null;
-    readonly isNestedPackage: boolean;
-    readonly packageVersion: string | null;
-    readonly rootPackageJson: Record<string, unknown> | null;
-    readonly rootPackageJsonPath: string | null;
-}
-
-export interface ParsedBuildTask extends BuildTask, ParsedTask {
-    readonly _packageJsonInfo: PackageJsonInfo | null;
-    readonly _outDir: string;
-}
 
 function validateConfig(config: ParsedBuildTask): void {
     const outDir = config._outDir;
