@@ -13,7 +13,7 @@ export interface BeforeBuildCleanOptions {
      */
     paths?: string[];
     /**
-     * List of minimatch patterns to exclude from clean.
+     * List of glob patterns to exclude from clean.
      */
     exclude?: string[];
 }
@@ -27,7 +27,7 @@ export interface AfterBuildCleanOptions {
      */
     paths: string[];
     /**
-     * List of minimatch patterns to exclude from clean.
+     * List of glob patterns to exclude from clean.
      */
     exclude?: string[];
 }
@@ -51,7 +51,7 @@ export interface CleanOptions {
  */
 export interface CopyEntry {
     /**
-     * Source file, directory or minimatch pattern to copy from.
+     * Source file, directory or glob pattern to copy from.
      */
     from: string;
     /**
@@ -59,7 +59,7 @@ export interface CopyEntry {
      */
     to?: string;
     /**
-     * List of minimatch patterns to exclude from copy.
+     * List of glob patterns to exclude from copy.
      */
     exclude?: string[];
 }
