@@ -159,23 +159,16 @@ export class CopyTaskRunner {
         const outDir = this.options.outDir;
         const projectRoot = this.options.workspaceInfo.projectRoot;
 
-        const processedFroms: string[] = [];
-
         for (const copyEntry of copyEntries) {
             let normalizedFrom = normalizePathToPOSIXStyle(copyEntry.from);
 
-            if (!normalizedFrom && /^[./\\]/.test(normalizedFrom)) {
+            if (!normalizedFrom && /^[./\\]/.test(copyEntry.from)) {
                 normalizedFrom = './';
             }
 
             if (!normalizedFrom) {
                 continue;
             }
-
-            if (processedFroms.includes(normalizedFrom)) {
-                continue;
-            }
-            processedFroms.push(normalizedFrom);
 
             const excludePathInfoes = await getPathInfoes(copyEntry.exclude ?? [], projectRoot);
 
@@ -250,14 +243,15 @@ export class CopyTaskRunner {
                         : path.resolve(outDir, normalizePathToPOSIXStyle(copyEntry.to ?? ''));
 
                 const fromPathStats = await fs.stat(fromPath);
-                if (excludePathInfoes.length) {
-                    if (this.isExclude(fromPath, fromPathStats, excludePathInfoes)) {
-                        this.logger.debug(`Excluded from copy, path: ${fromPath}.`);
-                        continue;
-                    }
-                }
 
                 if (fromPathStats.isFile()) {
+                    if (excludePathInfoes.length) {
+                        if (this.isExclude(fromPath, fromPathStats, excludePathInfoes)) {
+                            this.logger.debug(`Excluded from copy, path: ${fromPath}.`);
+                            continue;
+                        }
+                    }
+
                     const fromExt = path.extname(fromPath);
                     const toExt = path.extname(toBasePath);
                     let toPath = toBasePath;
