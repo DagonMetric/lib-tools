@@ -8,10 +8,9 @@ export async function runBuildTask(buildTask: ParsedBuildTask, logger: Logger, d
     // Copy
     const copyTaskRunner = getCopyTaskRunner(buildTask, logger, dryRun);
     if (copyTaskRunner) {
+        logger.info('Running copy task.');
         const copiedPaths = await copyTaskRunner.run();
-        if (copiedPaths.length) {
-            logger.info(`Total ${copiedPaths.length} files are copied.`);
-        }
+        logger.info(`Total ${copiedPaths.length} files are copied.`);
     }
 }
 
@@ -19,8 +18,9 @@ export default async function (buildTask: ParsedBuildTask, logger: Logger, dryRu
     // Before clean
     const beforeCleanTaskRunner = getCleanTaskRunner('before', buildTask, logger, dryRun);
     if (beforeCleanTaskRunner) {
+        logger.info('Running before build clean task.');
         const cleandPaths = await beforeCleanTaskRunner.run();
-        logger.info(`Total ${cleandPaths.length} files and directories are cleaned.`);
+        logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
     }
 
     await runBuildTask(buildTask, logger, dryRun);
@@ -28,7 +28,8 @@ export default async function (buildTask: ParsedBuildTask, logger: Logger, dryRu
     // After clean
     const afterCleanTaskRunner = getCleanTaskRunner('after', buildTask, logger, dryRun);
     if (afterCleanTaskRunner) {
+        logger.info('Running after build clean task.');
         const cleandPaths = await afterCleanTaskRunner.run();
-        logger.info(`Total ${cleandPaths.length} files and directories are cleaned.`);
+        logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
     }
 }
