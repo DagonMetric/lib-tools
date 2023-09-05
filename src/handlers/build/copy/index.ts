@@ -3,10 +3,12 @@ import { minimatch } from 'minimatch';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { InvalidConfigError } from '../../../exceptions/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../../../helpers/index.js';
 import { CopyEntry } from '../../../models/index.js';
 import {
     Logger,
+    isInFolder,
     isSamePaths,
     isWindowsStyleAbsolute,
     normalizePathToPOSIXStyle,
@@ -41,13 +43,43 @@ export class CopyTaskRunner {
     }
 
     async run(): Promise<string[]> {
+        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+        const projectRoot = this.options.workspaceInfo.projectRoot;
+        const outDir = this.options.outDir;
+        const configLocationPrefix = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build`;
+
+        // Validating outDir
+        //
+        if (!outDir?.trim().length) {
+            throw new InvalidConfigError(`The 'outDir' must not be empty.`, `${configLocationPrefix}.outDir`);
+        }
+
+        if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
+            throw new InvalidConfigError(
+                `The 'outDir' must not be system root directory.`,
+                `${configLocationPrefix}.outDir`
+            );
+        }
+
+        if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
+            throw new InvalidConfigError(
+                `The 'outDir' must not be parent of worksapce root or current working directory.`,
+                `${configLocationPrefix}.outDir`
+            );
+        }
+
+        if (isInFolder(outDir, projectRoot)) {
+            throw new InvalidConfigError(
+                `The 'outDir' must not be parent of project root directory.`,
+                `${configLocationPrefix}.outDir`
+            );
+        }
+
         if (!this.options.copyEntries?.length) {
             return [];
         }
 
         const copyEntries = this.options.copyEntries;
-        const projectRoot = this.options.workspaceInfo.projectRoot;
-        const outDir = this.options.outDir;
         const copiedPaths: string[] = [];
 
         for (const copyEntry of copyEntries) {
