@@ -3,8 +3,8 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../src/helpers/index.js';
 import { CopyEntry } from '../src/models/index.js';
+import { ParsedBuildTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 import { Logger } from '../src/utils/index.js';
 
 void describe('getCopyTaskRunner', () => {

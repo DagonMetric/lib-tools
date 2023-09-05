@@ -4,8 +4,8 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../src/helpers/index.js';
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/models/index.js';
+import { ParsedBuildTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 import { Logger } from '../src/utils/index.js';
 
 void describe('getCleanTaskRunner', () => {

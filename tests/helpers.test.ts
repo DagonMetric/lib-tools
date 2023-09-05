@@ -5,11 +5,12 @@ import { describe, it } from 'node:test';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 import { applyEnvOverrides } from '../src/helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/helpers/apply-project-extends.js';
+import { getParsedCommandOptions } from '../src/helpers/get-parsed-command-options.js';
 import { getTasks } from '../src/helpers/get-tasks.js';
-import { ParsedBuildTask, toParsedBuildTask } from '../src/helpers/parsed-build-task.js';
-import { ParsedCommandOptions, getParsedCommandOptions } from '../src/helpers/parsed-command-options.js';
-import { ParsedTask, WorkspaceInfo, toParsedTask } from '../src/helpers/parsed-task.js';
+import { toParsedBuildTask } from '../src/helpers/to-parsed-build-task.js';
+import { toParsedTask } from '../src/helpers/to-parsed-task.js';
 import { BuildTask, CommandOptions, ExternalTask, Project, Task } from '../src/models/index.js';
+import { ParsedBuildTask, ParsedCommandOptions, ParsedTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 
 void describe('applyEnvOverrides', () => {
     void it('should override with env value to build task', () => {
