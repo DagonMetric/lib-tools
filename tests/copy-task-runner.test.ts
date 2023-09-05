@@ -30,6 +30,20 @@ void describe('getCopyTaskRunner', () => {
         assert.equal(runner, null);
     });
 
+    void it('should not get runner when no valid copy entry', () => {
+        const buildTask: ParsedBuildTask = {
+            _taskName: 'build',
+            _workspaceInfo: workspaceInfo,
+            _outDir: path.resolve(workspaceRoot, 'theout'),
+            _packageJsonInfo: null,
+            copy: [' ', { from: ' ' }]
+        };
+
+        const runner = getCopyTaskRunner(buildTask, new Logger({ logLevel: 'error' }));
+
+        assert.equal(runner, null);
+    });
+
     void it('should get runner with string entry array', () => {
         const buildTask: ParsedBuildTask = {
             _taskName: 'build',

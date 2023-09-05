@@ -31,6 +31,24 @@ void describe('getCleanTaskRunner', () => {
         assert.equal(runner, null);
     });
 
+    void it('should not get runner when no valid clean entry', () => {
+        const buildTask: ParsedBuildTask = {
+            _taskName: 'build',
+            _workspaceInfo: workspaceInfo,
+            _outDir: path.resolve(workspaceRoot, 'theout'),
+            _packageJsonInfo: null,
+            clean: {
+                beforeBuild: {
+                    paths: [' ']
+                }
+            }
+        };
+
+        const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
+
+        assert.equal(runner, null);
+    });
+
     void it('should get runner with before build clean options when clean=true', () => {
         const buildTask: ParsedBuildTask = {
             _taskName: 'build',
@@ -496,7 +514,7 @@ void describe('CleanTaskRunner', () => {
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
 
-        void it('should respect exclude when cleaning paths - 1', async () => {
+        void it('should respect exclude when cleaning paths - #1', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
@@ -514,7 +532,7 @@ void describe('CleanTaskRunner', () => {
             assert.deepStrictEqual(cleanedPaths, []);
         });
 
-        void it('should respect exclude when cleaning paths - 2', async () => {
+        void it('should respect exclude when cleaning paths - #2', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {
@@ -532,11 +550,6 @@ void describe('CleanTaskRunner', () => {
                 path.resolve(runner.options.outDir, 'LICENSE'),
                 path.resolve(runner.options.outDir, 'README.md'),
                 path.resolve(runner.options.outDir, 'index.js'),
-                path.resolve(runner.options.outDir, 'path-1/p1.js'),
-                path.resolve(runner.options.outDir, 'path-2/note.md'),
-                path.resolve(runner.options.outDir, 'path-2/p2.js'),
-                path.resolve(runner.options.outDir, 'path-2/path-3'),
-                path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
                 path.resolve(runner.options.outDir, 'src/a.ts'),
                 path.resolve(runner.options.outDir, 'src/b.ts'),
                 path.resolve(runner.options.outDir, 'src/c.ts'),
@@ -546,7 +559,7 @@ void describe('CleanTaskRunner', () => {
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
         });
 
-        void it('should respect exclude when cleaning paths - 3', async () => {
+        void it('should respect exclude when cleaning paths - #3', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'after',
                 beforeOrAfterCleanOptions: {
@@ -564,6 +577,28 @@ void describe('CleanTaskRunner', () => {
                 path.resolve(runner.options.outDir, 'src/b.ts'),
                 path.resolve(runner.options.outDir, 'src/c.ts'),
                 path.resolve(runner.options.outDir, 'src/nested/nested.ts')
+            ];
+
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+        });
+
+        void it('should respect exclude when cleaning paths - #4', async () => {
+            const runner = new CleanTaskRunner({
+                runFor: 'after',
+                beforeOrAfterCleanOptions: {
+                    paths: ['path-2'],
+                    exclude: ['src/nested/../../../theout/path-*/../path-2/path-3']
+                },
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const cleanedPaths = await runner.run();
+            const expectedCleanPaths = [
+                path.resolve(runner.options.outDir, 'path-2/note.md'),
+                path.resolve(runner.options.outDir, 'path-2/p2.js')
             ];
 
             assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
