@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
+import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../src/helpers/index.js';
 import { CopyEntry } from '../src/models/index.js';
 import { Logger } from '../src/utils/index.js';
@@ -142,5 +142,113 @@ void describe('getCopyTaskRunner', () => {
         assert.ok(runner);
         assert.equal(runner.options.dryRun, false);
         assert.deepStrictEqual(runner.options.copyEntries, expectedCopyEntries);
+    });
+});
+
+void describe('CopyTaskRunner', () => {
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy-project');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'copy-project',
+        configPath: null
+    };
+
+    void describe('CopyTaskRunner:run [Validation outDir]', () => {
+        void it('should throw an error if outDir is empty', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [{ from: 'a.txt' }],
+                dryRun: true,
+                workspaceInfo,
+                outDir: ' ',
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it(
+            'should throw an error if outDir is system root directory - C:\\ on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CopyTaskRunner({
+                    copyEntries: [{ from: 'a.txt' }],
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve('C:\\'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
+
+                await assert.rejects(async () => await runner.run());
+            }
+        );
+
+        void it('should throw an error if outDir is system root directory - /', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [{ from: 'a.txt' }],
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve('/'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it(
+            'should throw an error if outDir is unc root directory - \\\\server\\public on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CopyTaskRunner({
+                    copyEntries: [{ from: 'a.txt' }],
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve('\\\\server\\public'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
+
+                await assert.rejects(async () => await runner.run());
+            }
+        );
+
+        void it(
+            'should throw an error if outDir is unc root directory - //server/public on Windows',
+            { skip: process.platform !== 'win32' },
+            async () => {
+                const runner = new CopyTaskRunner({
+                    copyEntries: [{ from: 'a.txt' }],
+                    dryRun: true,
+                    workspaceInfo,
+                    outDir: path.resolve('//server/public'),
+                    logger: new Logger({ logLevel: 'error' })
+                });
+
+                await assert.rejects(async () => await runner.run());
+            }
+        );
+
+        void it('should throw an error if outDir is parent of workspace root', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [{ from: 'a.txt' }],
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceRoot, '../'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
+
+        void it('should throw an error if outDir is parent of project root', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [{ from: 'a.txt' }],
+                dryRun: true,
+                workspaceInfo,
+                outDir: path.resolve(workspaceInfo.projectRoot, '../'),
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            await assert.rejects(async () => await runner.run());
+        });
     });
 });

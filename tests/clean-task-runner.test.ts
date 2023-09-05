@@ -111,7 +111,7 @@ void describe('CleanTaskRunner', () => {
         configPath: null
     };
 
-    void describe('CleanTaskRunner:run [Validation]', () => {
+    void describe('CleanTaskRunner:run [Validation outDir]', () => {
         void it('should throw an error if outDir is empty', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
@@ -228,7 +228,9 @@ void describe('CleanTaskRunner', () => {
 
             await assert.rejects(async () => await runner.run());
         });
+    });
 
+    void describe('CleanTaskRunner:run [Error throws]', () => {
         void it(
             'should throw an error if cleaning system root directory - C:\\ on Windows',
             { skip: process.platform !== 'win32' },
