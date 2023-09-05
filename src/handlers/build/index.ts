@@ -1,4 +1,4 @@
-import { ParsedBuildTask } from '../../helpers/index.js';
+import { ParsedBuildTask } from '../../models/parsed/index.js';
 import { Logger } from '../../utils/index.js';
 
 import { getCleanTaskRunner } from './clean/index.js';

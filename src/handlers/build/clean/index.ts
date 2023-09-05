@@ -4,8 +4,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { InvalidConfigError } from '../../../exceptions/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../../../helpers/index.js';
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../models/index.js';
+import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js';
 import {
     Logger,
     isInFolder,
