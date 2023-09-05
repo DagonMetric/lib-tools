@@ -239,6 +239,10 @@ export function getCopyTaskRunner(buildTask: ParsedBuildTask, logger: Logger, dr
         typeof copyEntry === 'string' ? { from: copyEntry } : { ...copyEntry }
     );
 
+    if (!copyEntries.filter((e) => e.from?.trim().length).length) {
+        return null;
+    }
+
     const copyTaskRunner = new CopyTaskRunner({
         copyEntries,
         dryRun,
