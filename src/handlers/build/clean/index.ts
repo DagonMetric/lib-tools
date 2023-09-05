@@ -21,14 +21,8 @@ interface PathInfo {
     readonly isSystemRoot?: boolean;
 }
 
-/**
- *
- * @param paths Relative paths. We allow absolute paths on Windows only.
- * @param cwd Output directory.
- * @param forExclude For exclude or clean purpose.
- */
-async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean): Promise<PathInfo[]> {
-    if (!paths?.length) {
+async function getPathInfoes(relPaths: string[], cwd: string): Promise<PathInfo[]> {
+    if (!relPaths.length) {
         return [];
     }
 
@@ -36,7 +30,7 @@ async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean):
 
     const pathInfoes: PathInfo[] = [];
 
-    for (const pathOrPattern of paths) {
+    for (const pathOrPattern of relPaths) {
         if (!pathOrPattern.trim().length) {
             continue;
         }
@@ -60,7 +54,7 @@ async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean):
 
                 const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
                 let stats: Stats | null = null;
-                if (!isSystemRoot && !forExclude) {
+                if (!isSystemRoot) {
                     stats = await fs.stat(absolutePath);
                 }
 
@@ -83,7 +77,7 @@ async function getPathInfoes(paths: string[], cwd: string, forExclude: boolean):
 
             const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
             let stats: Stats | null = null;
-            if (!isSystemRoot && !forExclude && (await pathExists(absolutePath))) {
+            if (!isSystemRoot && (await pathExists(absolutePath))) {
                 stats = await fs.stat(absolutePath);
             }
 
@@ -169,7 +163,7 @@ export class CleanTaskRunner {
             return [];
         }
 
-        // excludePathInfoes
+        // excludes
         const excludePathInfoes = await this.getExcludePathInfoes();
 
         // Delete output path only
@@ -226,13 +220,23 @@ export class CleanTaskRunner {
                 continue;
             }
 
-            // If excluded
+            // Exclude - if clean file is same as exclude file or directory
             if (excludePathInfoes.find((i) => isSamePaths(i.absolutePath, pathToClean))) {
                 this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
                 continue;
             }
 
-            // If excluded
+            // Exclude - if clean file/directory is in exclude directory
+            if (
+                excludePathInfoes.find(
+                    (i) => i.stats && i.stats.isDirectory() && isInFolder(i.absolutePath, pathToClean)
+                )
+            ) {
+                this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
+                continue;
+            }
+
+            // Exclude - if exclude file is in clean directory
             if (
                 cleanPathInfo.stats.isDirectory() &&
                 excludePathInfoes.find((i) => isInFolder(pathToClean, i.absolutePath))
@@ -260,7 +264,7 @@ export class CleanTaskRunner {
             return [];
         }
 
-        const cleanPathInfoes = await getPathInfoes(combinedCleanPaths, this.options.outDir, false);
+        const cleanPathInfoes = await getPathInfoes(combinedCleanPaths, this.options.outDir);
 
         return cleanPathInfoes;
     }
@@ -292,7 +296,7 @@ export class CleanTaskRunner {
             extraCleanDirPatterns.push(`${relToOutDir}/**/*`);
         }
 
-        const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, this.options.outDir, false);
+        const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, this.options.outDir);
         if (extraCleanPathInfoes.length) {
             cleanPathInfoes.push(...extraCleanPathInfoes);
         }
@@ -301,7 +305,7 @@ export class CleanTaskRunner {
     private getExcludePathInfoes(): Promise<PathInfo[]> {
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
 
-        return getPathInfoes(cleanOptions.exclude ?? [], this.options.outDir, true);
+        return getPathInfoes(cleanOptions.exclude ?? [], this.options.outDir);
     }
 
     private async delete(pathToDelete: string, stats: Stats): Promise<void> {
