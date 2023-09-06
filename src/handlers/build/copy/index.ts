@@ -9,7 +9,7 @@ import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js'
 import {
     AbsolutePathInfo,
     Logger,
-    getPAbsolutePathInfoes,
+    getAbsolutePathInfoes,
     isInFolder,
     isSamePaths,
     isWindowsStyleAbsolute,
@@ -26,8 +26,47 @@ export interface CopyTaskRunnerOptions {
 }
 
 interface CopyPathInfo {
-    fromPath: string;
-    toPath: string;
+    fromFilePath: string;
+    toFilePath: string;
+}
+
+async function globFiles(globPattern: string, cwd: string): Promise<string[]> {
+    const procesedFilePaths: string[] = [];
+
+    const foundPaths = await glob(globPattern, {
+        cwd,
+        dot: true,
+        absolute: true
+    });
+
+    for (const foundPath of foundPaths) {
+        const isSystemRoot = isSamePaths(path.parse(foundPath).root, foundPath);
+        let stats: Stats | null = null;
+        if (!isSystemRoot) {
+            stats = await fs.stat(foundPath);
+        }
+
+        if (stats?.isFile()) {
+            if (!procesedFilePaths.includes(foundPath)) {
+                procesedFilePaths.push(foundPath);
+            }
+        } else {
+            const foundFilePaths = await glob('**/*', {
+                cwd: foundPath,
+                nodir: true,
+                dot: true,
+                absolute: true
+            });
+
+            for (const foundFilePath of foundFilePaths) {
+                if (!procesedFilePaths.includes(foundPath)) {
+                    procesedFilePaths.push(foundFilePath);
+                }
+            }
+        }
+    }
+
+    return procesedFilePaths;
 }
 
 export class CopyTaskRunner {
@@ -74,7 +113,7 @@ export class CopyTaskRunner {
 
         await this.copy(copyPathInfoes);
 
-        return copyPathInfoes.map((i) => i.toPath);
+        return copyPathInfoes.map((i) => i.toFilePath);
     }
 
     private async getCopyPathInfoes(): Promise<CopyPathInfo[]> {
@@ -95,16 +134,12 @@ export class CopyTaskRunner {
                 continue;
             }
 
-            const excludePathInfoes = await getPAbsolutePathInfoes(copyEntry.exclude ?? [], projectRoot);
+            const excludePathInfoes = await getAbsolutePathInfoes(copyEntry.exclude ?? [], projectRoot);
 
             if (glob.hasMagic(normalizedFrom)) {
-                const foundPaths = await glob(normalizedFrom, {
-                    cwd: projectRoot,
-                    dot: true,
-                    absolute: true
-                });
+                const foundFilePaths = await globFiles(normalizedFrom, projectRoot);
 
-                if (!foundPaths.length) {
+                if (!foundFilePaths.length) {
                     this.logger.warn(`There is no matched file to copy, pattern: ${copyEntry.from}`);
                     continue;
                 }
@@ -125,40 +160,29 @@ export class CopyTaskRunner {
                         ? path.resolve(normalizePathToPOSIXStyle(copyEntry.to))
                         : path.resolve(outDir, normalizePathToPOSIXStyle(copyEntry.to ?? ''));
 
-                for (const fromPath of foundPaths) {
-                    if (copyPathInfoes.find((f) => f.fromPath === fromPath)) {
-                        continue;
-                    }
-
-                    const fromPathStats = await fs.stat(fromPath);
-                    if (fromPathStats.isDirectory()) {
-                        continue;
-                    }
-
+                for (const foundFilePath of foundFilePaths) {
                     if (excludePathInfoes.length) {
-                        if (this.isExclude(fromPath, fromPathStats, excludePathInfoes)) {
-                            this.logger.debug(`Excluded from copy, path: ${fromPath}.`);
+                        if (this.checkFileForExclude(foundFilePath, excludePathInfoes)) {
+                            this.logger.debug(`Excluded from copy, path: ${foundFilePath}.`);
                             continue;
                         }
                     }
 
-                    const toPathRel = path.relative(fromBasePath, fromPath);
-                    const toPath = path.resolve(toBasePath, toPathRel);
+                    const toPathRel = path.relative(fromBasePath, foundFilePath);
+                    const toFilePath = path.resolve(toBasePath, toPathRel);
 
-                    copyPathInfoes.push({
-                        fromPath,
-                        toPath
-                    });
+                    if (!copyPathInfoes.find((f) => f.fromFilePath === foundFilePath && f.toFilePath === toFilePath)) {
+                        copyPathInfoes.push({
+                            fromFilePath: foundFilePath,
+                            toFilePath
+                        });
+                    }
                 }
             } else {
                 const fromPath =
                     isWindowsStyleAbsolute(normalizedFrom) && process.platform === 'win32'
                         ? path.resolve(normalizedFrom)
                         : path.resolve(projectRoot, normalizedFrom);
-
-                if (copyPathInfoes.find((f) => f.fromPath === fromPath)) {
-                    continue;
-                }
 
                 if (!(await pathExists(fromPath))) {
                     this.logger.warn(`Path doesn't exist to copy, path: ${fromPath}`);
@@ -173,63 +197,64 @@ export class CopyTaskRunner {
                 const fromPathStats = await fs.stat(fromPath);
 
                 if (fromPathStats.isFile()) {
+                    const foundFromPath = fromPath;
+
                     if (excludePathInfoes.length) {
-                        if (this.isExclude(fromPath, fromPathStats, excludePathInfoes)) {
-                            this.logger.debug(`Excluded from copy, path: ${fromPath}.`);
+                        if (this.checkFileForExclude(foundFromPath, excludePathInfoes)) {
+                            this.logger.debug(`Excluded from copy, path: ${foundFromPath}.`);
                             continue;
                         }
                     }
 
-                    const fromExt = path.extname(fromPath);
+                    const fromExt = path.extname(foundFromPath);
                     const toExt = path.extname(toBasePath);
-                    let toPath = toBasePath;
+                    let toFilePath = toBasePath;
                     if (
                         !copyEntry.to?.trim().length ||
                         copyEntry.to.trim().endsWith('/') ||
                         isSamePaths(outDir, toBasePath) ||
                         (fromExt && !toExt)
                     ) {
-                        toPath = path.resolve(toBasePath, path.basename(fromPath));
+                        toFilePath = path.resolve(toBasePath, path.basename(foundFromPath));
                     }
 
-                    copyPathInfoes.push({
-                        fromPath,
-                        toPath
-                    });
+                    if (!copyPathInfoes.find((f) => f.fromFilePath === foundFromPath && f.toFilePath === toFilePath)) {
+                        copyPathInfoes.push({
+                            fromFilePath: foundFromPath,
+                            toFilePath
+                        });
+                    }
                 } else {
-                    const foundPaths = await glob('**/*', {
+                    const foundFilePaths = await glob('**/*', {
                         cwd: fromPath,
-                        // TODO: To review
                         nodir: true,
                         dot: true,
                         absolute: true
                     });
 
-                    if (!foundPaths.length) {
+                    if (!foundFilePaths.length) {
                         continue;
                     }
 
-                    for (const foundFromPath of foundPaths) {
-                        if (copyPathInfoes.find((f) => f.fromPath === foundFromPath)) {
-                            continue;
-                        }
-
+                    for (const foundFilePath of foundFilePaths) {
                         if (excludePathInfoes.length) {
-                            const foundFromPathStats = await fs.stat(foundFromPath);
-
-                            if (this.isExclude(foundFromPath, foundFromPathStats, excludePathInfoes)) {
-                                this.logger.debug(`Excluded from copy, path: ${foundFromPath}.`);
+                            if (this.checkFileForExclude(foundFilePath, excludePathInfoes)) {
+                                this.logger.debug(`Excluded from copy, path: ${foundFilePath}.`);
                                 continue;
                             }
                         }
 
-                        const foundFromPathRel = normalizePathToPOSIXStyle(path.relative(fromPath, foundFromPath));
-                        const toPath = path.resolve(toBasePath, foundFromPathRel);
+                        const foundFilePathRel = normalizePathToPOSIXStyle(path.relative(fromPath, foundFilePath));
+                        const toFilePath = path.resolve(toBasePath, foundFilePathRel);
 
-                        copyPathInfoes.push({
-                            fromPath: foundFromPath,
-                            toPath
-                        });
+                        if (
+                            !copyPathInfoes.find((f) => f.fromFilePath === foundFilePath && f.toFilePath === toFilePath)
+                        ) {
+                            copyPathInfoes.push({
+                                fromFilePath: foundFilePath,
+                                toFilePath
+                            });
+                        }
                     }
                 }
             }
@@ -238,19 +263,14 @@ export class CopyTaskRunner {
         return copyPathInfoes;
     }
 
-    private isExclude(pathToCheck: string, pathToCheckStats: Stats, excludePathInfoes: AbsolutePathInfo[]): boolean {
-        // Exclude - if check file/directory is same as exclude file/directory
-        if (excludePathInfoes.find((i) => isSamePaths(i.path, pathToCheck))) {
+    private checkFileForExclude(filePathToCheck: string, excludePathInfoes: AbsolutePathInfo[]): boolean {
+        // if check file/directory is same as exclude file/directory
+        if (excludePathInfoes.find((i) => isSamePaths(i.path, filePathToCheck))) {
             return true;
         }
 
-        // Exclude - if check file/directory is in exclude directory
-        if (excludePathInfoes.find((i) => i.stats?.isDirectory() && isInFolder(i.path, pathToCheck))) {
-            return true;
-        }
-
-        // Exclude - if exclude file is in check directory
-        if (pathToCheckStats.isDirectory() && excludePathInfoes.find((i) => isInFolder(pathToCheck, i.path))) {
+        // if check file/directory is in exclude directory
+        if (excludePathInfoes.find((i) => i.isDirectory && isInFolder(i.path, filePathToCheck))) {
             return true;
         }
 
@@ -261,22 +281,21 @@ export class CopyTaskRunner {
         const projectRoot = this.options.workspaceInfo.projectRoot;
 
         for (const copyPathInfo of copyPathInfoes) {
-            this.logger.debug(
-                `Copying ${normalizePathToPOSIXStyle(path.relative(projectRoot, copyPathInfo.fromPath))}`
+            this.logger.info(
+                `Copying file: ${normalizePathToPOSIXStyle(path.relative(projectRoot, copyPathInfo.fromFilePath))}`
             );
 
             if (this.options.dryRun) {
                 continue;
             }
 
-            if (!(await pathExists(path.dirname(copyPathInfo.toPath)))) {
-                await fs.mkdir(path.dirname(copyPathInfo.toPath), {
-                    mode: 0o777,
-                    recursive: true
-                });
+            const dirOfFile = path.dirname(copyPathInfo.toFilePath);
+
+            if (!(await pathExists(dirOfFile))) {
+                await fs.mkdir(dirOfFile, { recursive: true });
             }
 
-            await fs.copyFile(copyPathInfo.fromPath, copyPathInfo.toPath);
+            await fs.copyFile(copyPathInfo.fromFilePath, copyPathInfo.toFilePath);
         }
     }
 }
