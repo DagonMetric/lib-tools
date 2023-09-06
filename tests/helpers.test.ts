@@ -4,9 +4,9 @@ import { describe, it } from 'node:test';
 
 import { applyEnvOverrides } from '../src/config-helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/config-helpers/apply-project-extends.js';
+import { getParsedCommandOptions } from '../src/config-helpers/get-parsed-command-options.js';
 import { getTasks } from '../src/config-helpers/get-tasks.js';
 import { toParsedBuildTask, validateOutDir } from '../src/config-helpers/to-parsed-build-task.js';
-import { toParsedCommandOptions } from '../src/config-helpers/to-parsed-command-options.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 import { BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
 import { ParsedBuildTask, ParsedCommandOptions, WorkspaceInfo } from '../src/models/parsed/index.js';
@@ -185,32 +185,55 @@ void describe('applyProjectExtends', () => {
     });
 });
 
-void describe('toParsedCommandOptions', () => {
-    void it('should parse command options', () => {
+void describe('getParsedCommandOptions', () => {
+    void it('should parse command options - env', async () => {
         const cmdOptions: CommandOptions = {
-            workspace: '../notexist/libconfig.json',
-            project: 'a,b,c',
-            env: 'prod,ci',
-            outDir: 'dist',
-            clean: true,
-            copy: 'a.txt,**/*.md',
-            style: 'a.css,b.scss',
-            script: 'a.js,b.ts',
-            packageVersion: '1.0.0'
+            env: 'prod,ci'
         };
 
-        const result = toParsedCommandOptions(cmdOptions);
+        const result = await getParsedCommandOptions(cmdOptions);
 
         const expected: ParsedCommandOptions = {
             ...cmdOptions,
-            _configPath: path.resolve(process.cwd(), '../notexist/libconfig.json'),
-            _workspaceRoot: path.resolve(process.cwd(), '../notexist'),
-            _outDir: path.resolve(process.cwd(), '../notexist/dist'),
+            _configPath: null,
+            _workspaceRoot: null,
+            _outDir: null,
+            _env: { prod: true, ci: true },
+            _projects: [],
+            _copyEntries: [],
+            _styleEntries: [],
+            _scriptEntries: []
+        };
+
+        assert.deepStrictEqual(result, expected);
+    });
+
+    void it('should parse command options - all', async () => {
+        const cmdOptions: CommandOptions = {
+            workspace: './tests/test-data/libconfig.json',
+            outDir: 'dist',
+            env: 'prod ,ci',
+            project: 'a,b , c',
+            copy: 'README.md, **/*.js',
+            clean: true,
+            style: 'styles.scss , styles.scss',
+            script: 'index.ts, index.ts',
+            packageVersion: '1.0.0',
+            logLevel: 'info'
+        };
+
+        const result = await getParsedCommandOptions(cmdOptions);
+
+        const expected: ParsedCommandOptions = {
+            ...cmdOptions,
+            _configPath: path.resolve(process.cwd(), './tests/test-data/libconfig.json'),
+            _workspaceRoot: path.resolve(process.cwd(), './tests/test-data'),
+            _outDir: path.resolve(process.cwd(), './tests/test-data/dist'),
             _env: { prod: true, ci: true },
             _projects: ['a', 'b', 'c'],
-            _copyEntries: ['a.txt', '**/*.md'],
-            _styleEntries: ['a.css', 'b.scss'],
-            _scriptEntries: ['a.js', 'b.ts']
+            _copyEntries: ['README.md', '**/*.js'],
+            _styleEntries: ['styles.scss'],
+            _scriptEntries: ['index.ts']
         };
 
         assert.deepStrictEqual(result, expected);
@@ -367,13 +390,16 @@ void describe('validateOutDir', () => {
 void describe('getTasks', () => {
     void it('should return build task from cmd options', async () => {
         const cmdOptions: CommandOptions = {
-            workspace: '../notexist',
+            workspace: './tests/test-data/libconfig.json',
             outDir: 'dist',
+            env: 'prod ,ci',
+            project: 'a,b , c',
+            copy: 'README.md, **/*.js',
             clean: true,
-            copy: 'a.txt,**/*.md',
-            style: 'a.css,b.scss',
-            script: 'a.js,b.ts',
-            packageVersion: '1.0.0'
+            style: 'styles.scss , styles.scss',
+            script: 'index.ts, index.ts',
+            packageVersion: '3.0.0',
+            logLevel: 'info'
         };
 
         const result = await getTasks(cmdOptions);
@@ -381,19 +407,19 @@ void describe('getTasks', () => {
         const expected: ParsedBuildTask = {
             _taskName: 'build',
             _workspaceInfo: {
-                workspaceRoot: path.resolve(process.cwd(), '../notexist'),
-                projectRoot: path.resolve(process.cwd(), '../notexist'),
+                workspaceRoot: path.resolve(process.cwd(), './tests/test-data'),
+                projectRoot: path.resolve(process.cwd(), './tests/test-data'),
                 projectName: null,
-                configPath: null
+                configPath: path.resolve(process.cwd(), './tests/test-data/libconfig.json')
             },
             _packageJsonInfo: null,
-            _outDir: path.resolve(process.cwd(), '../notexist/dist'),
+            _outDir: path.resolve(process.cwd(), './tests/test-data/dist'),
             clean: true,
-            copy: ['a.txt', '**/*.md'],
-            style: ['a.css', 'b.scss'],
-            script: ['a.js', 'b.ts'],
+            copy: ['README.md', '**/*.js'],
+            style: ['styles.scss'],
+            script: ['index.ts'],
             packageJson: {
-                packageVersion: '1.0.0'
+                packageVersion: '3.0.0'
             }
         };
 
