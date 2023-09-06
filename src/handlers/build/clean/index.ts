@@ -1,4 +1,3 @@
-import { glob } from 'glob';
 import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -7,91 +6,14 @@ import { InvalidConfigError } from '../../../exceptions/index.js';
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../models/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js';
 import {
+    AbsolutePathInfo,
     Logger,
+    getPAbsolutePathInfoes,
     isInFolder,
     isSamePaths,
-    isWindowsStyleAbsolute,
     normalizePathToPOSIXStyle,
     pathExists
 } from '../../../utils/index.js';
-
-interface PathInfo {
-    readonly absolutePath: string;
-    readonly stats: Stats | null;
-    readonly isSystemRoot?: boolean;
-}
-
-async function getPathInfoes(relPaths: string[], cwd: string): Promise<PathInfo[]> {
-    if (!relPaths.length) {
-        return [];
-    }
-
-    const processedPaths: string[] = [];
-
-    const pathInfoes: PathInfo[] = [];
-
-    for (const pathOrPattern of relPaths) {
-        if (!pathOrPattern.trim().length) {
-            continue;
-        }
-
-        let normalizedPathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
-
-        if (!normalizedPathOrPattern && /^[./\\]/.test(pathOrPattern)) {
-            normalizedPathOrPattern = './';
-        }
-
-        if (!normalizedPathOrPattern) {
-            continue;
-        }
-
-        if (glob.hasMagic(normalizedPathOrPattern)) {
-            const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
-            for (const absolutePath of foundPaths) {
-                if (processedPaths.includes(absolutePath)) {
-                    continue;
-                }
-
-                const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-                let stats: Stats | null = null;
-                if (!isSystemRoot) {
-                    stats = await fs.stat(absolutePath);
-                }
-
-                processedPaths.push(absolutePath);
-                pathInfoes.push({
-                    absolutePath,
-                    isSystemRoot,
-                    stats
-                });
-            }
-        } else {
-            // We allow absolute path on Windows only.
-            const absolutePath =
-                isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
-                    ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
-                    : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
-            if (processedPaths.includes(absolutePath)) {
-                continue;
-            }
-
-            const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-            let stats: Stats | null = null;
-            if (!isSystemRoot && (await pathExists(absolutePath))) {
-                stats = await fs.stat(absolutePath);
-            }
-
-            processedPaths.push(absolutePath);
-            pathInfoes.push({
-                absolutePath,
-                isSystemRoot,
-                stats
-            });
-        }
-    }
-
-    return pathInfoes;
-}
 
 export interface CleanTaskRunnerOptions {
     readonly runFor: 'before' | 'after';
@@ -174,12 +96,12 @@ export class CleanTaskRunner {
         }
 
         // addMagicAllFilesToCleanPathInfoes
-        await this.addMagicAllFilesToCleanPathInfoes(cleanPathInfoes, excludePathInfoes);
+        await this.addAllFilesGlobMagicToCleanPathInfoes(cleanPathInfoes, excludePathInfoes);
 
         const cleanedPaths: string[] = [];
 
         for (const cleanPathInfo of cleanPathInfoes) {
-            const pathToClean = cleanPathInfo.absolutePath;
+            const pathToClean = cleanPathInfo.path;
 
             // Validation
             //
@@ -221,26 +143,19 @@ export class CleanTaskRunner {
             }
 
             // Exclude - if clean file is same as exclude file or directory
-            if (excludePathInfoes.find((i) => isSamePaths(i.absolutePath, pathToClean))) {
+            if (excludePathInfoes.find((i) => isSamePaths(i.path, pathToClean))) {
                 this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
                 continue;
             }
 
             // Exclude - if clean file/directory is in exclude directory
-            if (
-                excludePathInfoes.find(
-                    (i) => i.stats && i.stats.isDirectory() && isInFolder(i.absolutePath, pathToClean)
-                )
-            ) {
+            if (excludePathInfoes.find((i) => i.stats?.isDirectory() && isInFolder(i.path, pathToClean))) {
                 this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
                 continue;
             }
 
             // Exclude - if exclude file is in clean directory
-            if (
-                cleanPathInfo.stats.isDirectory() &&
-                excludePathInfoes.find((i) => isInFolder(pathToClean, i.absolutePath))
-            ) {
+            if (cleanPathInfo.stats.isDirectory() && excludePathInfoes.find((i) => isInFolder(pathToClean, i.path))) {
                 this.logger.debug(`Excluded from clean, path: ${pathToClean}.`);
                 continue;
             }
@@ -252,7 +167,7 @@ export class CleanTaskRunner {
         return cleanedPaths;
     }
 
-    private async getCleanPathInfoes(): Promise<PathInfo[]> {
+    private async getCleanPathInfoes(): Promise<AbsolutePathInfo[]> {
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
         const combinedCleanPaths = cleanOptions.paths ?? [];
         if (this.cleanOutDir) {
@@ -264,19 +179,19 @@ export class CleanTaskRunner {
             return [];
         }
 
-        const cleanPathInfoes = await getPathInfoes(combinedCleanPaths, this.options.outDir);
+        const cleanPathInfoes = await getPAbsolutePathInfoes(combinedCleanPaths, this.options.outDir);
 
         return cleanPathInfoes;
     }
 
-    private async addMagicAllFilesToCleanPathInfoes(
-        cleanPathInfoes: PathInfo[],
-        excludePathInfoes: PathInfo[]
+    private async addAllFilesGlobMagicToCleanPathInfoes(
+        cleanPathInfoes: AbsolutePathInfo[],
+        excludePathInfoes: AbsolutePathInfo[]
     ): Promise<void> {
         const dirPathsToClean: string[] = [];
         for (const pathInfo of cleanPathInfoes) {
             if (pathInfo.stats?.isDirectory()) {
-                dirPathsToClean.push(pathInfo.absolutePath);
+                dirPathsToClean.push(pathInfo.path);
             }
         }
         const sortedDirPathsToClean = dirPathsToClean.sort((a, b) => b.length - a.length);
@@ -285,7 +200,7 @@ export class CleanTaskRunner {
         for (const dirPathToClean of sortedDirPathsToClean) {
             if (
                 processedCleanDirs.find((p) => isInFolder(p, dirPathToClean)) ??
-                !excludePathInfoes.find((i) => isInFolder(dirPathToClean, i.absolutePath))
+                !excludePathInfoes.find((i) => isInFolder(dirPathToClean, i.path))
             ) {
                 continue;
             }
@@ -296,16 +211,16 @@ export class CleanTaskRunner {
             extraCleanDirPatterns.push(`${relToOutDir}/**/*`);
         }
 
-        const extraCleanPathInfoes = await getPathInfoes(extraCleanDirPatterns, this.options.outDir);
+        const extraCleanPathInfoes = await getPAbsolutePathInfoes(extraCleanDirPatterns, this.options.outDir);
         if (extraCleanPathInfoes.length) {
             cleanPathInfoes.push(...extraCleanPathInfoes);
         }
     }
 
-    private getExcludePathInfoes(): Promise<PathInfo[]> {
+    private getExcludePathInfoes(): Promise<AbsolutePathInfo[]> {
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
 
-        return getPathInfoes(cleanOptions.exclude ?? [], this.options.outDir);
+        return getPAbsolutePathInfoes(cleanOptions.exclude ?? [], this.options.outDir);
     }
 
     private async delete(pathToDelete: string, stats: Stats): Promise<void> {
