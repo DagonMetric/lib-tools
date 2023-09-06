@@ -2,13 +2,13 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { InvalidConfigError } from '../src/exceptions/index.js';
 import { applyEnvOverrides } from '../src/config-helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/config-helpers/apply-project-extends.js';
 import { getParsedCommandOptions } from '../src/config-helpers/get-parsed-command-options.js';
 import { getTasks } from '../src/config-helpers/get-tasks.js';
 import { toParsedBuildTask } from '../src/config-helpers/to-parsed-build-task.js';
 import { toParsedTask } from '../src/config-helpers/to-parsed-task.js';
+import { InvalidConfigError } from '../src/exceptions/index.js';
 import { BuildTask, CommandOptions, ExternalTask, Project, Task } from '../src/models/index.js';
 import { ParsedBuildTask, ParsedCommandOptions, ParsedTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 
