@@ -1,5 +1,5 @@
 import { glob } from 'glob';
-import { Stats } from 'node:fs';
+
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -160,22 +160,23 @@ export async function findUp(
 
 export interface AbsolutePathInfo {
     readonly path: string;
-    readonly stats: Stats | null;
-    readonly isSystemRoot?: boolean;
+    readonly isSystemRoot: boolean;
+    readonly isFile: boolean | null;
+    readonly isDirectory: boolean | null;
+    readonly isSymbolicLink: boolean | null;
 }
 
-export async function getPAbsolutePathInfoes(
-    globPatternsOrRelPaths: string[],
+export async function getAbsolutePathInfoes(
+    globPatternsOrRelativePaths: string[],
     cwd: string
 ): Promise<AbsolutePathInfo[]> {
-    if (!globPatternsOrRelPaths.length) {
+    if (!globPatternsOrRelativePaths.length) {
         return [];
     }
 
-    const processedPaths: string[] = [];
     const pathInfoes: AbsolutePathInfo[] = [];
 
-    for (const pathOrPattern of globPatternsOrRelPaths) {
+    for (const pathOrPattern of globPatternsOrRelativePaths) {
         if (!pathOrPattern.trim().length) {
             continue;
         }
@@ -193,21 +194,27 @@ export async function getPAbsolutePathInfoes(
         if (glob.hasMagic(normalizedPathOrPattern)) {
             const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
             for (const absolutePath of foundPaths) {
-                if (processedPaths.includes(absolutePath)) {
+                if (pathInfoes.find((i) => i.path === absolutePath)) {
                     continue;
                 }
 
                 const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-                let stats: Stats | null = null;
+                let isDirectory: boolean | null = isSystemRoot ? true : null;
+                let isFile: boolean | null = isSystemRoot ? false : null;
+                let isSymbolicLink: boolean | null = null;
                 if (!isSystemRoot) {
-                    stats = await fs.stat(absolutePath);
+                    const stats = await fs.stat(absolutePath);
+                    isDirectory = stats.isDirectory();
+                    isFile = !isDirectory && stats.isFile();
+                    isSymbolicLink = stats.isSymbolicLink();
                 }
 
-                processedPaths.push(absolutePath);
                 pathInfoes.push({
                     path: absolutePath,
                     isSystemRoot,
-                    stats
+                    isDirectory,
+                    isFile,
+                    isSymbolicLink
                 });
             }
         } else {
@@ -216,21 +223,28 @@ export async function getPAbsolutePathInfoes(
                 isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
                     ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
                     : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
-            if (processedPaths.includes(absolutePath)) {
+            if (pathInfoes.find((i) => i.path === absolutePath)) {
                 continue;
             }
 
             const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-            let stats: Stats | null = null;
+            let isDirectory: boolean | null = isSystemRoot ? true : null;
+            let isFile: boolean | null = isSystemRoot ? false : null;
+            let isSymbolicLink: boolean | null = null;
+
             if (!isSystemRoot && (await pathExists(absolutePath))) {
-                stats = await fs.stat(absolutePath);
+                const stats = await fs.stat(absolutePath);
+                isDirectory = stats.isDirectory();
+                isFile = !isDirectory && stats.isFile();
+                isSymbolicLink = stats.isSymbolicLink();
             }
 
-            processedPaths.push(absolutePath);
             pathInfoes.push({
                 path: absolutePath,
                 isSystemRoot,
-                stats
+                isDirectory,
+                isFile,
+                isSymbolicLink
             });
         }
     }
