@@ -524,6 +524,9 @@ void describe('CopyTaskRunner', () => {
                 copyEntries: [
                     {
                         from: 'README.md'
+                    },
+                    {
+                        from: 'README.md'
                     }
                 ],
                 dryRun,
@@ -549,6 +552,9 @@ void describe('CopyTaskRunner', () => {
         void it('should copy directory contents to output directory', async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
+                    {
+                        from: 'src/path-2/path-3'
+                    },
                     {
                         from: 'src/path-2/path-3'
                     }

@@ -657,7 +657,7 @@ void describe('CleanTaskRunner', () => {
             const runner = new CleanTaskRunner({
                 runFor: 'after',
                 beforeOrAfterCleanOptions: {
-                    paths: ['**/README.md']
+                    paths: ['**/README.md', '**/README.md']
                 },
                 dryRun,
                 workspaceInfo,
