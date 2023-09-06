@@ -4,7 +4,6 @@ import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { InvalidConfigError } from '../../../exceptions/index.js';
 import { CopyEntry } from '../../../models/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js';
 import {
@@ -78,38 +77,6 @@ export class CopyTaskRunner {
     }
 
     async run(): Promise<string[]> {
-        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
-        const projectRoot = this.options.workspaceInfo.projectRoot;
-        const outDir = this.options.outDir;
-        const configLocationPrefix = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build`;
-
-        // Validating outDir
-        //
-        if (!outDir?.trim().length) {
-            throw new InvalidConfigError(`The 'outDir' must not be empty.`, `${configLocationPrefix}.outDir`);
-        }
-
-        if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
-            throw new InvalidConfigError(
-                `The 'outDir' must not be system root directory.`,
-                `${configLocationPrefix}.outDir`
-            );
-        }
-
-        if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
-            throw new InvalidConfigError(
-                `The 'outDir' must not be parent of worksapce root or current working directory.`,
-                `${configLocationPrefix}.outDir`
-            );
-        }
-
-        if (isInFolder(outDir, projectRoot)) {
-            throw new InvalidConfigError(
-                `The 'outDir' must not be parent of project root directory.`,
-                `${configLocationPrefix}.outDir`
-            );
-        }
-
         const copyPathInfoes = await this.getCopyPathInfoes();
 
         await this.copy(copyPathInfoes);

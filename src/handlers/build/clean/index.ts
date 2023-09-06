@@ -38,36 +38,9 @@ export class CleanTaskRunner {
 
     async run(): Promise<string[]> {
         const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
-        const projectRoot = this.options.workspaceInfo.projectRoot;
         const outDir = this.options.outDir;
         const configLocationPrefix = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build`;
-
-        // Validating outDir
-        //
-        if (!outDir?.trim().length) {
-            throw new InvalidConfigError(`The 'outDir' must not be empty.`, `${configLocationPrefix}.outDir`);
-        }
-
-        if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
-            throw new InvalidConfigError(
-                `The 'outDir' must not be system root directory.`,
-                `${configLocationPrefix}.outDir`
-            );
-        }
-
-        if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
-            throw new InvalidConfigError(
-                `The 'outDir' must not be parent of worksapce root or current working directory.`,
-                `${configLocationPrefix}.outDir`
-            );
-        }
-
-        if (isInFolder(outDir, projectRoot)) {
-            throw new InvalidConfigError(
-                `The 'outDir' must not be parent of project root directory.`,
-                `${configLocationPrefix}.outDir`
-            );
-        }
+        const configPath = this.options.workspaceInfo.configPath;
 
         if (!(await pathExists(outDir))) {
             return [];
@@ -75,7 +48,11 @@ export class CleanTaskRunner {
 
         const outDirStats = await fs.stat(outDir);
         if (outDirStats.isFile()) {
-            throw new InvalidConfigError(`The 'outDir' must be directory.`, `${configLocationPrefix}.outDir`);
+            throw new InvalidConfigError(
+                `The 'outDir' must be directory.`,
+                configPath,
+                `${configLocationPrefix}.outDir`
+            );
         }
 
         // cleanPathInfoes
@@ -111,6 +88,7 @@ export class CleanTaskRunner {
             if (cleanPathInfo.isSystemRoot) {
                 throw new InvalidConfigError(
                     `Deleting root directory is not permitted, path: ${cleanPathInfo.path}.`,
+                    configPath,
                     `${configLocationPrefix}.clean`
                 );
             }
@@ -118,6 +96,7 @@ export class CleanTaskRunner {
             if (isInFolder(cleanPathInfo.path, workspaceRoot) || isSamePaths(cleanPathInfo.path, workspaceRoot)) {
                 throw new InvalidConfigError(
                     `Deleting current working directory is not permitted, path: ${cleanPathInfo.path}.`,
+                    configPath,
                     `${configLocationPrefix}.clean`
                 );
             }
@@ -125,6 +104,7 @@ export class CleanTaskRunner {
             if (!isInFolder(workspaceRoot, cleanPathInfo.path)) {
                 throw new InvalidConfigError(
                     `Deleting outside of current working directory is disabled. Path: ${cleanPathInfo.path}/`,
+                    configPath,
                     `${configLocationPrefix}.clean`
                 );
             }
@@ -132,6 +112,7 @@ export class CleanTaskRunner {
             if (!isSamePaths(outDir, cleanPathInfo.path) && !isInFolder(outDir, cleanPathInfo.path)) {
                 throw new InvalidConfigError(
                     `Cleaning outside of the output directory is disabled. Path: ${cleanPathInfo.path}.`,
+                    configPath,
                     `${configLocationPrefix}.clean`
                 );
             }
