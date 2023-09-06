@@ -24,7 +24,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
             })
 
             // Shared task options
-            .group(['logLevel', 'workspace', 'project'], colors.cyan('Common task options:'))
+            .group(['logLevel', 'workspace', 'project', 'env'], colors.cyan('Common task options:'))
             .option('logLevel', {
                 describe: 'Set logging level for output information',
                 choices: ['debug', 'info', 'warn', 'error', 'none'] as const
@@ -37,16 +37,14 @@ export function builder(argv: Argv): Argv<CommandOptions> {
                 describe: 'Set project name to Filter project(s)',
                 type: 'string'
             })
-
-            // Buuild task options
-            .group(
-                ['env', 'outDir', 'clean', 'copy', 'style', 'script', 'packageVersion'],
-                colors.cyan('Build task options:')
-            )
             .option('env', {
-                describe: 'Set env name to override the build task configuration with `envOverrides[name]` options.',
+                describe: 'Set env name to override the task configuration with `envOverrides[name]` options.',
                 type: 'string'
             })
+
+            // Buuild task options
+            .group(['outDir', 'clean', 'copy', 'style', 'script', 'packageVersion'], colors.cyan('Build task options:'))
+
             .option('outDir', {
                 describe: 'Set output directory for build results',
                 type: 'string'
