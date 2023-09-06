@@ -14,10 +14,9 @@ import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
-import { getParsedCommandOptions } from './get-parsed-command-options.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 import { toParsedBuildTask } from './to-parsed-build-task.js';
-import { toParsedTask } from './to-parsed-task.js';
+import { toParsedCommandOptions } from './to-parsed-command-options.js';
 
 async function validateCommandOptions(cmdOptions: ParsedCommandOptions): Promise<void> {
     if (cmdOptions._configPath && !(await pathExists(cmdOptions._configPath))) {
@@ -221,7 +220,7 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
 }
 
 export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Promise<ParsedTask[]> {
-    const parsedCmdOptions = getParsedCommandOptions(cmdOptions);
+    const parsedCmdOptions = toParsedCommandOptions(cmdOptions);
     await validateCommandOptions(parsedCmdOptions);
 
     let configPath = parsedCmdOptions._configPath;
@@ -243,7 +242,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         libConfig.projects = libConfig.projects || {};
 
         for (const [projectName, project] of Object.entries(libConfig.projects)) {
-            applyProjectExtends(projectName, project, libConfig.projects);
+            applyProjectExtends(projectName, project, libConfig.projects, configPath);
 
             const projectRoot = project.root
                 ? path.isAbsolute(project.root)
@@ -253,7 +252,8 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
             if (!isSamePaths(workspaceRoot, projectRoot) && !isInFolder(workspaceRoot, projectRoot)) {
                 throw new InvalidConfigError(
-                    `The project 'root' must not be outside of current working directory.`,
+                    `The project 'root' must not be parent of workspace root.`,
+                    configPath,
                     `projects[${projectName}].root`
                 );
             }
@@ -308,7 +308,11 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
                     tasks.push(parsedBuildTask);
                 } else {
-                    const parsedTask = toParsedTask(taskName, task, workspaceInfo);
+                    const parsedTask = {
+                        ...task,
+                        _taskName: taskName,
+                        _workspaceInfo: workspaceInfo
+                    };
                     tasks.push(parsedTask);
                 }
             }

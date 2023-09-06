@@ -5,7 +5,8 @@ function applyProjectExtendsInternal(
     projectName: string,
     projectConfig: Project,
     projectCollection: Record<string, Project>,
-    prevExtends: string[]
+    prevExtends: string[],
+    configPath: string | null
 ): void {
     const projectNameToExtend = projectConfig.extends?.trim();
     if (!projectNameToExtend) {
@@ -15,18 +16,18 @@ function applyProjectExtendsInternal(
     const configLocation = `projects[${projectName}].extends`;
 
     if (prevExtends.includes(projectNameToExtend)) {
-        throw new InvalidConfigError('Cross referencing extend founds.', configLocation);
+        throw new InvalidConfigError('Cross referencing extend founds.', configPath, configLocation);
     }
 
     const baseProject = projectCollection[projectNameToExtend];
     if (!baseProject) {
-        throw new InvalidConfigError('No base project to extend.', configLocation);
+        throw new InvalidConfigError('No base project to extend.', configPath, configLocation);
     }
 
     prevExtends.push(projectNameToExtend);
 
     if (baseProject.extends) {
-        applyProjectExtendsInternal(projectName, baseProject, projectCollection, prevExtends);
+        applyProjectExtendsInternal(projectName, baseProject, projectCollection, prevExtends, configPath);
     }
 
     if (baseProject.tasks) {
@@ -47,12 +48,13 @@ function applyProjectExtendsInternal(
 export function applyProjectExtends(
     projectName: string,
     projectConfig: Project,
-    projectCollection: Record<string, Project> = {}
+    projectCollection: Record<string, Project>,
+    configPath: string | null
 ): void {
     if (!projectConfig.extends?.trim().length) {
         return;
     }
 
     const prevExtends = [projectName];
-    applyProjectExtendsInternal(projectName, projectConfig, projectCollection, prevExtends);
+    applyProjectExtendsInternal(projectName, projectConfig, projectCollection, prevExtends, configPath);
 }

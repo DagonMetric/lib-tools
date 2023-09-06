@@ -2,8 +2,9 @@ import * as path from 'node:path';
 
 import { CommandOptions } from '../models/index.js';
 import { ParsedCommandOptions } from '../models/parsed/index.js';
+import { isWindowsStyleAbsolute, normalizePathToPOSIXStyle } from '../utils/index.js';
 
-export function getParsedCommandOptions(cmdOptions: CommandOptions): ParsedCommandOptions {
+export function toParsedCommandOptions(cmdOptions: CommandOptions): ParsedCommandOptions {
     let workspaceRoot: string | null = null;
     let configPath: string | null = null;
 
@@ -41,10 +42,10 @@ export function getParsedCommandOptions(cmdOptions: CommandOptions): ParsedComma
                 {} as Record<string, boolean>
             ) ?? {};
 
-    const outDir = cmdOptions.outDir
-        ? path.isAbsolute(cmdOptions.outDir)
-            ? path.resolve(cmdOptions.outDir)
-            : path.resolve(workspaceRoot ?? process.cwd(), cmdOptions.outDir)
+    const outDir = cmdOptions.outDir?.trim().length
+        ? isWindowsStyleAbsolute(cmdOptions.outDir) && process.platform === 'win32'
+            ? path.resolve(normalizePathToPOSIXStyle(cmdOptions.outDir))
+            : path.resolve(workspaceRoot ?? process.cwd(), normalizePathToPOSIXStyle(cmdOptions.outDir))
         : null;
 
     const copyEntries =
