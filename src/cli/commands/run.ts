@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
-import { getTasks } from '../../helpers/index.js';
+import { getTasks } from '../../config-helpers/index.js';
 import { CommandOptions } from '../../models/index.js';
 import { ParsedBuildTask, ParsedTask } from '../../models/parsed/index.js';
 import { Logger, colors, dashCaseToCamelCase, exec } from '../../utils/index.js';
