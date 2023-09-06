@@ -7,7 +7,9 @@ import { InvalidConfigError } from '../../../exceptions/index.js';
 import { CopyEntry } from '../../../models/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js';
 import {
+    AbsolutePathInfo,
     Logger,
+    getPAbsolutePathInfoes,
     isInFolder,
     isSamePaths,
     isWindowsStyleAbsolute,
@@ -26,83 +28,6 @@ export interface CopyTaskRunnerOptions {
 interface CopyPathInfo {
     fromPath: string;
     toPath: string;
-}
-
-interface PathInfo {
-    readonly absolutePath: string;
-    readonly stats: Stats | null;
-    readonly isSystemRoot?: boolean;
-}
-
-async function getPathInfoes(relPaths: string[], cwd: string): Promise<PathInfo[]> {
-    if (!relPaths.length) {
-        return [];
-    }
-
-    const processedPaths: string[] = [];
-    const pathInfoes: PathInfo[] = [];
-
-    for (const pathOrPattern of relPaths) {
-        if (!pathOrPattern.trim().length) {
-            continue;
-        }
-
-        let normalizedPathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
-
-        if (!normalizedPathOrPattern && /^[./\\]/.test(pathOrPattern)) {
-            normalizedPathOrPattern = './';
-        }
-
-        if (!normalizedPathOrPattern) {
-            continue;
-        }
-
-        if (glob.hasMagic(normalizedPathOrPattern)) {
-            const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
-            for (const absolutePath of foundPaths) {
-                if (processedPaths.includes(absolutePath)) {
-                    continue;
-                }
-
-                const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-                let stats: Stats | null = null;
-                if (!isSystemRoot) {
-                    stats = await fs.stat(absolutePath);
-                }
-
-                processedPaths.push(absolutePath);
-                pathInfoes.push({
-                    absolutePath,
-                    isSystemRoot,
-                    stats
-                });
-            }
-        } else {
-            // We allow absolute path on Windows only.
-            const absolutePath =
-                isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
-                    ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
-                    : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
-            if (processedPaths.includes(absolutePath)) {
-                continue;
-            }
-
-            const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
-            let stats: Stats | null = null;
-            if (!isSystemRoot && (await pathExists(absolutePath))) {
-                stats = await fs.stat(absolutePath);
-            }
-
-            processedPaths.push(absolutePath);
-            pathInfoes.push({
-                absolutePath,
-                isSystemRoot,
-                stats
-            });
-        }
-    }
-
-    return pathInfoes;
 }
 
 export class CopyTaskRunner {
@@ -170,12 +95,11 @@ export class CopyTaskRunner {
                 continue;
             }
 
-            const excludePathInfoes = await getPathInfoes(copyEntry.exclude ?? [], projectRoot);
+            const excludePathInfoes = await getPAbsolutePathInfoes(copyEntry.exclude ?? [], projectRoot);
 
             if (glob.hasMagic(normalizedFrom)) {
                 const foundPaths = await glob(normalizedFrom, {
                     cwd: projectRoot,
-                    nodir: true,
                     dot: true,
                     absolute: true
                 });
@@ -206,8 +130,12 @@ export class CopyTaskRunner {
                         continue;
                     }
 
+                    const fromPathStats = await fs.stat(fromPath);
+                    if (fromPathStats.isDirectory()) {
+                        continue;
+                    }
+
                     if (excludePathInfoes.length) {
-                        const fromPathStats = await fs.stat(fromPath);
                         if (this.isExclude(fromPath, fromPathStats, excludePathInfoes)) {
                             this.logger.debug(`Excluded from copy, path: ${fromPath}.`);
                             continue;
@@ -310,19 +238,19 @@ export class CopyTaskRunner {
         return copyPathInfoes;
     }
 
-    private isExclude(pathToCheck: string, pathToCheckStats: Stats, excludePathInfoes: PathInfo[]): boolean {
+    private isExclude(pathToCheck: string, pathToCheckStats: Stats, excludePathInfoes: AbsolutePathInfo[]): boolean {
         // Exclude - if check file/directory is same as exclude file/directory
-        if (excludePathInfoes.find((i) => isSamePaths(i.absolutePath, pathToCheck))) {
+        if (excludePathInfoes.find((i) => isSamePaths(i.path, pathToCheck))) {
             return true;
         }
 
         // Exclude - if check file/directory is in exclude directory
-        if (excludePathInfoes.find((i) => i.stats?.isDirectory() && isInFolder(i.absolutePath, pathToCheck))) {
+        if (excludePathInfoes.find((i) => i.stats?.isDirectory() && isInFolder(i.path, pathToCheck))) {
             return true;
         }
 
         // Exclude - if exclude file is in check directory
-        if (pathToCheckStats.isDirectory() && excludePathInfoes.find((i) => isInFolder(pathToCheck, i.absolutePath))) {
+        if (pathToCheckStats.isDirectory() && excludePathInfoes.find((i) => isInFolder(pathToCheck, i.path))) {
             return true;
         }
 
