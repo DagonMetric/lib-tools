@@ -1,5 +1,3 @@
-import { colors } from './colorize.js';
-
 export enum LogLevel {
     None = 0,
     Error = 2,
@@ -17,7 +15,6 @@ export interface LoggerOptions {
     readonly infoPrefix?: string;
     readonly warnPrefix?: string;
     readonly errorPrefix?: string;
-    readonly color?: boolean;
 }
 
 export interface LoggerBase {
@@ -53,13 +50,7 @@ export class Logger implements LoggerBase {
 
         const prefix = this.getPrefix(logLevel);
 
-        let logMsg = `${prefix}${message.trimLeft()}`;
-
-        if (this.loggerOptions.color !== false && logLevel === LogLevel.Warn) {
-            logMsg = colors.yellow(logMsg);
-        } else if (this.loggerOptions.color !== false && logLevel === LogLevel.Error) {
-            logMsg = colors.red(logMsg);
-        }
+        const logMsg = `${prefix}${message.trimStart()}`;
 
         if (optionalParams) {
             if (logLevel === LogLevel.Warn) {
