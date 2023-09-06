@@ -359,8 +359,71 @@ void describe('CopyTaskRunner', () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
-                        from: './',
+                        from: '/',
                         exclude: ['src']
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copyPaths = await runner.run();
+
+            const expectedCopyPaths = [
+                path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'LICENSE'),
+                path.resolve(runner.options.outDir, 'index.ts')
+            ];
+
+            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+        });
+
+        void it('should copy with complex copy options #1', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    {
+                        from: '.',
+                        exclude: ['src']
+                    },
+                    {
+                        from: 'src',
+                        to: 'source',
+                        exclude: ['**/*.js', '**/a.ts']
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copyPaths = await runner.run();
+
+            const expectedCopyPaths = [
+                path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'LICENSE'),
+                path.resolve(runner.options.outDir, 'index.ts'),
+                path.resolve(runner.options.outDir, 'source/b.ts'),
+                path.resolve(runner.options.outDir, 'source/c.ts'),
+                path.resolve(runner.options.outDir, 'source/README.md'),
+                path.resolve(runner.options.outDir, 'source/path-2/note.md')
+            ];
+
+            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+        });
+
+        void it('should copy with complex copy options #2', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    // {
+                    //     from: '**/*',
+                    //     exclude: ['**/*.ts', 'src']
+                    // },
+                    {
+                        from: 'src/path-*'
+                        // exclude: ['**/*.md']
                     }
                 ],
                 dryRun,
@@ -372,9 +435,13 @@ void describe('CopyTaskRunner', () => {
             const copyPaths = await runner.run();
 
             const expectedCopyPaths = [
-                path.resolve(runner.options.outDir, 'README.md'),
-                path.resolve(runner.options.outDir, 'LICENSE'),
-                path.resolve(runner.options.outDir, 'index.ts')
+                // path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'LICENSE')
+                // path.resolve(runner.options.outDir, 'p1/p1.js'),
+                // path.resolve(runner.options.outDir, 'p1/p1.js')
+                // path.resolve(runner.options.outDir, 'source/c.ts'),
+                // path.resolve(runner.options.outDir, 'source/README.md'),
+                // path.resolve(runner.options.outDir, 'source/path-2/note.md')
             ];
 
             assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
