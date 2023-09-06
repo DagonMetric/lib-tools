@@ -7,7 +7,7 @@ import { applyProjectExtends } from '../src/config-helpers/apply-project-extends
 import { getParsedCommandOptions } from '../src/config-helpers/get-parsed-command-options.js';
 import { getTasks } from '../src/config-helpers/get-tasks.js';
 import { toParsedBuildTask, validateOutDir } from '../src/config-helpers/to-parsed-build-task.js';
-import { InvalidConfigError } from '../src/exceptions/index.js';
+import { InvalidCommandOptionError, InvalidConfigError } from '../src/exceptions/index.js';
 import { BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
 import { ParsedBuildTask, ParsedCommandOptions, WorkspaceInfo } from '../src/models/parsed/index.js';
 
@@ -237,6 +237,127 @@ void describe('getParsedCommandOptions', () => {
         };
 
         assert.deepStrictEqual(result, expected);
+    });
+
+    void it("should throw an error when specified workspace libconfig.json file doesn't not exist", async () => {
+        const cmdOptions: CommandOptions = {
+            workspace: './tests/test-data/notexist/libconfig.json'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            `The workspace config file doesn't exist.`,
+            `workspace=${cmdOptions.workspace}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it("should throw an error when specified workspace directory doesn't not exist", async () => {
+        const cmdOptions: CommandOptions = {
+            workspace: './tests/test-data/notexist'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            `The workspace directory doesn't exist.`,
+            `workspace=${cmdOptions.workspace}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it(
+        'should throw an error when specified outDir is system root directory on Windows',
+        { skip: process.platform !== 'win32' },
+        async () => {
+            const cmdOptions: CommandOptions = {
+                outDir: 'C:\\'
+            };
+
+            const expectedError = new InvalidCommandOptionError(
+                `The outDir must not be system root directory.`,
+                `outDir=${cmdOptions.outDir}`
+            );
+
+            await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+        }
+    );
+
+    void it('should throw an error when specified outDir is parent of current working directory', async () => {
+        const cmdOptions: CommandOptions = {
+            outDir: '../'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            `The outDir must not be parent directory of current working directory.`,
+            `outDir=${cmdOptions.outDir}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it("should throw an error when specified copy entry file doesn't not exist", async () => {
+        const cmdOptions: CommandOptions = {
+            copy: 'not.txt'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            'Could not find the file(s) to copy.',
+            `copy=${cmdOptions.copy}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it("should throw an error when specified style entry file doesn't not exist", async () => {
+        const cmdOptions: CommandOptions = {
+            style: 'not.css'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            'Could not find some style file(s) to bundle.',
+            `style=${cmdOptions.style}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it('should throw an error when specified style entry is glob pattern', async () => {
+        const cmdOptions: CommandOptions = {
+            style: '**/*.css'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            'Could not find some style file(s) to bundle.',
+            `style=${cmdOptions.style}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it("should throw an error when specified script entry file doesn't not exist", async () => {
+        const cmdOptions: CommandOptions = {
+            script: 'not.ts'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            'Could not find some script file(s) to bundle.',
+            `script=${cmdOptions.script}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
+    });
+
+    void it('should throw an error when specified script entry is glob pattern', async () => {
+        const cmdOptions: CommandOptions = {
+            script: '**/*.ts'
+        };
+
+        const expectedError = new InvalidCommandOptionError(
+            'Could not find some script file(s) to bundle.',
+            `script=${cmdOptions.script}`
+        );
+
+        await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
     });
 });
 
