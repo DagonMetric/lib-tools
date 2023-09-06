@@ -1,3 +1,5 @@
+import { glob } from 'glob';
+import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -154,4 +156,84 @@ export async function findUp(
     }
 
     return null;
+}
+
+export interface AbsolutePathInfo {
+    readonly path: string;
+    readonly stats: Stats | null;
+    readonly isSystemRoot?: boolean;
+}
+
+export async function getPAbsolutePathInfoes(
+    globPatternsOrRelPaths: string[],
+    cwd: string
+): Promise<AbsolutePathInfo[]> {
+    if (!globPatternsOrRelPaths.length) {
+        return [];
+    }
+
+    const processedPaths: string[] = [];
+    const pathInfoes: AbsolutePathInfo[] = [];
+
+    for (const pathOrPattern of globPatternsOrRelPaths) {
+        if (!pathOrPattern.trim().length) {
+            continue;
+        }
+
+        let normalizedPathOrPattern = normalizePathToPOSIXStyle(pathOrPattern);
+
+        if (!normalizedPathOrPattern && /^[./\\]/.test(pathOrPattern)) {
+            normalizedPathOrPattern = './';
+        }
+
+        if (!normalizedPathOrPattern) {
+            continue;
+        }
+
+        if (glob.hasMagic(normalizedPathOrPattern)) {
+            const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
+            for (const absolutePath of foundPaths) {
+                if (processedPaths.includes(absolutePath)) {
+                    continue;
+                }
+
+                const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+                let stats: Stats | null = null;
+                if (!isSystemRoot) {
+                    stats = await fs.stat(absolutePath);
+                }
+
+                processedPaths.push(absolutePath);
+                pathInfoes.push({
+                    path: absolutePath,
+                    isSystemRoot,
+                    stats
+                });
+            }
+        } else {
+            // We allow absolute path on Windows only.
+            const absolutePath =
+                isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
+                    ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
+                    : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
+            if (processedPaths.includes(absolutePath)) {
+                continue;
+            }
+
+            const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+            let stats: Stats | null = null;
+            if (!isSystemRoot && (await pathExists(absolutePath))) {
+                stats = await fs.stat(absolutePath);
+            }
+
+            processedPaths.push(absolutePath);
+            pathInfoes.push({
+                path: absolutePath,
+                isSystemRoot,
+                stats
+            });
+        }
+    }
+
+    return pathInfoes;
 }
