@@ -11,13 +11,13 @@ export enum LogLevel {
 export type LogLevelString = 'debug' | 'info' | 'warn' | 'error' | 'none';
 
 export interface LoggerOptions {
-    logLevel?: LogLevel | LogLevelString;
-    name?: string;
-    debugPrefix?: string;
-    infoPrefix?: string;
-    warnPrefix?: string;
-    errorPrefix?: string;
-    color?: boolean;
+    readonly logLevel?: LogLevel | LogLevelString;
+    readonly name?: string;
+    readonly debugPrefix?: string;
+    readonly infoPrefix?: string;
+    readonly warnPrefix?: string;
+    readonly errorPrefix?: string;
+    readonly color?: boolean;
 }
 
 export interface LoggerBase {
@@ -29,11 +29,9 @@ export interface LoggerBase {
 }
 
 export class Logger implements LoggerBase {
-    readonly loggerOptions: LoggerOptions;
     private _minLogLevel: LogLevel = LogLevel.Info;
 
-    constructor(loggerOptions: LoggerOptions) {
-        this.loggerOptions = loggerOptions || {};
+    constructor(readonly loggerOptions: LoggerOptions) {
         if (this.loggerOptions.logLevel != null) {
             this._minLogLevel =
                 typeof this.loggerOptions.logLevel === 'string'
