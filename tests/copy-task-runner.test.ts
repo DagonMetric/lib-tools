@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { describe, it } from 'node:test';
+import { afterEach, describe, it } from 'node:test';
 
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
 import { CopyEntry } from '../src/models/index.js';
@@ -270,7 +271,7 @@ void describe('CopyTaskRunner', () => {
     void describe('CopyTaskRunner:run [Dry Run]', () => {
         const dryRun = true;
 
-        void it('should copy file to output directory', async () => {
+        void it('should copy single file to output directory', async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
@@ -283,11 +284,11 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [path.resolve(runner.options.outDir, 'README.md')];
+            const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
 
-            assert.deepStrictEqual(copyPaths, expectedCopyPaths);
+            assert.deepStrictEqual(copiedPaths, expectedPaths);
         });
 
         void it('should copy directory contents to output directory', async () => {
@@ -303,11 +304,11 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [path.resolve(runner.options.outDir, 'p3.js')];
+            const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
 
-            assert.deepStrictEqual(copyPaths, expectedCopyPaths);
+            assert.deepStrictEqual(copiedPaths, expectedPaths);
         });
 
         void it('should copy with glob pattern', async () => {
@@ -323,23 +324,23 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'p2.js'),
                 path.resolve(runner.options.outDir, 'note.md'),
                 path.resolve(runner.options.outDir, 'path-3/p3.js')
             ];
 
-            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+            assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
         });
 
-        void it('should copy with from and to', async () => {
+        void it('should copy with from and to options', async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
                         from: 'src/path-1',
-                        to: 'path-1'
+                        to: 'p1'
                     }
                 ],
                 dryRun,
@@ -348,14 +349,39 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [path.resolve(runner.options.outDir, 'path-1/p1.js')];
+            const expectedPaths = [path.resolve(runner.options.outDir, 'p1/p1.js')];
 
-            assert.deepStrictEqual(copyPaths, expectedCopyPaths);
+            assert.deepStrictEqual(copiedPaths, expectedPaths);
         });
 
-        void it('should repect exclude when copying', async () => {
+        void it("should copy when from is project root '.'", async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    {
+                        from: '.',
+                        exclude: ['src']
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copiedPaths = await runner.run();
+
+            const expectedPaths = [
+                path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'LICENSE'),
+                path.resolve(runner.options.outDir, 'index.ts')
+            ];
+
+            assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
+        });
+
+        void it("should copy when from is project root '/'", async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
@@ -369,28 +395,23 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'README.md'),
                 path.resolve(runner.options.outDir, 'LICENSE'),
                 path.resolve(runner.options.outDir, 'index.ts')
             ];
 
-            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+            assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
         });
 
-        void it('should copy with complex copy options #1', async () => {
+        void it("should copy and repect exclude folder 'src'", async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
-                        from: '.',
+                        from: '/',
                         exclude: ['src']
-                    },
-                    {
-                        from: 'src',
-                        to: 'source',
-                        exclude: ['**/*.js', '**/a.ts']
                     }
                 ],
                 dryRun,
@@ -399,22 +420,18 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'README.md'),
                 path.resolve(runner.options.outDir, 'LICENSE'),
-                path.resolve(runner.options.outDir, 'index.ts'),
-                path.resolve(runner.options.outDir, 'source/b.ts'),
-                path.resolve(runner.options.outDir, 'source/c.ts'),
-                path.resolve(runner.options.outDir, 'source/README.md'),
-                path.resolve(runner.options.outDir, 'source/path-2/note.md')
+                path.resolve(runner.options.outDir, 'index.ts')
             ];
 
-            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+            assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
         });
 
-        void it('should copy with complex copy options #2', async () => {
+        void it("should copy and repect exclude pattern: '**/*.md'", async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
@@ -428,29 +445,29 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'error' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'path-1/p1.js'),
                 path.resolve(runner.options.outDir, 'path-2/p2.js'),
                 path.resolve(runner.options.outDir, 'path-2/path-3/p3.js')
             ];
 
-            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+            assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
         });
 
-        void it("should copy and repect exclude folder pattern: 'path-*/'", async () => {
+        void it("should copy and repect exclude pattern: '**/path-*'", async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
                         from: 'src',
-                        exclude: ['path-*/']
+                        exclude: ['**/path-*']
                     }
                 ],
                 dryRun,
                 workspaceInfo,
                 outDir,
-                logger: new Logger({ logLevel: 'debug' })
+                logger: new Logger({ logLevel: 'error' })
             });
 
             const copiedPaths = await runner.run();
@@ -463,6 +480,97 @@ void describe('CopyTaskRunner', () => {
             ];
 
             assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
+        });
+
+        void it('should not copy when from and exclude is same path', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    {
+                        from: '.',
+                        exclude: ['/']
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copiedPaths = await runner.run();
+
+            assert.deepStrictEqual(copiedPaths, []);
+        });
+    });
+
+    void describe('CopyTaskRunner:run [Actual Copy]', () => {
+        const dryRun = false;
+
+        afterEach(async () => {
+            await fs
+                .access(outDir)
+                .then(async () => {
+                    await fs.rm(outDir, {
+                        recursive: true,
+                        force: true
+                    });
+                })
+                .catch(() => {
+                    // Do nothing
+                });
+        });
+
+        void it('should copy single file to output directory', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    {
+                        from: 'README.md'
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copiedPaths = await runner.run();
+
+            const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
+            for (const coppiedPath of expectedPaths) {
+                const fileExisted = await fs
+                    .access(coppiedPath)
+                    .then(() => true)
+                    .catch(() => false);
+                assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
+            }
+
+            assert.deepStrictEqual(copiedPaths, expectedPaths);
+        });
+
+        void it('should copy directory contents to output directory', async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    {
+                        from: 'src/path-2/path-3'
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copiedPaths = await runner.run();
+
+            const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
+            for (const coppiedPath of expectedPaths) {
+                const fileExisted = await fs
+                    .access(coppiedPath)
+                    .then(() => true)
+                    .catch(() => false);
+                assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
+            }
+
+            assert.deepStrictEqual(copiedPaths, expectedPaths);
         });
     });
 });

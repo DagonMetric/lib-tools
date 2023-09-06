@@ -475,7 +475,7 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'src'),
                 path.resolve(runner.options.outDir, 'path-1/p1.js'),
                 path.resolve(runner.options.outDir, 'path-2'),
@@ -486,7 +486,7 @@ void describe('CleanTaskRunner', () => {
                 path.resolve(runner.options.outDir, 'index.js')
             ];
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
         });
 
         void it('should delete with after build clean options', async () => {
@@ -502,7 +502,7 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'README.md'),
                 path.resolve(runner.options.outDir, 'src'),
                 path.resolve(runner.options.outDir, 'src/README.md'),
@@ -511,7 +511,7 @@ void describe('CleanTaskRunner', () => {
                 path.resolve(runner.options.outDir, 'path-2/note.md')
             ];
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
         });
 
         void it('should respect exclude when cleaning paths - #1', async () => {
@@ -546,7 +546,7 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths: string[] = [
+            const expectedPaths: string[] = [
                 path.resolve(runner.options.outDir, 'LICENSE'),
                 path.resolve(runner.options.outDir, 'README.md'),
                 path.resolve(runner.options.outDir, 'index.js'),
@@ -556,7 +556,7 @@ void describe('CleanTaskRunner', () => {
                 path.resolve(runner.options.outDir, 'src/nested/nested.ts')
             ];
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
         });
 
         void it('should respect exclude when cleaning paths - #3', async () => {
@@ -573,13 +573,13 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'src/b.ts'),
                 path.resolve(runner.options.outDir, 'src/c.ts'),
                 path.resolve(runner.options.outDir, 'src/nested/nested.ts')
             ];
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
         });
 
         void it('should respect exclude when cleaning paths - #4', async () => {
@@ -596,12 +596,12 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'path-2/note.md'),
                 path.resolve(runner.options.outDir, 'path-2/p2.js')
             ];
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
         });
     });
 
@@ -642,13 +642,15 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const outDirDeleted = await fs
-                .access(runner.options.outDir)
-                .then(() => false)
-                .catch(() => true);
-
-            assert.equal(outDirDeleted, true, "'outDir' should be deleted.");
-            assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
+            const expectedPaths = [runner.options.outDir];
+            for (const cleanedPath of expectedPaths) {
+                const fileDeleted = await fs
+                    .access(cleanedPath)
+                    .then(() => false)
+                    .catch(() => true);
+                assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
+            }
+            assert.deepStrictEqual(cleanedPaths, expectedPaths);
         });
 
         void it('should delete with after build clean options [Actual Delete]', async () => {
@@ -664,21 +666,21 @@ void describe('CleanTaskRunner', () => {
             });
 
             const cleanedPaths = await runner.run();
-            const expectedCleanPaths = [
+            const expectedPaths = [
                 path.resolve(runner.options.outDir, 'README.md'),
                 path.resolve(runner.options.outDir, 'src/README.md'),
                 path.resolve(runner.options.outDir, 'src/nested/README.md')
             ];
 
-            for (const cleanPath of expectedCleanPaths) {
+            for (const cleanedPath of expectedPaths) {
                 const fileDeleted = await fs
-                    .access(cleanPath)
+                    .access(cleanedPath)
                     .then(() => false)
                     .catch(() => true);
-                assert.equal(fileDeleted, true, `'${cleanPath}' should be deleted.`);
+                assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
             }
 
-            assert.deepStrictEqual(cleanedPaths.sort(), expectedCleanPaths.sort());
+            assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
         });
     });
 });
