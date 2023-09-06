@@ -417,13 +417,34 @@ void describe('CopyTaskRunner', () => {
         void it('should copy with complex copy options #2', async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
-                    // {
-                    //     from: '**/*',
-                    //     exclude: ['**/*.ts', 'src']
-                    // },
                     {
-                        from: 'src/path-*'
-                        // exclude: ['**/*.md']
+                        from: 'src/path-*',
+                        exclude: ['**/*.md']
+                    }
+                ],
+                dryRun,
+                workspaceInfo,
+                outDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
+
+            const copyPaths = await runner.run();
+
+            const expectedCopyPaths = [
+                path.resolve(runner.options.outDir, 'path-1/p1.js'),
+                path.resolve(runner.options.outDir, 'path-2/p2.js'),
+                path.resolve(runner.options.outDir, 'path-2/path-3/p3.js')
+            ];
+
+            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+        });
+
+        void it("should copy and repect exclude folder pattern: 'path-*/'", async () => {
+            const runner = new CopyTaskRunner({
+                copyEntries: [
+                    {
+                        from: 'src',
+                        exclude: ['path-*/']
                     }
                 ],
                 dryRun,
@@ -432,19 +453,16 @@ void describe('CopyTaskRunner', () => {
                 logger: new Logger({ logLevel: 'debug' })
             });
 
-            const copyPaths = await runner.run();
+            const copiedPaths = await runner.run();
 
-            const expectedCopyPaths = [
-                // path.resolve(runner.options.outDir, 'README.md'),
-                path.resolve(runner.options.outDir, 'LICENSE')
-                // path.resolve(runner.options.outDir, 'p1/p1.js'),
-                // path.resolve(runner.options.outDir, 'p1/p1.js')
-                // path.resolve(runner.options.outDir, 'source/c.ts'),
-                // path.resolve(runner.options.outDir, 'source/README.md'),
-                // path.resolve(runner.options.outDir, 'source/path-2/note.md')
+            const expectedPaths = [
+                path.resolve(runner.options.outDir, 'README.md'),
+                path.resolve(runner.options.outDir, 'a.ts'),
+                path.resolve(runner.options.outDir, 'b.ts'),
+                path.resolve(runner.options.outDir, 'c.ts')
             ];
 
-            assert.deepStrictEqual(copyPaths.sort(), expectedCopyPaths.sort());
+            assert.deepStrictEqual(copiedPaths.sort(), expectedPaths.sort());
         });
     });
 });
