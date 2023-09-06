@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
+import { InvalidConfigError } from '../exceptions/index.js';
 import { BuildTask, CommandOptions } from '../models/index.js';
 import {
     PackageJsonInfo,
@@ -10,36 +10,13 @@ import {
     ParsedTask,
     WorkspaceInfo
 } from '../models/parsed/index.js';
-import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
+import { findUp, isInFolder, isSamePaths } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
+import { getParsedCommandOptions } from './get-parsed-command-options.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 import { toParsedBuildTask } from './to-parsed-build-task.js';
-import { toParsedCommandOptions } from './to-parsed-command-options.js';
-
-async function validateCommandOptions(cmdOptions: ParsedCommandOptions): Promise<void> {
-    if (cmdOptions._configPath && !(await pathExists(cmdOptions._configPath))) {
-        throw new InvalidCommandOptionError(
-            `The 'libconfig' file path doesn't exist. File path: ${cmdOptions._configPath}.`
-        );
-    }
-
-    if (cmdOptions._outDir) {
-        if (cmdOptions._outDir === path.parse(cmdOptions._outDir).root) {
-            throw new InvalidCommandOptionError(`The 'outDir' must not be the same as system root directory.`);
-        }
-
-        if (
-            isInFolder(cmdOptions._outDir, process.cwd()) ||
-            (cmdOptions._workspaceRoot && isInFolder(cmdOptions._outDir, cmdOptions._workspaceRoot))
-        ) {
-            throw new InvalidCommandOptionError(
-                `The 'outDir' must not be parent directory of current working directory.`
-            );
-        }
-    }
-}
 
 const packageJsonCache = new Map<string, Record<string, unknown>>();
 async function readPackageJsonFile(packageJsonPath: string): Promise<Record<string, unknown>> {
@@ -220,8 +197,7 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
 }
 
 export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Promise<ParsedTask[]> {
-    const parsedCmdOptions = toParsedCommandOptions(cmdOptions);
-    await validateCommandOptions(parsedCmdOptions);
+    const parsedCmdOptions = await getParsedCommandOptions(cmdOptions);
 
     let configPath = parsedCmdOptions._configPath;
     if (!configPath) {
