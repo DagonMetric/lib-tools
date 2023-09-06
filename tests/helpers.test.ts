@@ -4,13 +4,12 @@ import { describe, it } from 'node:test';
 
 import { applyEnvOverrides } from '../src/config-helpers/apply-env-overrides.js';
 import { applyProjectExtends } from '../src/config-helpers/apply-project-extends.js';
-import { getParsedCommandOptions } from '../src/config-helpers/get-parsed-command-options.js';
 import { getTasks } from '../src/config-helpers/get-tasks.js';
-import { toParsedBuildTask } from '../src/config-helpers/to-parsed-build-task.js';
-import { toParsedTask } from '../src/config-helpers/to-parsed-task.js';
+import { toParsedBuildTask, validateOutDir } from '../src/config-helpers/to-parsed-build-task.js';
+import { toParsedCommandOptions } from '../src/config-helpers/to-parsed-command-options.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
-import { BuildTask, CommandOptions, ExternalTask, Project, Task } from '../src/models/index.js';
-import { ParsedBuildTask, ParsedCommandOptions, ParsedTask, WorkspaceInfo } from '../src/models/parsed/index.js';
+import { BuildTask, CommandOptions, ExternalTask, Project } from '../src/models/index.js';
+import { ParsedBuildTask, ParsedCommandOptions, WorkspaceInfo } from '../src/models/parsed/index.js';
 
 void describe('applyEnvOverrides', () => {
     void it('should override with env value to build task', () => {
@@ -119,7 +118,7 @@ void describe('applyProjectExtends', () => {
 
         const projectC = projects.c;
 
-        applyProjectExtends('c', projectC, projects);
+        applyProjectExtends('c', projectC, projects, null);
 
         const expectedConfig = {
             extends: 'b',
@@ -161,9 +160,9 @@ void describe('applyProjectExtends', () => {
 
         const projectC = projects.c;
 
-        const expectedError = new InvalidConfigError('Cross referencing extend founds.', 'projects[c].extends');
+        const expectedError = new InvalidConfigError('Cross referencing extend founds.', null, 'projects[c].extends');
 
-        assert.throws(() => applyProjectExtends('c', projectC, projects), expectedError);
+        assert.throws(() => applyProjectExtends('c', projectC, projects, null), expectedError);
     });
 
     void it('should throw if no base project to extend', () => {
@@ -180,13 +179,13 @@ void describe('applyProjectExtends', () => {
         const projectB = projects.b;
 
         assert.throws(
-            () => applyProjectExtends('b', projectB, projects),
-            'Invalid configuration. No base project to extends. Config location: projects[b].extends'
+            () => applyProjectExtends('b', projectB, projects, null),
+            'Configuration error: No base project to extends. Config location: projects[b].extends'
         );
     });
 });
 
-void describe('getParsedCommandOptions', () => {
+void describe('toParsedCommandOptions', () => {
     void it('should parse command options', () => {
         const cmdOptions: CommandOptions = {
             workspace: '../notexist/libconfig.json',
@@ -200,7 +199,7 @@ void describe('getParsedCommandOptions', () => {
             packageVersion: '1.0.0'
         };
 
-        const result = getParsedCommandOptions(cmdOptions);
+        const result = toParsedCommandOptions(cmdOptions);
 
         const expected: ParsedCommandOptions = {
             ...cmdOptions,
@@ -218,35 +217,7 @@ void describe('getParsedCommandOptions', () => {
     });
 });
 
-void describe('getParsedTask', () => {
-    void it('should parse task config', () => {
-        const task: Task = {
-            handler: 'tasks.mjs',
-            skip: true
-        };
-
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot: process.cwd(),
-            projectRoot: path.resolve(process.cwd(), 'tests/test-data'),
-            projectName: 'test-project',
-            configPath: null
-        };
-
-        const taskName = 'hello';
-
-        const result = toParsedTask(taskName, task, workspaceInfo);
-
-        const expected: ParsedTask = {
-            ...task,
-            _taskName: taskName,
-            _workspaceInfo: workspaceInfo
-        };
-
-        assert.deepStrictEqual(result, expected);
-    });
-});
-
-void describe('getParsedBuildTask', () => {
+void describe('toParsedBuildTask', () => {
     void it('should parse build task config', () => {
         const buildTask: BuildTask = {
             outDir: 'out',
@@ -300,6 +271,96 @@ void describe('getParsedBuildTask', () => {
         };
 
         assert.deepStrictEqual(result, expected);
+    });
+});
+
+void describe('validateOutDir', () => {
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: path.resolve(workspaceRoot, 'test-project'),
+        projectName: 'test-project',
+        configPath: path.resolve(workspaceRoot, 'libconfig.json')
+    };
+
+    const configLocationPrefix = `projects[${workspaceInfo.projectName}].tasks.build`;
+
+    void it(
+        'should throw an error if outDir is system root directory - C:\\ on Windows',
+        { skip: process.platform !== 'win32' },
+        () => {
+            const outDir = path.resolve('C:\\');
+            const expectedError = new InvalidConfigError(
+                `The 'outDir' must not be system root directory.`,
+                workspaceInfo.configPath,
+                `${configLocationPrefix}.outDir`
+            );
+
+            assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
+        }
+    );
+
+    void it('should throw an error if outDir is system root directory - /', () => {
+        const outDir = path.resolve('/');
+        const expectedError = new InvalidConfigError(
+            `The 'outDir' must not be system root directory.`,
+            workspaceInfo.configPath,
+            `${configLocationPrefix}.outDir`
+        );
+
+        assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
+    });
+
+    void it(
+        'should throw an error if outDir is system root directory - \\\\server\\public on Windows',
+        { skip: process.platform !== 'win32' },
+        () => {
+            const outDir = path.resolve('\\\\server\\public');
+            const expectedError = new InvalidConfigError(
+                `The 'outDir' must not be system root directory.`,
+                workspaceInfo.configPath,
+                `${configLocationPrefix}.outDir`
+            );
+
+            assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
+        }
+    );
+
+    void it(
+        'should throw an error if outDir is system root directory - //server/public on Windows',
+        { skip: process.platform !== 'win32' },
+        () => {
+            const outDir = path.resolve('//server/public');
+            const expectedError = new InvalidConfigError(
+                `The 'outDir' must not be system root directory.`,
+                workspaceInfo.configPath,
+                `${configLocationPrefix}.outDir`
+            );
+
+            assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
+        }
+    );
+
+    void it('should throw an error if outDir is parent of workspace root', () => {
+        const outDir = path.resolve(workspaceRoot, '../');
+        const expectedError = new InvalidConfigError(
+            `The 'outDir' must not be parent of worksapce root or current working directory.`,
+            workspaceInfo.configPath,
+            `${configLocationPrefix}.outDir`
+        );
+
+        assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
+    });
+
+    void it('should throw an error if outDir is parent of project root', () => {
+        const outDir = path.resolve(workspaceInfo.projectRoot, '../');
+        const expectedError = new InvalidConfigError(
+            `The 'outDir' must not be parent of project root directory.`,
+            workspaceInfo.configPath,
+            `${configLocationPrefix}.outDir`
+        );
+
+        assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
     });
 });
 
