@@ -2,8 +2,6 @@
  * Important: To sync with ../helpers/commands/run
  */
 export interface BuildCommandOptions {
-    // Build command options
-    env?: string;
     outDir?: string;
     clean?: boolean;
     copy?: string;
@@ -20,4 +18,5 @@ export interface CommandOptions extends BuildCommandOptions {
     logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'none';
     workspace?: string;
     project?: string;
+    env?: string;
 }
