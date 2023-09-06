@@ -59,8 +59,8 @@ async function getPackageJsonInfo(
     let packageScope: string | null = null;
 
     if (slashIndex > -1 && packageName.startsWith('@')) {
-        packageScope = packageName.substr(0, slashIndex);
-        packageNameWithoutScope = packageName.substr(slashIndex + 1);
+        packageScope = packageName.substring(0, slashIndex);
+        packageNameWithoutScope = packageName.substring(slashIndex + 1);
     }
 
     let rootPackageJsonPath: string | null = null;
