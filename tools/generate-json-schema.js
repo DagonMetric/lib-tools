@@ -10,33 +10,56 @@ const __dirname = path.dirname(__filename);
 const schemaOutputFilePath = path.resolve(__dirname, '../dist/schemas/schema.json');
 
 const generateJsonSchemaFile = async () => {
-    const config = {
-        // -i, --id
-        schemaId: 'lib-tools://schemas/schema.json',
-        // -p, --path
-        path: '../src/models/**/*.ts',
-        // -f, --tsconfig
-        tsconfig: path.resolve(__dirname, './tsconfig.schema.json'),
-        // -t, --type
-        type: 'LibConfig'
-    };
-
-    const schema = tsj.createGenerator(config).createSchema(config.type);
+    const schema = tsj
+        .createGenerator({
+            // -i, --id
+            schemaId: 'lib-tools://schemas/schema.json',
+            // -p, --path
+            path: '../src/models/**/*.ts',
+            // -f, --tsconfig
+            tsconfig: path.resolve(__dirname, './tsconfig.schema.json')
+            // -t, --type
+            // type: 'LibConfig'
+        })
+        .createSchema('LibConfig');
 
     // Patch
     if (schema.definitions) {
         const buildTaskDef = schema.definitions.BuildTask;
-        if (buildTaskDef) {
-            buildTaskDef.anyOf = [
-                {
-                    required: ['clean', 'copy', 'script', 'style']
-                },
-                { required: ['script'] },
-                { required: ['style'] },
-                { required: ['copy'] },
-                { required: ['clean'] }
-            ];
+        if (
+            !buildTaskDef ||
+            !buildTaskDef.properties?.clean ||
+            !buildTaskDef.properties?.copy ||
+            !buildTaskDef.properties?.style ||
+            !buildTaskDef.properties?.script
+        ) {
+            throw new Error(`'BuildTask' config model changed.`);
         }
+        buildTaskDef.anyOf = [
+            {
+                required: ['clean', 'copy', 'script', 'style']
+            },
+            { required: ['script'] },
+            { required: ['style'] },
+            { required: ['copy'] },
+            { required: ['clean'] }
+        ];
+
+        const beforeBuildCleanOptionsDef = schema.definitions.BeforeBuildCleanOptions;
+        if (
+            !beforeBuildCleanOptionsDef ||
+            !beforeBuildCleanOptionsDef.properties?.cleanOutDir ||
+            !beforeBuildCleanOptionsDef.properties?.paths
+        ) {
+            throw new Error(`'BeforeBuildCleanOptions' config model changed.`);
+        }
+        beforeBuildCleanOptionsDef.anyOf = [
+            {
+                required: ['cleanOutDir', 'paths']
+            },
+            { required: ['cleanOutDir'] },
+            { required: ['paths'] }
+        ];
     }
     const schemaString = JSON.stringify(schema, null, 2);
 
