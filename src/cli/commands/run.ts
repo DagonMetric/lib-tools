@@ -91,8 +91,8 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
 
     const logger = new Logger({
         logLevel: argv.logLevel ?? 'info',
-        warnPrefix: 'Warning:',
-        errorPrefix: 'Error:'
+        warnPrefix: colors.yellow('Warning:'),
+        errorPrefix: colors.red('Error:')
     });
 
     if (!tasks.length) {
