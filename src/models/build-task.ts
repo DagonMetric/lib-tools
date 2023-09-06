@@ -9,11 +9,11 @@ export interface BeforeBuildCleanOptions {
      */
     cleanOutDir?: boolean;
     /**
-     * Extra custom file or directory paths to delete.
+     * Extra list of files or directories or glob patterns to delete before build task run.
      */
     paths?: string[];
     /**
-     * List of glob patterns to exclude from clean.
+     * List of files or directories or glob patterns to exclude from clean.
      */
     exclude?: string[];
 }
@@ -23,11 +23,11 @@ export interface BeforeBuildCleanOptions {
  */
 export interface AfterBuildCleanOptions {
     /**
-     * File or directory paths to delete after build task run.
+     * List of files or directories or glob patterns to delete after build task run.
      */
     paths: string[];
     /**
-     * List of glob patterns to exclude from clean.
+     * List of files or directories or glob patterns to exclude from clean.
      */
     exclude?: string[];
 }
@@ -59,7 +59,7 @@ export interface CopyEntry {
      */
     to?: string;
     /**
-     * List of glob patterns to exclude from copy.
+     * List of files or directories or glob patterns to exclude from copy.
      */
     exclude?: string[];
 }
@@ -237,7 +237,7 @@ export interface BuildTaskOptions extends Task {
      */
     clean?: boolean | CleanOptions;
     /**
-     * List of assets to copy to output directory.
+     * List of files to copy to output directory.
      */
     copy?: (string | CopyEntry)[];
     /**
