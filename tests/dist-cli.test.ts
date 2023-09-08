@@ -93,5 +93,27 @@ void describe('dist/cli', () => {
             assert.strictEqual(actualLines[1], expectedLine2);
             assert.strictEqual(actualLines[2], expectedLine3);
         });
+
+        void it('should show schema validation error when invalid schema in config file', async () => {
+            const result = await runCli('run echo --workspace=./tests/test-data/libconfig-invalid.json');
+            const actualLines = result
+                .split(/[\n\r]/)
+                .filter((l) => l.trim().length)
+                .map((l) => l.trim());
+
+            const expectedLine1 = `${path.resolve(
+                process.cwd(),
+                './tests/test-data/libconfig-invalid.json'
+            )} - Configuration validation errors:`;
+            const expectedLine2 =
+                'config location: /projects/invalid-project/tasks/build/script - must be array or object.';
+            const expectedLine3 =
+                'See more about libconfig.json configuration at https://github.com/DagonMetric/lib-tools/wiki/Lib-Tools-Workspace-Configuration.';
+
+            assert.strictEqual(actualLines.length, 3);
+            assert.strictEqual(actualLines[0], expectedLine1);
+            assert.strictEqual(actualLines[1], expectedLine2);
+            assert.strictEqual(actualLines[2], expectedLine3);
+        });
     });
 });
