@@ -10,7 +10,7 @@ import {
     ParsedTask,
     WorkspaceInfo
 } from '../models/parsed/index.js';
-import { findUp, isInFolder, isSamePaths } from '../utils/index.js';
+import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
@@ -201,8 +201,14 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
     let configPath = parsedCmdOptions._configPath;
     if (!configPath) {
-        const workingDir = parsedCmdOptions._workspaceRoot ?? process.cwd();
-        configPath = await findUp('libconfig.json', workingDir, path.parse(workingDir).root);
+        if (parsedCmdOptions._workspaceRoot) {
+            const testPath = path.resolve(parsedCmdOptions._workspaceRoot, 'libconfig.json');
+            if (await pathExists(testPath)) {
+                configPath = testPath;
+            }
+        } else {
+            configPath = await findUp('libconfig.json', process.cwd(), path.parse(process.cwd()).root);
+        }
     }
 
     const workspaceRoot = configPath
