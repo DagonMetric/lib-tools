@@ -1,15 +1,11 @@
 import Ajv from 'ajv';
-import ajvFormats from 'ajv-formats';
 
 import { SchemaValidationError } from '../exceptions/index.js';
 import { LibConfig } from '../models/index.js';
 import schema from '../schemas/schema.json' assert { type: 'json' };
 import { readJsonWithComments } from '../utils/index.js';
 
-const ajv = new Ajv.default();
-ajvFormats.default(ajv);
-
-const LibConfigSchemaKey = 'LibConfigSchema';
+const ajv = new Ajv.default({ allErrors: true });
 
 const libConfigCache = new Map<string, LibConfig>();
 
@@ -21,14 +17,12 @@ export async function readLibConfigJsonFile(configPath: string): Promise<LibConf
 
     libConfig = (await readJsonWithComments(configPath)) as LibConfig;
 
-    let validate = ajv.getSchema<LibConfig>(LibConfigSchemaKey);
-    if (!validate) {
-        ajv.addSchema(schema, LibConfigSchemaKey);
-        validate = ajv.getSchema<LibConfig>(LibConfigSchemaKey);
-    }
+    const validate = ajv.compile(schema);
 
-    if (!validate || !validate(libConfig)) {
-        throw new SchemaValidationError(`${ajv.errorsText()}`);
+    const valid = validate(libConfig);
+
+    if (!valid) {
+        throw new SchemaValidationError(validate.errors ?? [], configPath);
     }
 
     libConfigCache.set(configPath, libConfig);
