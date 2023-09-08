@@ -4,17 +4,13 @@ function formatMessage(message: string, configFile: string | null, configLocatio
     let formattedMsg = '';
 
     if (configFile) {
-        formattedMsg += `${colors.cyan(configFile)}`;
-    }
-
-    if (formattedMsg) {
-        formattedMsg += ' - ';
+        formattedMsg += `${colors.cyan(configFile)} - `;
     }
 
     formattedMsg += colors.red('Configuration error:') + ` ${message}`;
 
     if (configLocation) {
-        formattedMsg += ` Config location: `;
+        formattedMsg += `\n  config location: `;
         formattedMsg += colors.red(configLocation);
     }
 
