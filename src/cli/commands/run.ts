@@ -101,7 +101,7 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
     }
 
     for (const task of tasks) {
-        const taskPath = `'${task._workspaceInfo.projectName ?? '0'} > ${task._taskName}'`;
+        const taskPath = `${task._workspaceInfo.projectName ?? '0'}/${task._taskName}`;
 
         if (task.handler?.trim().length) {
             const handlerStr = task.handler?.trim();
@@ -109,9 +109,9 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
                 const index = handlerStr.indexOf(':') + 1;
                 if (handlerStr.length > index) {
                     const execCmd = handlerStr.substring(index).trim();
-                    logger.info(`Executing ${taskPath} task command: ${execCmd}`);
+                    logger.info(`Executing ${taskPath} task: ${execCmd}`);
                     await exec(execCmd);
-                    logger.info(`Executing ${taskPath} task command completed.`);
+                    logger.info(`Executing ${taskPath} task completed.`);
                 } else {
                     logger.warn(`No command found for ${taskPath} task.`);
                     continue;
@@ -143,7 +143,7 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
                     continue;
                 }
 
-                logger.info(`Executing task: ${taskPath}`);
+                logger.info(`Executing ${taskPath} task`);
                 const result = taskHandlerFn(task, logger);
                 if (result && result instanceof Promise) {
                     await result;
@@ -152,7 +152,7 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
             }
         } else if (task._taskName === 'build') {
             const buildHandlerModule = await import('../../handlers/build/index.js');
-            logger.info(`Executing task: ${taskPath}`);
+            logger.info(`Executing ${taskPath} task`);
             await buildHandlerModule.default(task as ParsedBuildTask, logger);
             logger.info(`Executing ${taskPath} task completed.`);
         } else {
