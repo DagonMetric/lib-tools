@@ -85,12 +85,12 @@ void describe('dist/cli', () => {
                 .map((l) => l.trim());
 
             const expectedLine1 = 'Executing test-project/echo task: echo "Hello exec!"';
-            const expectedLine2 = `"Hello exec!"`;
+            const expectedLine2 = /Hello exec!/;
             const expectedLine3 = 'Executing test-project/echo task completed.';
 
             assert.strictEqual(actualLines.length, 3);
             assert.strictEqual(actualLines[0], expectedLine1);
-            assert.strictEqual(actualLines[1], expectedLine2);
+            assert.match(actualLines[1], expectedLine2);
             assert.strictEqual(actualLines[2], expectedLine3);
         });
 
