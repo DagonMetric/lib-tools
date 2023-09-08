@@ -1,0 +1,12 @@
+{
+  "$schema": "../../dist/schemas/schema.json",
+  "projects": {
+    "invalid-project": {
+      "tasks": {
+        "build": {
+          "script": true
+        }
+      }
+    }
+  }
+}

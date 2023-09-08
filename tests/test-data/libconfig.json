@@ -4,9 +4,11 @@
     "test-project": {
       "root": ".",
       "tasks": {
+        // Hello task
         "hello": {
           "handler": "./tasks.mjs"
         },
+        // Echo task
         "echo": {
           "handler": "exec: echo \"Hello exec!\""
         }
