@@ -69,13 +69,13 @@ export interface CopyEntry {
  */
 export interface StyleBundleEntry {
     /**
-     * The input style file. Supported formats are .scss, .sass or .css.
+     * The entry style file. Supported formats are .scss, .sass or .css.
      */
     entry: string;
     /**
-     * The output file for bundled css. The output can be directory or css file name relative to project `outputPath`.
+     * The output file for bundled css. The `out` can be directory or css file name relative to project `outDir`.
      */
-    outputFile?: string;
+    out?: string;
     /**
      * If true, enable the outputing of sourcemap. Default is `true`.
      */
@@ -107,29 +107,25 @@ export interface StyleOptions {
      */
     bundles: StyleBundleEntry[];
     /**
-     * Default sourceMap option to all entries. If true, enable the outputing of sourcemap. Default is `true`.
+     * Default sourceMap option to all bundle entries. If true, enable the outputing of sourcemap. Default is `true`.
      */
     sourceMap?: boolean;
     /**
-     * Default sourceMapIncludeSources option to all entries. If true, enable the outputing of sources in the generated source map. Default is `true`.
+     * Default sourceMapIncludeSources option to all bundle entries. If true, enable the outputing of sources in the generated source map. Default is `true`.
      */
     sourceMapIncludeSources?: boolean;
     /**
-     * Default loadPaths option to all entries. Paths in which to look for stylesheets loaded by rules like @use and @import.
+     * Default loadPaths option to all bundle entries. Paths in which to look for stylesheets loaded by rules like @use and @import.
      */
     loadPaths?: string[];
     /**
-     * Default minify option to all entries. Default is `true`.
-     */
-    minify?: boolean;
-    /**
-     * Default vendorPrefixes option to all entries. Set boolean value to add vendor prefixes to css rules. Default is `true`.
+     * Default vendorPrefixes option to all bundle entries. Set boolean value to add vendor prefixes to css rules. Default is `true`.
      */
     vendorPrefixes?: boolean;
     /**
-     * If true, automatically add `style` entry to package.json file.
+     * Default minify option to all bundle entries. Default is `true`.
      */
-    updatePackageJson?: boolean;
+    minify?: boolean;
 }
 
 /**
