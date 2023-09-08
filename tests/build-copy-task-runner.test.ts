@@ -8,7 +8,7 @@ import { CopyEntry } from '../src/models/index.js';
 import { ParsedBuildTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('getCopyTaskRunner', () => {
+void describe('build/copy/getCopyTaskRunner', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy-project');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
@@ -160,7 +160,7 @@ void describe('getCopyTaskRunner', () => {
     });
 });
 
-void describe('CopyTaskRunner', () => {
+void describe('build/copy/CopyTaskRunner', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy-project');
     const outDir = path.resolve(workspaceRoot, 'dist');
     const workspaceInfo: WorkspaceInfo = {

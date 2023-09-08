@@ -5,7 +5,7 @@ import yargs from 'yargs';
 
 import * as runCommand from '../src/cli/commands/run.js';
 
-void describe('yargs.parseAsync', () => {
+void describe('cli/commands/run/yargs.parseAsync', () => {
     void it(`should parse command options`, async () => {
         const cmdOptions = [
             'run',

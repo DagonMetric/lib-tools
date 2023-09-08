@@ -8,7 +8,7 @@ import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/models/i
 import { ParsedBuildTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('getCleanTaskRunner', () => {
+void describe('build/clean/getCleanTaskRunner', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
@@ -120,7 +120,7 @@ void describe('getCleanTaskRunner', () => {
     });
 });
 
-void describe('CleanTaskRunner', () => {
+void describe('build/clean/CleanTaskRunner', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean-project');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
