@@ -13,9 +13,6 @@
         },
         "lint": {
           "handler": "exec: eslint ."
-        },
-        "hello": {
-          "handler": "exec: echo \"Hello lib-tools!\""
         }
       }
     }
