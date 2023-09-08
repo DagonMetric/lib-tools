@@ -23,44 +23,6 @@ const generateJsonSchemaFile = async () => {
         })
         .createSchema('LibConfig');
 
-    // Patch
-    if (schema.definitions) {
-        const buildTaskDef = schema.definitions.BuildTask;
-        if (
-            !buildTaskDef ||
-            !buildTaskDef.properties?.clean ||
-            !buildTaskDef.properties?.copy ||
-            !buildTaskDef.properties?.style ||
-            !buildTaskDef.properties?.script
-        ) {
-            throw new Error(`'BuildTask' config model changed.`);
-        }
-        buildTaskDef.anyOf = [
-            {
-                required: ['clean', 'copy', 'script', 'style']
-            },
-            { required: ['script'] },
-            { required: ['style'] },
-            { required: ['copy'] },
-            { required: ['clean'] }
-        ];
-
-        const beforeBuildCleanOptionsDef = schema.definitions.BeforeBuildCleanOptions;
-        if (
-            !beforeBuildCleanOptionsDef ||
-            !beforeBuildCleanOptionsDef.properties?.cleanOutDir ||
-            !beforeBuildCleanOptionsDef.properties?.paths
-        ) {
-            throw new Error(`'BeforeBuildCleanOptions' config model changed.`);
-        }
-        beforeBuildCleanOptionsDef.anyOf = [
-            {
-                required: ['cleanOutDir', 'paths']
-            },
-            { required: ['cleanOutDir'] },
-            { required: ['paths'] }
-        ];
-    }
     const schemaString = JSON.stringify(schema, null, 2);
 
     const schemaOutputDir = path.dirname(schemaOutputFilePath);
