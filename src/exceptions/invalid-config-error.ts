@@ -11,7 +11,7 @@ function formatMessage(message: string, configFile: string | null, configLocatio
         formattedMsg += ' - ';
     }
 
-    formattedMsg += colors.red('Configuration error') + `: ${message}`;
+    formattedMsg += colors.red('Configuration error:') + ` ${message}`;
 
     if (configLocation) {
         formattedMsg += ` Config location: `;
