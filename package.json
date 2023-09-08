@@ -53,14 +53,21 @@
     "test": "glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\"",
     "lib:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --help",
     "lib:version": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --version",
-    "lib:hello": "node --no-warnings --enable-source-maps ./dist/bin/lib.js hello --logLevel=info",
     "lib:lint": "node --no-warnings --enable-source-maps ./dist/bin/lib.js lint --logLevel=info",
     "lib:test": "node --no-warnings --enable-source-maps ./dist/bin/lib.js test",
     "lib:build": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build"
   },
   "dependencies": {
     "ajv": "^8.12.0",
+    "css-loader": "^6.8.1",
+    "css-minimizer-webpack-plugin": "^5.0.1",
     "glob": "^10.3.4",
+    "postcss": "^8.4.29",
+    "postcss-loader": "^7.3.3",
+    "postcss-preset-env": "^9.1.3",
+    "sass": "^1.66.1",
+    "sass-loader": "^13.3.2",
+    "webpack": "^5.88.2",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
