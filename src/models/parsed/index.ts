@@ -35,8 +35,6 @@ export interface PackageJsonInfo {
     readonly packageScope: string | null;
     readonly isNestedPackage: boolean;
     readonly packageVersion: string | null;
-    readonly rootPackageJson: Record<string, unknown> | null;
-    readonly rootPackageJsonPath: string | null;
 }
 
 export interface ParsedBuildTask extends BuildTask, ParsedTask {
