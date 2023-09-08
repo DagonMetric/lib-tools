@@ -1,10 +1,10 @@
 import { colors } from '../utils/index.js';
 
-function formatMessage(message: string, configFile: string | null, configLocation: string | null): string {
+function formatMessage(message: string, configPath: string | null, configLocation: string | null): string {
     let formattedMsg = '';
 
-    if (configFile) {
-        formattedMsg += `${colors.cyan(configFile)} - `;
+    if (configPath) {
+        formattedMsg += `${colors.cyan(configPath)} - `;
     }
 
     formattedMsg += colors.red('Configuration error:') + ` ${message}`;
@@ -18,7 +18,7 @@ function formatMessage(message: string, configFile: string | null, configLocatio
 }
 
 export class InvalidConfigError extends Error {
-    constructor(message: string, configFile: string | null, configLocation: string | null) {
-        super(formatMessage(message, configFile, configLocation));
+    constructor(message: string, configPath: string | null, configLocation: string | null) {
+        super(formatMessage(message, configPath, configLocation));
     }
 }
