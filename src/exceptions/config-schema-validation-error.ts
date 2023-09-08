@@ -14,7 +14,7 @@ function formatMessage(errors: ErrorObject[], configPath: string): string {
             continue;
         }
 
-        let msg = `config location: ${colors.red(error.instancePath?.trim() || '/')} - `;
+        let msg = `config location: ${colors.red(error.instancePath?.trim() ?? '/')} - `;
 
         if (error.keyword === 'type' || error.keyword === 'required') {
             const groupErrors = errors.filter(
