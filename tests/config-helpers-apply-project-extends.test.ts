@@ -117,10 +117,9 @@ void describe('config-helpers/apply-project-extends', () => {
 
             const projectB = projects.b;
 
-            assert.throws(
-                () => applyProjectExtends('b', projectB, projects, null),
-                'Configuration error: No base project to extends. Config location: projects[b].extends'
-            );
+            assert.throws(() => applyProjectExtends('b', projectB, projects, null), {
+                message: 'Configuration error: No base project to extend.\n  config location: projects/b/extends'
+            });
         });
     });
 });
