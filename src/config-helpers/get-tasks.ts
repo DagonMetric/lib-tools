@@ -230,7 +230,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 throw new InvalidConfigError(
                     `The project 'root' must not be parent of workspace root.`,
                     configPath,
-                    `projects[${projectName}].root`
+                    `projects/${projectName}/root`
                 );
             }
 

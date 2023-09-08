@@ -9,18 +9,18 @@ export function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): vo
     const workspaceRoot = workspaceInfo.workspaceRoot;
     const projectRoot = workspaceInfo.projectRoot;
     const projectName = workspaceInfo.projectName ?? '0';
-    const configLocationPrefix = `projects[${projectName}].tasks.build`;
+    const configLocationPrefix = `projects/${projectName}/tasks/build`;
     const configPath = workspaceInfo.configPath;
 
     if (!outDir?.trim().length) {
-        throw new InvalidConfigError(`The 'outDir' must not be empty.`, configPath, `${configLocationPrefix}.outDir`);
+        throw new InvalidConfigError(`The 'outDir' must not be empty.`, configPath, `${configLocationPrefix}/outDir`);
     }
 
     if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
         throw new InvalidConfigError(
             `The 'outDir' must not be system root directory.`,
             configPath,
-            `${configLocationPrefix}.outDir`
+            `${configLocationPrefix}/outDir`
         );
     }
 
@@ -28,7 +28,7 @@ export function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): vo
         throw new InvalidConfigError(
             `The 'outDir' must not be parent of worksapce root or current working directory.`,
             configPath,
-            `${configLocationPrefix}.outDir`
+            `${configLocationPrefix}/outDir`
         );
     }
 
@@ -36,7 +36,7 @@ export function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): vo
         throw new InvalidConfigError(
             `The 'outDir' must not be parent of project root directory.`,
             configPath,
-            `${configLocationPrefix}.outDir`
+            `${configLocationPrefix}/outDir`
         );
     }
 }

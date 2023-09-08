@@ -13,7 +13,7 @@ function applyProjectExtendsInternal(
         return;
     }
 
-    const configLocation = `projects[${projectName}].extends`;
+    const configLocation = `projects/${projectName}/extends`;
 
     if (prevExtends.includes(projectNameToExtend)) {
         throw new InvalidConfigError('Cross referencing extend founds.', configPath, configLocation);
