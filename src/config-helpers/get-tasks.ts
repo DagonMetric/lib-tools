@@ -63,11 +63,10 @@ async function getPackageJsonInfo(
         packageNameWithoutScope = packageName.substring(slashIndex + 1);
     }
 
-    let rootPackageJsonPath: string | null = null;
     let rootPackageJson: Record<string, unknown> | null = null;
 
     if (!isSamePaths(path.dirname(packageJsonPath), workspaceRoot) && isInFolder(workspaceRoot, packageJsonPath)) {
-        rootPackageJsonPath = await findUp('package.json', null, workspaceRoot);
+        const rootPackageJsonPath = await findUp('package.json', null, workspaceRoot);
         rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : null;
     }
 
@@ -77,6 +76,9 @@ async function getPackageJsonInfo(
     } else {
         if (
             rootPackageJson?.version &&
+            rootPackageJson.version !== '0.0.0' &&
+            rootPackageJson.version !== '[PLACEHOLDER]' &&
+            !/0\.0\.0-PLACEHOLDER/i.test(rootPackageJson.version as string) &&
             (!packageJson.version ||
                 packageJson.version === '0.0.0' ||
                 packageJson.version === '[PLACEHOLDER]' ||
@@ -100,9 +102,7 @@ async function getPackageJsonInfo(
         packageNameWithoutScope,
         packageScope,
         packageVersion,
-        isNestedPackage,
-        rootPackageJsonPath,
-        rootPackageJson
+        isNestedPackage
     };
 }
 
