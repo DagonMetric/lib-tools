@@ -89,10 +89,6 @@ export interface StyleBundleEntry {
      */
     loadPaths?: string[];
     /**
-     * Set boolean value to add vendor prefixes to css rules. Default is `true`.
-     */
-    vendorPrefixes?: boolean;
-    /**
      * Set true to generate minify file. Default is `true`.
      */
     minify?: boolean;
@@ -118,10 +114,6 @@ export interface StyleOptions {
      * Default loadPaths option to all bundle entries. Paths in which to look for stylesheets loaded by rules like @use and @import.
      */
     loadPaths?: string[];
-    /**
-     * Default vendorPrefixes option to all bundle entries. Set boolean value to add vendor prefixes to css rules. Default is `true`.
-     */
-    vendorPrefixes?: boolean;
     /**
      * Default minify option to all bundle entries. Default is `true`.
      */
