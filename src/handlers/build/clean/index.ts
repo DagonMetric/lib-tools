@@ -39,7 +39,7 @@ export class CleanTaskRunner {
     async run(): Promise<string[]> {
         const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
         const outDir = this.options.outDir;
-        const configLocationPrefix = `projects[${this.options.workspaceInfo.projectName ?? '0'}].tasks.build`;
+        const configLocationPrefix = `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build`;
         const configPath = this.options.workspaceInfo.configPath;
 
         if (!(await pathExists(outDir))) {
@@ -51,7 +51,7 @@ export class CleanTaskRunner {
             throw new InvalidConfigError(
                 `The 'outDir' must be directory.`,
                 configPath,
-                `${configLocationPrefix}.outDir`
+                `${configLocationPrefix}/outDir`
             );
         }
 
@@ -89,7 +89,7 @@ export class CleanTaskRunner {
                 throw new InvalidConfigError(
                     `Deleting root directory is not permitted, path: ${cleanPathInfo.path}.`,
                     configPath,
-                    `${configLocationPrefix}.clean`
+                    `${configLocationPrefix}/clean`
                 );
             }
 
@@ -97,7 +97,7 @@ export class CleanTaskRunner {
                 throw new InvalidConfigError(
                     `Deleting current working directory is not permitted, path: ${cleanPathInfo.path}.`,
                     configPath,
-                    `${configLocationPrefix}.clean`
+                    `${configLocationPrefix}/clean`
                 );
             }
 
@@ -105,7 +105,7 @@ export class CleanTaskRunner {
                 throw new InvalidConfigError(
                     `Deleting outside of current working directory is disabled. Path: ${cleanPathInfo.path}/`,
                     configPath,
-                    `${configLocationPrefix}.clean`
+                    `${configLocationPrefix}/clean`
                 );
             }
 
@@ -113,7 +113,7 @@ export class CleanTaskRunner {
                 throw new InvalidConfigError(
                     `Cleaning outside of the output directory is disabled. Path: ${cleanPathInfo.path}.`,
                     configPath,
-                    `${configLocationPrefix}.clean`
+                    `${configLocationPrefix}/clean`
                 );
             }
 
