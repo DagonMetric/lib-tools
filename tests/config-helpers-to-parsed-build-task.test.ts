@@ -74,7 +74,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
         configPath: path.resolve(workspaceRoot, 'libconfig.json')
     };
 
-    const configLocationPrefix = `projects[${workspaceInfo.projectName}].tasks.build`;
+    const configLocationPrefix = `projects/${workspaceInfo.projectName}/tasks/build`;
 
     void it(
         'should throw an error if outDir is system root directory - C:\\ on Windows',
@@ -84,7 +84,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
             const expectedError = new InvalidConfigError(
                 `The 'outDir' must not be system root directory.`,
                 workspaceInfo.configPath,
-                `${configLocationPrefix}.outDir`
+                `${configLocationPrefix}/outDir`
             );
 
             assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
@@ -96,7 +96,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
         const expectedError = new InvalidConfigError(
             `The 'outDir' must not be system root directory.`,
             workspaceInfo.configPath,
-            `${configLocationPrefix}.outDir`
+            `${configLocationPrefix}/outDir`
         );
 
         assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
@@ -110,7 +110,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
             const expectedError = new InvalidConfigError(
                 `The 'outDir' must not be system root directory.`,
                 workspaceInfo.configPath,
-                `${configLocationPrefix}.outDir`
+                `${configLocationPrefix}/outDir`
             );
 
             assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
@@ -125,7 +125,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
             const expectedError = new InvalidConfigError(
                 `The 'outDir' must not be system root directory.`,
                 workspaceInfo.configPath,
-                `${configLocationPrefix}.outDir`
+                `${configLocationPrefix}/outDir`
             );
 
             assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
@@ -137,7 +137,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
         const expectedError = new InvalidConfigError(
             `The 'outDir' must not be parent of worksapce root or current working directory.`,
             workspaceInfo.configPath,
-            `${configLocationPrefix}.outDir`
+            `${configLocationPrefix}/outDir`
         );
 
         assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
@@ -148,7 +148,7 @@ void describe('config-helpers/to-parsed-build-task/validateOutDir', () => {
         const expectedError = new InvalidConfigError(
             `The 'outDir' must not be parent of project root directory.`,
             workspaceInfo.configPath,
-            `${configLocationPrefix}.outDir`
+            `${configLocationPrefix}/outDir`
         );
 
         assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
