@@ -67,7 +67,7 @@ function formatMessage(errors: ErrorObject[], configPath: string): string {
     return formattedMessage;
 }
 
-export class SchemaValidationError extends Error {
+export class ConfigSchemaValidationError extends Error {
     constructor(errors: ErrorObject[], configPath: string) {
         super(formatMessage(errors, configPath));
     }
