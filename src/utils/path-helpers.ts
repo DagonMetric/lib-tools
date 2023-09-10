@@ -118,6 +118,12 @@ export function isInFolder(parentDir: string, checkDir: string, ignoreCase = fal
     return false;
 }
 
+export function resolvePath(rootPath: string, currentPath: string): string {
+    return isWindowsStyleAbsolute(currentPath) && process.platform === 'win32'
+        ? path.resolve(normalizePathToPOSIXStyle(currentPath))
+        : path.resolve(rootPath, normalizePathToPOSIXStyle(currentPath));
+}
+
 export async function pathExists(path: string): Promise<boolean> {
     return fs
         .access(path)
@@ -219,10 +225,7 @@ export async function getAbsolutePathInfoes(
             }
         } else {
             // We allow absolute path on Windows only.
-            const absolutePath =
-                isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
-                    ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
-                    : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
+            const absolutePath = resolvePath(cwd, normalizedPathOrPattern);
             if (pathInfoes.find((i) => i.path === absolutePath)) {
                 continue;
             }
