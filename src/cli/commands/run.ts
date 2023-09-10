@@ -4,11 +4,10 @@ import { pathToFileURL } from 'node:url';
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { getTasks } from '../../config-helpers/index.js';
-import { CommandOptions } from '../../models/index.js';
-import { ParsedBuildTask, ParsedTask } from '../../models/parsed/index.js';
+import { CommandOptions } from '../../config-models/index.js';
+import { ParsedBuildTaskConfig } from '../../config-models/parsed/index.js';
+import { TaskHandlerFn } from '../../handlers/interfaces/index.js';
 import { Logger, colors, dashCaseToCamelCase, exec } from '../../utils/index.js';
-
-type TaskHandlerFn = (taskOptions: ParsedTask, logger: Logger) => Promise<void> | void;
 
 export const command = 'run <task> [options..]';
 
@@ -24,7 +23,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
             })
 
             // Shared task options
-            .group(['logLevel', 'workspace', 'project', 'env'], colors.cyan('Common task options:'))
+            .group(['logLevel', 'workspace', 'project', 'env', 'dryRun'], colors.cyan('Common task options:'))
             .option('logLevel', {
                 describe: 'Set logging level for output information',
                 choices: ['debug', 'info', 'warn', 'error', 'none'] as const
@@ -40,6 +39,10 @@ export function builder(argv: Argv): Argv<CommandOptions> {
             .option('env', {
                 describe: 'Set env name to override the task configuration with `envOverrides[name]` options.',
                 type: 'string'
+            })
+            .option('dryRun', {
+                describe: 'Set true to run without cleaning or emitting files on physical file system.',
+                type: 'boolean'
             })
 
             // Buuild task options
@@ -87,8 +90,11 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
 
     const tasks = await getTasks(argv, taskName);
 
+    const dryRun = argv.dryRun ? true : false;
+
+    const logLevel = argv.logLevel ?? 'info';
     const logger = new Logger({
-        logLevel: argv.logLevel ?? 'info',
+        logLevel,
         warnPrefix: colors.yellow('Warning:'),
         errorPrefix: colors.red('Error:')
     });
@@ -144,7 +150,12 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
                 }
 
                 logger.info(`Executing ${taskPath} task`);
-                const result = taskHandlerFn(task, logger);
+                const result = taskHandlerFn({
+                    taskOptions: task,
+                    logger,
+                    logLevel,
+                    dryRun
+                });
                 if (result && result instanceof Promise) {
                     await result;
                 }
@@ -153,7 +164,12 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise
         } else if (task._taskName === 'build') {
             const buildHandlerModule = await import('../../handlers/build/index.js');
             logger.info(`Executing ${taskPath} task`);
-            await buildHandlerModule.default(task as ParsedBuildTask, logger);
+            await buildHandlerModule.default({
+                taskOptions: task as ParsedBuildTaskConfig,
+                logger,
+                logLevel,
+                dryRun
+            });
             logger.info(`Executing ${taskPath} task completed.`);
         } else {
             logger.warn(`No handler is defined for ${taskPath} task.`);
