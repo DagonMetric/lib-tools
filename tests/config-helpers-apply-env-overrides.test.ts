@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { applyEnvOverrides } from '../src/config-helpers/apply-env-overrides.js';
 
-import { BuildTask, ExternalTask } from '../src/models/index.js';
+import { BuildTask, CustomTask } from '../src/config-models/index.js';
 
 void describe('config-helpers/apply-env-overrides', () => {
     void describe('applyEnvOverrides', () => {
@@ -40,7 +40,7 @@ void describe('config-helpers/apply-env-overrides', () => {
         });
 
         void it('should override with env value to external task', () => {
-            const config: ExternalTask = {
+            const config: CustomTask = {
                 handler: 'a.js',
                 envOverrides: {
                     prod: {

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../dist/schemas/schema.json",
+  "projects": {
+    "style-project": {
+      "root": "./",
+      "tasks": {
+        "build": {
+          "outDir": "dist",
+          "clean": true,
+          "style": {
+            "bundles": [
+              {
+                "entry": "./src/style.css",
+                "out": "bundle.css"
+              }
+            ],
+            "minify": false
+          }
+        }
+      }
+    }
+  }
+}

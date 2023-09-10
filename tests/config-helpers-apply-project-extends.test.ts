@@ -3,8 +3,8 @@ import { describe, it } from 'node:test';
 
 import { applyProjectExtends } from '../src/config-helpers/apply-project-extends.js';
 
+import { CustomTask, Project } from '../src/config-models/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
-import { ExternalTask, Project } from '../src/models/index.js';
 
 void describe('config-helpers/apply-project-extends', () => {
     void describe('applyProjectExtends', () => {
@@ -39,15 +39,15 @@ void describe('config-helpers/apply-project-extends', () => {
 
             const projects: Record<string, Project> = {
                 a: {
-                    tasks: projectATasks as unknown as Record<string, ExternalTask>
+                    tasks: projectATasks as unknown as Record<string, CustomTask>
                 },
                 b: {
                     extends: 'a',
-                    tasks: projectBTasks as unknown as Record<string, ExternalTask>
+                    tasks: projectBTasks as unknown as Record<string, CustomTask>
                 },
                 c: {
                     extends: 'b',
-                    tasks: projectCTasks as unknown as Record<string, ExternalTask>
+                    tasks: projectCTasks as unknown as Record<string, CustomTask>
                 }
             };
 

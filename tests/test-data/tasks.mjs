@@ -1,9 +1,6 @@
 /**
- * @param {Record<string,unknown>} [task]
- * @param {{ info: (message: string) => void }} [logger]
+ * @param {{logger: { info: (message: string) => void}}} [context]
  */
-export function hello(task, logger) {
-    if (task) {
-        logger.info('Hello!');
-    }
+export function hello(context) {
+    context.logger.info('Hello!');
 }

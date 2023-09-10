@@ -3,9 +3,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
+import { CopyEntry } from '../src/config-models/index.js';
+import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
-import { CopyEntry } from '../src/models/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/copy', () => {
@@ -15,11 +15,12 @@ void describe('handlers/build/copy', () => {
             workspaceRoot,
             projectRoot: workspaceRoot,
             projectName: 'copy-project',
-            configPath: null
+            configPath: null,
+            nodeModulePath: null
         };
 
         void it('should not get runner when empty copy entry', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -27,13 +28,18 @@ void describe('handlers/build/copy', () => {
                 copy: []
             };
 
-            const runner = getCopyTaskRunner(buildTask, new Logger({ logLevel: 'error' }));
+            const runner = getCopyTaskRunner({
+                taskOptions: buildTask,
+                dryRun: true,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             assert.equal(runner, null);
         });
 
         void it('should not get runner when no valid copy entry', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -41,13 +47,18 @@ void describe('handlers/build/copy', () => {
                 copy: [' ', { from: ' ' }]
             };
 
-            const runner = getCopyTaskRunner(buildTask, new Logger({ logLevel: 'error' }));
+            const runner = getCopyTaskRunner({
+                taskOptions: buildTask,
+                dryRun: true,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             assert.equal(runner, null);
         });
 
         void it('should get runner with string entry array', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -55,7 +66,12 @@ void describe('handlers/build/copy', () => {
                 copy: ['a.txt', 'b.txt', '**/*.md']
             };
 
-            const runner = getCopyTaskRunner(buildTask, new Logger({ logLevel: 'error' }), true);
+            const runner = getCopyTaskRunner({
+                taskOptions: buildTask,
+                dryRun: true,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             const expectedCopyEntries: CopyEntry[] = [
                 {
@@ -75,7 +91,7 @@ void describe('handlers/build/copy', () => {
         });
 
         void it('should get runner with object entry array', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -96,7 +112,12 @@ void describe('handlers/build/copy', () => {
                 ]
             };
 
-            const runner = getCopyTaskRunner(buildTask, new Logger({ logLevel: 'error' }), false);
+            const runner = getCopyTaskRunner({
+                taskOptions: buildTask,
+                dryRun: false,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             const expectedCopyEntries: CopyEntry[] = [
                 {
@@ -119,7 +140,7 @@ void describe('handlers/build/copy', () => {
         });
 
         void it('should get runner with string and object mixed entry array', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -138,7 +159,12 @@ void describe('handlers/build/copy', () => {
                 ]
             };
 
-            const runner = getCopyTaskRunner(buildTask, new Logger({ logLevel: 'error' }));
+            const runner = getCopyTaskRunner({
+                taskOptions: buildTask,
+                dryRun: false,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             const expectedCopyEntries: CopyEntry[] = [
                 {
@@ -168,7 +194,8 @@ void describe('handlers/build/copy', () => {
             workspaceRoot,
             projectRoot: workspaceRoot,
             projectName: 'copy-project',
-            configPath: null
+            configPath: null,
+            nodeModulePath: null
         };
 
         void describe('CopyTaskRunner:run [Dry Run]', () => {

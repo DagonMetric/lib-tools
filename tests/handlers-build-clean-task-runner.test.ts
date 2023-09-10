@@ -3,9 +3,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
+import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
+import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
-import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/models/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../src/models/parsed/index.js';
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/clean', () => {
@@ -15,11 +15,12 @@ void describe('handlers/build/clean', () => {
             workspaceRoot,
             projectRoot: workspaceRoot,
             projectName: 'clean-project',
-            configPath: null
+            configPath: null,
+            nodeModulePath: null
         };
 
         void it('should not get runner when clean=false', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -27,13 +28,18 @@ void describe('handlers/build/clean', () => {
                 clean: false
             };
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
+            const runner = getCleanTaskRunner('before', {
+                taskOptions: buildTask,
+                dryRun: true,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             assert.equal(runner, null);
         });
 
         void it('should not get runner when no valid clean entry', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -45,13 +51,18 @@ void describe('handlers/build/clean', () => {
                 }
             };
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
+            const runner = getCleanTaskRunner('before', {
+                taskOptions: buildTask,
+                dryRun: true,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             assert.equal(runner, null);
         });
 
         void it('should get runner with before build clean options when clean=true', () => {
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -59,7 +70,12 @@ void describe('handlers/build/clean', () => {
                 clean: true
             };
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }), true);
+            const runner = getCleanTaskRunner('before', {
+                taskOptions: buildTask,
+                dryRun: true,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             const expectedBeforeBuildCleanOptions: BeforeBuildCleanOptions = {
                 cleanOutDir: true
@@ -78,7 +94,7 @@ void describe('handlers/build/clean', () => {
                 exclude: ['c.md']
             };
 
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -88,7 +104,12 @@ void describe('handlers/build/clean', () => {
                 }
             };
 
-            const runner = getCleanTaskRunner('before', buildTask, new Logger({ logLevel: 'error' }));
+            const runner = getCleanTaskRunner('before', {
+                taskOptions: buildTask,
+                dryRun: false,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             assert.ok(runner != null);
             assert.equal(runner.options.dryRun, false);
@@ -102,7 +123,7 @@ void describe('handlers/build/clean', () => {
                 exclude: ['c.md']
             };
 
-            const buildTask: ParsedBuildTask = {
+            const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
@@ -112,7 +133,12 @@ void describe('handlers/build/clean', () => {
                 }
             };
 
-            const runner = getCleanTaskRunner('after', buildTask, new Logger({ logLevel: 'info' }));
+            const runner = getCleanTaskRunner('after', {
+                taskOptions: buildTask,
+                dryRun: false,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error'
+            });
 
             assert.ok(runner != null);
             assert.equal(runner.options.dryRun, false);
@@ -127,7 +153,8 @@ void describe('handlers/build/clean', () => {
             workspaceRoot,
             projectRoot: workspaceRoot,
             projectName: 'clean-project',
-            configPath: null
+            configPath: null,
+            nodeModulePath: null
         };
 
         void describe('CleanTaskRunner:run [Error throws]', () => {

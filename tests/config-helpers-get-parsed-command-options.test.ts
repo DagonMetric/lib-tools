@@ -4,9 +4,9 @@ import { describe, it } from 'node:test';
 
 import { getParsedCommandOptions } from '../src/config-helpers/get-parsed-command-options.js';
 
+import { CommandOptions } from '../src/config-models/index.js';
+import { ParsedCommandOptions } from '../src/config-models/parsed/index.js';
 import { InvalidCommandOptionError } from '../src/exceptions/index.js';
-import { CommandOptions } from '../src/models/index.js';
-import { ParsedCommandOptions } from '../src/models/parsed/index.js';
 
 void describe('config-helpers/get-parsed-command-options', () => {
     void describe('getParsedCommandOptions', () => {
