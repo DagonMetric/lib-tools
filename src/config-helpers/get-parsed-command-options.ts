@@ -2,9 +2,9 @@ import { glob } from 'glob';
 
 import * as path from 'node:path';
 
+import { CommandOptions } from '../config-models/index.js';
+import { ParsedCommandOptions } from '../config-models/parsed/index.js';
 import { InvalidCommandOptionError } from '../exceptions/invalid-command-option-error.js';
-import { CommandOptions } from '../models/index.js';
-import { ParsedCommandOptions } from '../models/parsed/index.js';
 import {
     isInFolder,
     isSamePaths,

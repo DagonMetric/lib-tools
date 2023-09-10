@@ -1,4 +1,4 @@
-import { OverridableTaskOptions, Task } from '../models/index.js';
+import { OverridableTaskOptions, Task } from '../config-models/index.js';
 
 function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>): void {
     Object.keys(newConfig)

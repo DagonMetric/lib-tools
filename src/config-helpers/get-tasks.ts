@@ -1,22 +1,21 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { InvalidConfigError } from '../exceptions/index.js';
-import { BuildTask, CommandOptions } from '../models/index.js';
+import { BuildTask, CommandOptions } from '../config-models/index.js';
 import {
     PackageJsonInfo,
-    ParsedBuildTask,
+    ParsedBuildTaskConfig,
     ParsedCommandOptions,
-    ParsedTask,
+    ParsedTaskConfig,
     WorkspaceInfo
-} from '../models/parsed/index.js';
-import { findUp, isInFolder, isSamePaths, pathExists } from '../utils/index.js';
+} from '../config-models/parsed/index.js';
+import { InvalidConfigError } from '../exceptions/index.js';
+import { findUp, isInFolder, isSamePaths, pathExists, resolvePath } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
 import { getParsedCommandOptions } from './get-parsed-command-options.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
-import { toParsedBuildTask } from './to-parsed-build-task.js';
 
 const packageJsonCache = new Map<string, Record<string, unknown>>();
 async function readPackageJsonFile(packageJsonPath: string): Promise<Record<string, unknown>> {
@@ -196,7 +195,70 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
     return merged;
 }
 
-export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Promise<ParsedTask[]> {
+export function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
+    const workspaceRoot = workspaceInfo.workspaceRoot;
+    const projectRoot = workspaceInfo.projectRoot;
+    const projectName = workspaceInfo.projectName ?? '0';
+    const configLocationPrefix = `projects/${projectName}/tasks/build`;
+    const configPath = workspaceInfo.configPath;
+
+    if (!outDir?.trim().length) {
+        throw new InvalidConfigError(`The 'outDir' must not be empty.`, configPath, `${configLocationPrefix}/outDir`);
+    }
+
+    if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
+        throw new InvalidConfigError(
+            `The 'outDir' must not be system root directory.`,
+            configPath,
+            `${configLocationPrefix}/outDir`
+        );
+    }
+
+    if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
+        throw new InvalidConfigError(
+            `The 'outDir' must not be parent of worksapce root or current working directory.`,
+            configPath,
+            `${configLocationPrefix}/outDir`
+        );
+    }
+
+    if (isInFolder(outDir, projectRoot)) {
+        throw new InvalidConfigError(
+            `The 'outDir' must not be parent of project root directory.`,
+            configPath,
+            `${configLocationPrefix}/outDir`
+        );
+    }
+}
+
+export function toParsedBuildTask(
+    buildTask: BuildTask,
+    workspaceInfo: WorkspaceInfo,
+    packageJsonInfo: PackageJsonInfo | null,
+    cmdOptionsOutDirAbs: string | null
+): ParsedBuildTaskConfig {
+    const projectRoot = workspaceInfo.projectRoot;
+
+    const outDir = buildTask.outDir?.trim().length
+        ? resolvePath(projectRoot, buildTask.outDir)
+        : cmdOptionsOutDirAbs
+        ? cmdOptionsOutDirAbs
+        : path.resolve(projectRoot, 'dist');
+
+    const parsedBuildTask: ParsedBuildTaskConfig = {
+        _taskName: 'build',
+        _workspaceInfo: workspaceInfo,
+        _packageJsonInfo: packageJsonInfo,
+        _outDir: outDir,
+        ...buildTask
+    };
+
+    validateOutDir(outDir, workspaceInfo);
+
+    return parsedBuildTask;
+}
+
+export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Promise<ParsedTaskConfig[]> {
     const parsedCmdOptions = await getParsedCommandOptions(cmdOptions);
 
     let configPath = parsedCmdOptions._configPath;
@@ -216,8 +278,9 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         : parsedCmdOptions._workspaceRoot
         ? parsedCmdOptions._workspaceRoot
         : process.cwd();
+    const nodeModulePath = await findUp('node_modules', workspaceRoot, path.parse(workspaceRoot).root);
 
-    const tasks: ParsedTask[] = [];
+    const tasks: ParsedTaskConfig[] = [];
 
     if (configPath) {
         const libConfig = await readLibConfigJsonFile(configPath);
@@ -248,7 +311,8 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 workspaceRoot,
                 projectRoot,
                 projectName,
-                configPath
+                configPath,
+                nodeModulePath
             };
 
             if (!project.tasks) {
@@ -303,7 +367,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
     if (!forTask || forTask === 'build') {
         const buildTasks = tasks.filter((t) => t._taskName === 'build');
-        const firstBuildTask = buildTasks.length ? (buildTasks[0] as ParsedBuildTask) : {};
+        const firstBuildTask = buildTasks.length ? (buildTasks[0] as ParsedBuildTaskConfig) : {};
         const hasCommandOptionsBuildTask = mergeBuildTaskFromCommandOptions(parsedCmdOptions, firstBuildTask);
 
         if (hasCommandOptionsBuildTask && !buildTasks.length) {
@@ -311,7 +375,8 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 workspaceRoot,
                 projectRoot: workspaceRoot,
                 projectName: null,
-                configPath
+                configPath,
+                nodeModulePath
             };
 
             const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);

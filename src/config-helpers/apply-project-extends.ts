@@ -1,5 +1,5 @@
+import { Project, Task } from '../config-models/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
-import { Project, Task } from '../models/index.js';
 
 function applyProjectExtendsInternal(
     projectName: string,

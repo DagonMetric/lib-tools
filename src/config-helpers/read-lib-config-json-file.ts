@@ -1,7 +1,7 @@
 import Ajv, { Schema } from 'ajv';
 
+import { LibConfig } from '../config-models/index.js';
 import { ConfigSchemaValidationError } from '../exceptions/index.js';
-import { LibConfig } from '../models/index.js';
 import schema from '../schemas/schema.json' assert { type: 'json' };
 import { readJsonWithComments } from '../utils/index.js';
 
