@@ -4,18 +4,20 @@ import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { CopyEntry } from '../../../models/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js';
+import { CopyEntry } from '../../../config-models/index.js';
+import { WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import {
     AbsolutePathInfo,
     Logger,
     getAbsolutePathInfoes,
     isInFolder,
     isSamePaths,
-    isWindowsStyleAbsolute,
     normalizePathToPOSIXStyle,
-    pathExists
+    pathExists,
+    resolvePath
 } from '../../../utils/index.js';
+
+import { BuildTaskHandleContext } from '../../interfaces/index.js';
 
 export interface CopyTaskRunnerOptions {
     readonly logger: Logger;
@@ -123,10 +125,7 @@ export class CopyTaskRunner {
                     }
                 }
 
-                const toBasePath =
-                    copyEntry.to && isWindowsStyleAbsolute(copyEntry.to) && process.platform === 'win32'
-                        ? path.resolve(normalizePathToPOSIXStyle(copyEntry.to))
-                        : path.resolve(outDir, normalizePathToPOSIXStyle(copyEntry.to ?? ''));
+                const toBasePath = resolvePath(outDir, copyEntry.to ?? '');
 
                 for (const foundFilePath of foundFilePaths) {
                     if (excludePathInfoes.length) {
@@ -147,20 +146,14 @@ export class CopyTaskRunner {
                     }
                 }
             } else {
-                const fromPath =
-                    isWindowsStyleAbsolute(normalizedFrom) && process.platform === 'win32'
-                        ? path.resolve(normalizedFrom)
-                        : path.resolve(projectRoot, normalizedFrom);
+                const fromPath = resolvePath(projectRoot, normalizedFrom);
 
                 if (!(await pathExists(fromPath))) {
                     this.logger.warn(`Path doesn't exist to copy, path: ${fromPath}`);
                     continue;
                 }
 
-                const toBasePath =
-                    copyEntry.to && isWindowsStyleAbsolute(copyEntry.to) && process.platform === 'win32'
-                        ? path.resolve(normalizePathToPOSIXStyle(copyEntry.to))
-                        : path.resolve(outDir, normalizePathToPOSIXStyle(copyEntry.to ?? ''));
+                const toBasePath = resolvePath(outDir, copyEntry.to ?? '');
 
                 const fromPathStats = await fs.stat(fromPath);
 
@@ -268,7 +261,9 @@ export class CopyTaskRunner {
     }
 }
 
-export function getCopyTaskRunner(buildTask: ParsedBuildTask, logger: Logger, dryRun = false): CopyTaskRunner | null {
+export function getCopyTaskRunner(context: BuildTaskHandleContext): CopyTaskRunner | null {
+    const buildTask = context.taskOptions;
+
     if (!buildTask.copy?.length) {
         return null;
     }
@@ -283,10 +278,10 @@ export function getCopyTaskRunner(buildTask: ParsedBuildTask, logger: Logger, dr
 
     const copyTaskRunner = new CopyTaskRunner({
         copyEntries,
-        dryRun,
         workspaceInfo: buildTask._workspaceInfo,
+        dryRun: context.dryRun,
         outDir: buildTask._outDir,
-        logger
+        logger: context.logger
     });
 
     return copyTaskRunner;

@@ -1,35 +1,42 @@
-import { ParsedBuildTask } from '../../models/parsed/index.js';
-import { Logger } from '../../utils/index.js';
+import { BuildTaskHandleContext } from '../interfaces/index.js';
 
 import { getCleanTaskRunner } from './clean/index.js';
 import { getCopyTaskRunner } from './copy/index.js';
+import { getStyleTaskRunner } from './style/index.js';
 
-export async function runBuildTask(buildTask: ParsedBuildTask, logger: Logger, dryRun: boolean): Promise<void> {
+export async function runBuildTask(context: BuildTaskHandleContext): Promise<void> {
     // Copy
-    const copyTaskRunner = getCopyTaskRunner(buildTask, logger, dryRun);
+    const copyTaskRunner = getCopyTaskRunner(context);
     if (copyTaskRunner) {
-        logger.info('Running copy task.');
+        context.logger.info('Running copy task.');
         const copiedPaths = await copyTaskRunner.run();
-        logger.info(`Total ${copiedPaths.length} files are copied.`);
+        context.logger.info(`Total ${copiedPaths.length} files are copied.`);
+    }
+
+    // style
+    const styleTaskRunner = getStyleTaskRunner(context);
+    if (styleTaskRunner) {
+        context.logger.info('Running style task.');
+        await styleTaskRunner.run();
     }
 }
 
-export default async function (buildTask: ParsedBuildTask, logger: Logger, dryRun = false): Promise<void> {
+export default async function (context: BuildTaskHandleContext): Promise<void> {
     // Before clean
-    const beforeCleanTaskRunner = getCleanTaskRunner('before', buildTask, logger, dryRun);
+    const beforeCleanTaskRunner = getCleanTaskRunner('before', context);
     if (beforeCleanTaskRunner) {
-        logger.info('Running before build clean task.');
+        context.logger.info('Running before build clean task.');
         const cleandPaths = await beforeCleanTaskRunner.run();
-        logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
+        context.logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
     }
 
-    await runBuildTask(buildTask, logger, dryRun);
+    await runBuildTask(context);
 
     // After clean
-    const afterCleanTaskRunner = getCleanTaskRunner('after', buildTask, logger, dryRun);
+    const afterCleanTaskRunner = getCleanTaskRunner('after', context);
     if (afterCleanTaskRunner) {
-        logger.info('Running after build clean task.');
+        context.logger.info('Running after build clean task.');
         const cleandPaths = await afterCleanTaskRunner.run();
-        logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
+        context.logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
     }
 }

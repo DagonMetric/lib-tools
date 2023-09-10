@@ -1,9 +1,9 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../config-models/index.js';
+import { WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { InvalidConfigError } from '../../../exceptions/index.js';
-import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../models/index.js';
-import { ParsedBuildTask, WorkspaceInfo } from '../../../models/parsed/index.js';
 import {
     AbsolutePathInfo,
     Logger,
@@ -14,12 +14,14 @@ import {
     pathExists
 } from '../../../utils/index.js';
 
+import { BuildTaskHandleContext } from '../../interfaces/index.js';
+
 export interface CleanTaskRunnerOptions {
     readonly runFor: 'before' | 'after';
     readonly beforeOrAfterCleanOptions: BeforeBuildCleanOptions | AfterBuildCleanOptions;
-    readonly dryRun: boolean;
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
+    readonly dryRun: boolean;
     readonly logger: Logger;
 }
 
@@ -233,10 +235,10 @@ export class CleanTaskRunner {
 
 export function getCleanTaskRunner(
     runFor: 'before' | 'after',
-    buildTask: ParsedBuildTask,
-    logger: Logger,
-    dryRun = false
+    context: BuildTaskHandleContext
 ): CleanTaskRunner | null {
+    const buildTask = context.taskOptions;
+
     if (!buildTask.clean) {
         return null;
     }
@@ -267,10 +269,10 @@ export function getCleanTaskRunner(
         const cleanTaskRunner = new CleanTaskRunner({
             runFor: 'before',
             beforeOrAfterCleanOptions: beforeBuildCleanOptions,
-            dryRun,
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
-            logger
+            dryRun: context.dryRun,
+            logger: context.logger
         });
 
         return cleanTaskRunner;
@@ -284,10 +286,10 @@ export function getCleanTaskRunner(
         const cleanTaskRunner = new CleanTaskRunner({
             runFor: 'after',
             beforeOrAfterCleanOptions: afterBuildCleanOptions,
-            dryRun,
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
-            logger
+            dryRun: context.dryRun,
+            logger: context.logger
         });
 
         return cleanTaskRunner;
