@@ -67,31 +67,15 @@ export interface CopyEntry {
 /**
  * @additionalProperties false
  */
-export interface StyleBundleEntry {
+export interface StyleBundle {
     /**
      * The entry style file. Supported formats are .scss, .sass or .css.
      */
     entry: string;
     /**
-     * The output file for bundled css. The `out` can be directory or css file name relative to project `outDir`.
+     * The output bundle name for generated .css file. It can be a bundle name or a directory path relative to project `outDir`.
      */
     out?: string;
-    /**
-     * If true, enable the outputing of sourcemap. Default is `true`.
-     */
-    sourceMap?: boolean;
-    /**
-     * If true, enable the outputing of sources in the generated source map. Default is `true`.
-     */
-    sourceMapIncludeSources?: boolean;
-    /**
-     * Paths in which to look for stylesheets loaded by rules like @use and @import.
-     */
-    loadPaths?: string[];
-    /**
-     * Set true to generate minify file. Default is `true`.
-     */
-    minify?: boolean;
 }
 
 /**
@@ -101,21 +85,17 @@ export interface StyleOptions {
     /**
      * List of style compilation / bundle entries.
      */
-    bundles: StyleBundleEntry[];
+    bundles: StyleBundle[];
     /**
-     * Default sourceMap option to all bundle entries. If true, enable the outputing of sourcemap. Default is `true`.
+     * If true, enable the outputing of sourcemap. Default is `true`.
      */
     sourceMap?: boolean;
     /**
-     * Default sourceMapIncludeSources option to all bundle entries. If true, enable the outputing of sources in the generated source map. Default is `true`.
-     */
-    sourceMapIncludeSources?: boolean;
-    /**
-     * Default loadPaths option to all bundle entries. Paths in which to look for stylesheets loaded by rules like @use and @import.
+     * Paths in which to look for stylesheets loaded by rules like @use and @import.
      */
     loadPaths?: string[];
     /**
-     * Default minify option to all bundle entries. Default is `true`.
+     * Set true to generate minify file. Default is `true`.
      */
     minify?: boolean;
 }

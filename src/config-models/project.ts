@@ -1,5 +1,5 @@
 import { BuildTask } from './build-task.js';
-import { ExternalTask } from './external-task.js';
+import { CustomTask } from './custom-task.js';
 
 /**
  * Project configuration options.
@@ -18,7 +18,7 @@ export interface Project {
      * Task configurations.
      */
     tasks: {
-        [Property in keyof Record<string, ExternalTask> as Exclude<Property, 'build'>]: ExternalTask;
+        [Property in keyof Record<string, CustomTask> as Exclude<Property, 'build'>]: CustomTask;
     } & {
         /**
          * Build task configuration.

@@ -19,4 +19,5 @@ export interface CommandOptions extends BuildCommandOptions {
     workspace?: string;
     project?: string;
     env?: string;
+    dryRun?: boolean;
 }
