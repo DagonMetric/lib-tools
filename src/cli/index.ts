@@ -11,6 +11,8 @@ import * as runCommand from './commands/run.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export { run } from './commands/run.js';
+
 export default async function (): Promise<void> {
     const packageJsonPath = await findUp(
         'package.json',
@@ -47,7 +49,7 @@ export default async function (): Promise<void> {
             'deprecated: %s': colors.yellow('deprecated:') + ' %s',
             'Did you mean %s?': 'Unknown command. Did you mean %s?'
         })
-        .command([runCommand.command, '$0'], runCommand.describe, runCommand.builder, runCommand.handler)
+        .command([runCommand.command, '$0'], runCommand.describe, runCommand.builder, runCommand.run)
         .version(packageVersion)
         .help('help')
         .showHelpOnFail(false)

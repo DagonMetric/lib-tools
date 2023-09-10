@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { ArgumentsCamelCase, Argv } from 'yargs';
+import { Argv } from 'yargs';
 
 import { getTasks } from '../../config-helpers/index.js';
 import { CommandOptions } from '../../config-models/index.js';
@@ -81,7 +81,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
     );
 }
 
-export async function handler(argv: ArgumentsCamelCase<CommandOptions>): Promise<void> {
+export async function run(argv: CommandOptions): Promise<void> {
     const taskName = argv.task;
 
     if (!taskName) {

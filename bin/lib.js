@@ -3,7 +3,7 @@
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,16 +45,15 @@ const getCliInfo = async () => {
 
 const runCli = async () => {
     const cliInfo = await getCliInfo();
-
     process.title = `${cliInfo.packageName} v${cliInfo.version}`;
+    const cliModule = await import(pathToFileURL(cliInfo.cliPath).toString());
 
-    let cliRelPath = path.relative(__dirname, cliInfo.cliPath).replace(/\\/g, '/');
-    if (!cliRelPath.startsWith('.')) {
-        cliRelPath = './' + cliRelPath;
-    }
-
-    const cliModule = await import(cliRelPath);
     await cliModule.default(cliInfo).catch((err) => {
+        if (!err) {
+            process.exitCode = 1;
+            return;
+        }
+
         if (err.exitCode != null && typeof err.exitCode === 'number') {
             process.exitCode = err.exitCode;
             if (err.message) {
