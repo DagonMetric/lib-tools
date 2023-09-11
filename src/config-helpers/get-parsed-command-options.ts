@@ -5,13 +5,7 @@ import * as path from 'node:path';
 import { CommandOptions } from '../config-models/index.js';
 import { ParsedCommandOptions } from '../config-models/parsed/index.js';
 import { InvalidCommandOptionError } from '../exceptions/invalid-command-option-error.js';
-import {
-    isInFolder,
-    isSamePaths,
-    isWindowsStyleAbsolute,
-    normalizePathToPOSIXStyle,
-    pathExists
-} from '../utils/index.js';
+import { isInFolder, isSamePaths, normalizePathToPOSIXStyle, pathExists, resolvePath } from '../utils/index.js';
 
 async function checkPaths(
     globPatternsOrRelativePaths: string[],
@@ -37,11 +31,7 @@ async function checkPaths(
                 continue;
             } else {
                 // We allow absolute path on Windows only.
-                const absolutePath =
-                    isWindowsStyleAbsolute(normalizedPathOrPattern) && process.platform === 'win32'
-                        ? path.resolve(normalizePathToPOSIXStyle(normalizedPathOrPattern))
-                        : path.resolve(cwd, normalizePathToPOSIXStyle(normalizedPathOrPattern));
-
+                const absolutePath = resolvePath(cwd, normalizedPathOrPattern);
                 if (!(await pathExists(absolutePath))) {
                     return false;
                 }
@@ -130,10 +120,7 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
             .filter((value, index, array) => array.indexOf(value) === index) ?? [];
 
     if (cmdOptions.workspace?.trim().length) {
-        const pathAbs =
-            isWindowsStyleAbsolute(cmdOptions.workspace) && process.platform === 'win32'
-                ? path.resolve(normalizePathToPOSIXStyle(cmdOptions.workspace))
-                : path.resolve(process.cwd(), normalizePathToPOSIXStyle(cmdOptions.workspace));
+        const pathAbs = resolvePath(process.cwd(), cmdOptions.workspace);
 
         if (path.extname(pathAbs) && /\.json$/i.test(pathAbs)) {
             configPath = pathAbs;
@@ -160,9 +147,7 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
             ) ?? {};
 
     const outDir = cmdOptions.outDir?.trim().length
-        ? isWindowsStyleAbsolute(cmdOptions.outDir) && process.platform === 'win32'
-            ? path.resolve(normalizePathToPOSIXStyle(cmdOptions.outDir))
-            : path.resolve(workspaceRoot ?? process.cwd(), normalizePathToPOSIXStyle(cmdOptions.outDir))
+        ? resolvePath(workspaceRoot ?? process.cwd(), cmdOptions.outDir)
         : null;
 
     const copyEntries =
