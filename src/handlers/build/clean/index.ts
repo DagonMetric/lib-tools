@@ -25,9 +25,16 @@ export interface CleanTaskRunnerOptions {
     readonly logger: Logger;
 }
 
+export interface CleanTaskResult {
+    readonly cleanedPathInfoes: AbsolutePathInfo[];
+    readonly excludedPaths: string[];
+}
+
 export class CleanTaskRunner {
     private readonly logger: Logger;
     private readonly cleanOutDir: boolean;
+    private readonly configLocationPrefix: string;
+    private readonly configPath: string | null;
 
     constructor(readonly options: CleanTaskRunnerOptions) {
         this.cleanOutDir =
@@ -36,31 +43,36 @@ export class CleanTaskRunner {
                 ? true
                 : false;
         this.logger = this.options.logger;
+        this.configPath = this.options.workspaceInfo.configPath;
+        this.configLocationPrefix = `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build`;
     }
 
-    async run(): Promise<string[]> {
-        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+    async run(): Promise<CleanTaskResult> {
         const outDir = this.options.outDir;
-        const configLocationPrefix = `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build`;
-        const configPath = this.options.workspaceInfo.configPath;
 
         if (!(await pathExists(outDir))) {
-            return [];
+            return {
+                cleanedPathInfoes: [],
+                excludedPaths: []
+            };
         }
 
         const outDirStats = await fs.stat(outDir);
-        if (outDirStats.isFile()) {
+        if (!outDirStats.isDirectory()) {
             throw new InvalidConfigError(
                 `The 'outDir' must be directory.`,
-                configPath,
-                `${configLocationPrefix}/outDir`
+                this.configPath,
+                `${this.configLocationPrefix}/outDir`
             );
         }
 
         // cleanPathInfoes
         const cleanPathInfoes = await this.getCleanPathInfoes();
         if (!cleanPathInfoes.length) {
-            return [];
+            return {
+                cleanedPathInfoes: [],
+                excludedPaths: []
+            };
         }
 
         // excludes
@@ -68,89 +80,115 @@ export class CleanTaskRunner {
 
         // Delete output path only
         if (this.cleanOutDir && !excludePathInfoes.length) {
-            await this.delete({
+            const outDirPathInfo: AbsolutePathInfo = {
                 path: outDir,
                 isSystemRoot: false,
                 isDirectory: true,
                 isFile: false,
                 isSymbolicLink: outDirStats.isSymbolicLink()
-            });
+            };
+            await this.delete(outDirPathInfo);
 
-            return [outDir];
+            return {
+                cleanedPathInfoes: [outDirPathInfo],
+                excludedPaths: []
+            };
         }
 
-        // addMagicAllFilesToCleanPathInfoes
+        // addAllFilesGlobMagicToCleanPathInfoes
         await this.addAllFilesGlobMagicToCleanPathInfoes(cleanPathInfoes, excludePathInfoes);
 
-        const cleanedPaths: string[] = [];
+        const cleanTaskResult: CleanTaskResult = {
+            cleanedPathInfoes: [],
+            excludedPaths: []
+        };
 
         for (const cleanPathInfo of cleanPathInfoes) {
             // Validation
-            //
-            if (cleanPathInfo.isSystemRoot) {
-                throw new InvalidConfigError(
-                    `Deleting root directory is not permitted, path: ${cleanPathInfo.path}.`,
-                    configPath,
-                    `${configLocationPrefix}/clean`
-                );
-            }
-
-            if (isInFolder(cleanPathInfo.path, workspaceRoot) || isSamePaths(cleanPathInfo.path, workspaceRoot)) {
-                throw new InvalidConfigError(
-                    `Deleting current working directory is not permitted, path: ${cleanPathInfo.path}.`,
-                    configPath,
-                    `${configLocationPrefix}/clean`
-                );
-            }
-
-            if (!isInFolder(workspaceRoot, cleanPathInfo.path)) {
-                throw new InvalidConfigError(
-                    `Deleting outside of current working directory is disabled. Path: ${cleanPathInfo.path}/`,
-                    configPath,
-                    `${configLocationPrefix}/clean`
-                );
-            }
-
-            if (!isSamePaths(outDir, cleanPathInfo.path) && !isInFolder(outDir, cleanPathInfo.path)) {
-                throw new InvalidConfigError(
-                    `Cleaning outside of the output directory is disabled. Path: ${cleanPathInfo.path}.`,
-                    configPath,
-                    `${configLocationPrefix}/clean`
-                );
-            }
+            this.validateCleanPath(cleanPathInfo);
 
             // If already cleaned
-            if (
-                cleanedPaths.includes(cleanPathInfo.path) ||
-                cleanedPaths.find((p) => isSamePaths(p, cleanPathInfo.path))
-            ) {
+            if (cleanTaskResult.cleanedPathInfoes.find((pathInfo) => isSamePaths(pathInfo.path, cleanPathInfo.path))) {
+                continue;
+            }
+
+            // If already excluded
+            if (cleanTaskResult.excludedPaths.find((p) => isSamePaths(p, cleanPathInfo.path))) {
                 continue;
             }
 
             // Exclude - if clean file is same as exclude file or directory
             if (excludePathInfoes.find((i) => isSamePaths(i.path, cleanPathInfo.path))) {
                 this.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
+                cleanTaskResult.excludedPaths.push(cleanPathInfo.path);
                 continue;
             }
 
             // Exclude - if clean file/directory is in exclude directory
             if (excludePathInfoes.find((i) => i.isDirectory && isInFolder(i.path, cleanPathInfo.path))) {
                 this.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
+                cleanTaskResult.excludedPaths.push(cleanPathInfo.path);
                 continue;
             }
 
             // Exclude - if exclude file is in clean directory
             if (cleanPathInfo.isDirectory && excludePathInfoes.find((i) => isInFolder(cleanPathInfo.path, i.path))) {
                 this.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
+                cleanTaskResult.excludedPaths.push(cleanPathInfo.path);
                 continue;
             }
 
             await this.delete(cleanPathInfo);
 
-            cleanedPaths.push(cleanPathInfo.path);
+            cleanTaskResult.cleanedPathInfoes.push(cleanPathInfo);
         }
 
-        return cleanedPaths;
+        return cleanTaskResult;
+    }
+
+    private validateCleanPath(cleanPathInfo: AbsolutePathInfo): void {
+        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+        const outDir = this.options.outDir;
+
+        if (cleanPathInfo.isSystemRoot) {
+            throw new InvalidConfigError(
+                `Deleting root directory is not permitted, path: ${cleanPathInfo.path}.`,
+                this.configPath,
+                `${this.configLocationPrefix}/clean`
+            );
+        }
+
+        if (isSamePaths(cleanPathInfo.path, workspaceRoot)) {
+            throw new InvalidConfigError(
+                `Deleting current working directory is not permitted, path: ${cleanPathInfo.path}.`,
+                this.configPath,
+                `${this.configLocationPrefix}/clean`
+            );
+        }
+
+        if (isInFolder(cleanPathInfo.path, workspaceRoot)) {
+            throw new InvalidConfigError(
+                `The path you specified to clean cannot be deleted because it contains the working directory., path: ${cleanPathInfo.path}.`,
+                this.configPath,
+                `${this.configLocationPrefix}/clean`
+            );
+        }
+
+        if (!isSamePaths(outDir, cleanPathInfo.path) && !isInFolder(outDir, cleanPathInfo.path)) {
+            throw new InvalidConfigError(
+                `Deleting outside of the output directory is not allowed, path: ${cleanPathInfo.path}.`,
+                this.configPath,
+                `${this.configLocationPrefix}/clean`
+            );
+        }
+
+        if (!isInFolder(workspaceRoot, cleanPathInfo.path)) {
+            throw new InvalidConfigError(
+                `Deleting outside of the workspace directory is not allowed, path: ${cleanPathInfo.path}/`,
+                this.configPath,
+                `${this.configLocationPrefix}/clean`
+            );
+        }
     }
 
     private async getCleanPathInfoes(): Promise<AbsolutePathInfo[]> {
@@ -211,12 +249,9 @@ export class CleanTaskRunner {
 
     private async delete(cleanPathInfo: AbsolutePathInfo): Promise<void> {
         const cleanOutDir = isSamePaths(cleanPathInfo.path, this.options.outDir) ? true : false;
-        const relToWorkspace = normalizePathToPOSIXStyle(
-            path.relative(this.options.workspaceInfo.workspaceRoot, cleanPathInfo.path)
-        );
 
         const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
-        this.logger.info(`${msgPrefix} ${relToWorkspace}`);
+        this.logger.info(`${msgPrefix} ${normalizePathToPOSIXStyle(path.relative(process.cwd(), cleanPathInfo.path))}`);
 
         if (!this.options.dryRun) {
             if (cleanPathInfo.isDirectory && !cleanPathInfo.isSymbolicLink) {

@@ -19,6 +19,11 @@ import {
 
 import { BuildTaskHandleContext } from '../../interfaces/index.js';
 
+export interface CopyFileInfo {
+    from: string;
+    to: string;
+}
+
 export interface CopyTaskRunnerOptions {
     readonly logger: Logger;
     readonly copyEntries: CopyEntry[];
@@ -27,9 +32,9 @@ export interface CopyTaskRunnerOptions {
     readonly dryRun: boolean;
 }
 
-interface CopyPathInfo {
-    fromFilePath: string;
-    toFilePath: string;
+export interface CopyTaskResult {
+    readonly copiedFileInfoes: CopyFileInfo[];
+    readonly excludedPaths: string[];
 }
 
 async function globFiles(globPattern: string, cwd: string): Promise<string[]> {
@@ -78,22 +83,15 @@ export class CopyTaskRunner {
         this.logger = this.options.logger;
     }
 
-    async run(): Promise<string[]> {
-        const copyPathInfoes = await this.getCopyPathInfoes();
-
-        await this.copy(copyPathInfoes);
-
-        return copyPathInfoes.map((i) => i.toFilePath);
-    }
-
-    private async getCopyPathInfoes(): Promise<CopyPathInfo[]> {
-        const copyPathInfoes: CopyPathInfo[] = [];
-
-        const copyEntries = this.options.copyEntries;
-        const outDir = this.options.outDir;
+    async run(): Promise<CopyTaskResult> {
         const projectRoot = this.options.workspaceInfo.projectRoot;
+        const outDir = this.options.outDir;
+        const copyResult: CopyTaskResult = {
+            copiedFileInfoes: [],
+            excludedPaths: []
+        };
 
-        for (const copyEntry of copyEntries) {
+        for (const copyEntry of this.options.copyEntries) {
             let normalizedFrom = normalizePathToPOSIXStyle(copyEntry.from);
 
             if (!normalizedFrom && /^[./\\]/.test(copyEntry.from)) {
@@ -101,6 +99,11 @@ export class CopyTaskRunner {
             }
 
             if (!normalizedFrom) {
+                this.logger.warn(`There is no matched file to copy, path: ${copyEntry.from.trim()}`);
+                if (!copyResult.excludedPaths.includes(copyEntry.from.trim())) {
+                    copyResult.excludedPaths.push(copyEntry.from.trim());
+                }
+
                 continue;
             }
 
@@ -111,6 +114,10 @@ export class CopyTaskRunner {
 
                 if (!foundFilePaths.length) {
                     this.logger.warn(`There is no matched file to copy, pattern: ${copyEntry.from}`);
+                    if (!copyResult.excludedPaths.includes(copyEntry.from.trim())) {
+                        copyResult.excludedPaths.push(copyEntry.from.trim());
+                    }
+
                     continue;
                 }
 
@@ -131,6 +138,11 @@ export class CopyTaskRunner {
                     if (excludePathInfoes.length) {
                         if (this.checkFileForExclude(foundFilePath, excludePathInfoes)) {
                             this.logger.debug(`Excluded from copy, path: ${foundFilePath}.`);
+
+                            if (!copyResult.excludedPaths.includes(foundFilePath)) {
+                                copyResult.excludedPaths.push(foundFilePath);
+                            }
+
                             continue;
                         }
                     }
@@ -138,10 +150,14 @@ export class CopyTaskRunner {
                     const toPathRel = path.relative(fromBasePath, foundFilePath);
                     const toFilePath = path.resolve(toBasePath, toPathRel);
 
-                    if (!copyPathInfoes.find((f) => f.fromFilePath === foundFilePath && f.toFilePath === toFilePath)) {
-                        copyPathInfoes.push({
-                            fromFilePath: foundFilePath,
-                            toFilePath
+                    if (
+                        !copyResult.copiedFileInfoes.find(
+                            (f) => isSamePaths(f.from, foundFilePath) && isSamePaths(f.to, toFilePath)
+                        )
+                    ) {
+                        copyResult.copiedFileInfoes.push({
+                            from: foundFilePath,
+                            to: toFilePath
                         });
                     }
                 }
@@ -150,6 +166,10 @@ export class CopyTaskRunner {
 
                 if (!(await pathExists(fromPath))) {
                     this.logger.warn(`Path doesn't exist to copy, path: ${fromPath}`);
+                    if (!copyResult.excludedPaths.includes(fromPath)) {
+                        copyResult.excludedPaths.push(fromPath);
+                    }
+
                     continue;
                 }
 
@@ -163,6 +183,10 @@ export class CopyTaskRunner {
                     if (excludePathInfoes.length) {
                         if (this.checkFileForExclude(foundFromPath, excludePathInfoes)) {
                             this.logger.debug(`Excluded from copy, path: ${foundFromPath}.`);
+                            if (!copyResult.excludedPaths.includes(foundFromPath)) {
+                                copyResult.excludedPaths.push(foundFromPath);
+                            }
+
                             continue;
                         }
                     }
@@ -179,10 +203,14 @@ export class CopyTaskRunner {
                         toFilePath = path.resolve(toBasePath, path.basename(foundFromPath));
                     }
 
-                    if (!copyPathInfoes.find((f) => f.fromFilePath === foundFromPath && f.toFilePath === toFilePath)) {
-                        copyPathInfoes.push({
-                            fromFilePath: foundFromPath,
-                            toFilePath
+                    if (
+                        !copyResult.copiedFileInfoes.find(
+                            (f) => isSamePaths(f.from, foundFromPath) && isSamePaths(f.to, toFilePath)
+                        )
+                    ) {
+                        copyResult.copiedFileInfoes.push({
+                            from: foundFromPath,
+                            to: toFilePath
                         });
                     }
                 } else {
@@ -201,6 +229,10 @@ export class CopyTaskRunner {
                         if (excludePathInfoes.length) {
                             if (this.checkFileForExclude(foundFilePath, excludePathInfoes)) {
                                 this.logger.debug(`Excluded from copy, path: ${foundFilePath}.`);
+                                if (!copyResult.excludedPaths.includes(foundFilePath)) {
+                                    copyResult.excludedPaths.push(foundFilePath);
+                                }
+
                                 continue;
                             }
                         }
@@ -209,11 +241,13 @@ export class CopyTaskRunner {
                         const toFilePath = path.resolve(toBasePath, foundFilePathRel);
 
                         if (
-                            !copyPathInfoes.find((f) => f.fromFilePath === foundFilePath && f.toFilePath === toFilePath)
+                            !copyResult.copiedFileInfoes.find(
+                                (f) => isSamePaths(f.from, foundFilePath) && isSamePaths(f.to, toFilePath)
+                            )
                         ) {
-                            copyPathInfoes.push({
-                                fromFilePath: foundFilePath,
-                                toFilePath
+                            copyResult.copiedFileInfoes.push({
+                                from: foundFilePath,
+                                to: toFilePath
                             });
                         }
                     }
@@ -221,7 +255,9 @@ export class CopyTaskRunner {
             }
         }
 
-        return copyPathInfoes;
+        await this.copy(copyResult.copiedFileInfoes);
+
+        return copyResult;
     }
 
     private checkFileForExclude(filePathToCheck: string, excludePathInfoes: AbsolutePathInfo[]): boolean {
@@ -238,25 +274,27 @@ export class CopyTaskRunner {
         return false;
     }
 
-    private async copy(copyPathInfoes: CopyPathInfo[]): Promise<void> {
-        const projectRoot = this.options.workspaceInfo.projectRoot;
+    private async copy(copyFileInfoes: CopyFileInfo[]): Promise<void> {
+        const cwd = process.cwd();
 
-        for (const copyPathInfo of copyPathInfoes) {
+        for (const copyFileInfo of copyFileInfoes) {
             this.logger.info(
-                `Copying file: ${normalizePathToPOSIXStyle(path.relative(projectRoot, copyPathInfo.fromFilePath))}`
+                `Copying ${normalizePathToPOSIXStyle(
+                    path.relative(cwd, copyFileInfo.from)
+                )} -> ${normalizePathToPOSIXStyle(path.relative(cwd, copyFileInfo.to))}`
             );
 
             if (this.options.dryRun) {
                 continue;
             }
 
-            const dirOfFile = path.dirname(copyPathInfo.toFilePath);
+            const dirOfToFile = path.dirname(copyFileInfo.to);
 
-            if (!(await pathExists(dirOfFile))) {
-                await fs.mkdir(dirOfFile, { recursive: true });
+            if (!(await pathExists(dirOfToFile))) {
+                await fs.mkdir(dirOfToFile, { recursive: true });
             }
 
-            await fs.copyFile(copyPathInfo.fromFilePath, copyPathInfo.toFilePath);
+            await fs.copyFile(copyFileInfo.from, copyFileInfo.to);
         }
     }
 }

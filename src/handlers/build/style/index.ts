@@ -32,10 +32,6 @@ async function runWebpack(webpackConfig: Configuration, logger: Logger, logLevel
     return new Promise((resolve, reject) => {
         const cb = (err?: Error | null, stats?: Stats) => {
             if (err) {
-                // console.error(err.stack || err);
-                // if (err.details) {
-                //     console.error(err.details);
-                // }
                 reject(err);
 
                 return;
@@ -121,13 +117,13 @@ async function runWebpack(webpackConfig: Configuration, logger: Logger, logLevel
                 }
 
                 if (logLevel === 'debug') {
-                    const msg = stats.toString('detailed');
+                    const msg = stats.toString();
                     if (msg?.trim()) {
-                        logger.info(msg);
+                        logger.debug(msg);
                     }
                 } else {
                     const msg = stats.toString('errors-warnings');
-                    if (msg?.trim()) {
+                    if (msg?.trim() && stats.hasWarnings()) {
                         logger.warn(msg);
                     }
                 }
@@ -298,7 +294,7 @@ export class StyleTaskRunner {
                     loader: require.resolve('css-loader'),
                     options: {
                         // We don't parse css url function
-                        // url: false, // Default: true
+                        url: false, // Default: true
                         sourceMap,
                         // 0 => no loaders (default);
                         // 1 => postcss-loader;
@@ -324,6 +320,7 @@ export class StyleTaskRunner {
 
         const webpackConfig: Configuration = {
             devtool: sourceMap ? 'source-map' : false,
+            mode: 'production',
             entry: entryPoints,
             output: {
                 path: this.options.outDir
@@ -417,8 +414,7 @@ export class StyleTaskRunner {
                           })
                       ]
                     : []
-            },
-            stats: 'errors-only'
+            }
         };
 
         await runWebpack(webpackConfig, this.logger, logLevel);

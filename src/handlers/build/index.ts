@@ -9,8 +9,8 @@ export async function runBuildTask(context: BuildTaskHandleContext): Promise<voi
     const copyTaskRunner = getCopyTaskRunner(context);
     if (copyTaskRunner) {
         context.logger.info('Running copy task.');
-        const copiedPaths = await copyTaskRunner.run();
-        context.logger.info(`Total ${copiedPaths.length} files are copied.`);
+        const copyResult = await copyTaskRunner.run();
+        context.logger.info(`Total ${copyResult.copiedFileInfoes.length} files are copied.`);
     }
 
     // style
@@ -26,8 +26,17 @@ export default async function (context: BuildTaskHandleContext): Promise<void> {
     const beforeCleanTaskRunner = getCleanTaskRunner('before', context);
     if (beforeCleanTaskRunner) {
         context.logger.info('Running before build clean task.');
-        const cleandPaths = await beforeCleanTaskRunner.run();
-        context.logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
+        const cleanResult = await beforeCleanTaskRunner.run();
+        const cleanedDirsCount = cleanResult.cleanedPathInfoes.filter((pathInfo) => pathInfo.isDirectory).length;
+        const cleanedFilesCount = cleanResult.cleanedPathInfoes.filter((pathInfo) => pathInfo.isFile).length;
+        const fileSuffix = cleanedFilesCount > 1 ? 'files' : 'file';
+        const dirSuffix = cleanedDirsCount > 1 ? 'directories' : 'directory';
+        let cleanMsg = `otal ${cleanedFilesCount} ${fileSuffix} and ${cleanedDirsCount} ${dirSuffix} cleaned`;
+        if (cleanResult.excludedPaths.length) {
+            cleanMsg += `, ${cleanResult.excludedPaths.length} excluded`;
+        }
+        cleanMsg += '.';
+        context.logger.info(cleanMsg);
     }
 
     await runBuildTask(context);
@@ -36,7 +45,16 @@ export default async function (context: BuildTaskHandleContext): Promise<void> {
     const afterCleanTaskRunner = getCleanTaskRunner('after', context);
     if (afterCleanTaskRunner) {
         context.logger.info('Running after build clean task.');
-        const cleandPaths = await afterCleanTaskRunner.run();
-        context.logger.info(`Total ${cleandPaths.length} files / directories are cleaned.`);
+        const cleanResult = await afterCleanTaskRunner.run();
+        const cleanedDirsCount = cleanResult.cleanedPathInfoes.filter((pathInfo) => pathInfo.isDirectory).length;
+        const cleanedFilesCount = cleanResult.cleanedPathInfoes.filter((pathInfo) => pathInfo.isFile).length;
+        const fileSuffix = cleanedFilesCount > 1 ? 'files' : 'file';
+        const dirSuffix = cleanedDirsCount > 1 ? 'directories' : 'directory';
+        let cleanMsg = `otal ${cleanedFilesCount} ${fileSuffix} and ${cleanedDirsCount} ${dirSuffix} cleaned`;
+        if (cleanResult.excludedPaths.length) {
+            cleanMsg += `, ${cleanResult.excludedPaths.length} excluded`;
+        }
+        cleanMsg += '.';
+        context.logger.info(cleanMsg);
     }
 }
