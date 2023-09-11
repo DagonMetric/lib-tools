@@ -9,6 +9,7 @@ import { WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import {
     AbsolutePathInfo,
     Logger,
+    colors,
     getAbsolutePathInfoes,
     isInFolder,
     isSamePaths,
@@ -78,6 +79,7 @@ async function globFiles(globPattern: string, cwd: string): Promise<string[]> {
 
 export class CopyTaskRunner {
     private readonly logger: Logger;
+    private startTime = Date.now();
 
     constructor(readonly options: CopyTaskRunnerOptions) {
         this.logger = this.options.logger;
@@ -279,13 +281,14 @@ export class CopyTaskRunner {
     }
 
     private logStart(): void {
-        this.logger.group('clean');
-        this.logger.info('Running copy task.');
+        this.logger.group('\u25B7 copy');
+        this.startTime = Date.now();
     }
 
     private logComplete(result: CopyTaskResult): void {
         this.logger.info(`Total ${result.copiedFileInfoes.length} files are copied.`);
         this.logger.groupEnd();
+        this.logger.info(`${colors.green('\u25B6')} copy [${colors.green(`${Date.now() - this.startTime}ms`)}]`);
     }
 
     private async copy(copyFileInfoes: CopyFileInfo[]): Promise<void> {
@@ -295,7 +298,7 @@ export class CopyTaskRunner {
             this.logger.info(
                 `Copying ${normalizePathToPOSIXStyle(
                     path.relative(cwd, copyFileInfo.from)
-                )} -> ${normalizePathToPOSIXStyle(path.relative(cwd, copyFileInfo.to))}`
+                )} \u2192 ${normalizePathToPOSIXStyle(path.relative(cwd, copyFileInfo.to))}`
             );
 
             if (this.options.dryRun) {

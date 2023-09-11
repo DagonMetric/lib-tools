@@ -7,6 +7,7 @@ import { InvalidConfigError } from '../../../exceptions/index.js';
 import {
     AbsolutePathInfo,
     Logger,
+    colors,
     getAbsolutePathInfoes,
     isInFolder,
     isSamePaths,
@@ -35,6 +36,7 @@ export class CleanTaskRunner {
     private readonly cleanOutDir: boolean;
     private readonly configLocationPrefix: string;
     private readonly configPath: string | null;
+    private startTime = Date.now();
 
     constructor(readonly options: CleanTaskRunnerOptions) {
         this.cleanOutDir =
@@ -252,10 +254,8 @@ export class CleanTaskRunner {
     }
 
     private logStart(): void {
-        this.logger.group('clean');
-        const msg =
-            this.options.runFor === 'before' ? 'Running before build clean task.' : 'Running after build clean task.';
-        this.logger.info(msg);
+        this.logger.group('\u25B7 clean');
+        this.startTime = Date.now();
     }
 
     private logComplete(result: CleanTaskResult): void {
@@ -270,6 +270,7 @@ export class CleanTaskRunner {
         cleanMsg += '.';
         this.logger.info(cleanMsg);
         this.logger.groupEnd();
+        this.logger.info(`${colors.green('\u25B6')} clean [${colors.green(`${Date.now() - this.startTime}ms`)}]`);
     }
 
     private async delete(cleanPathInfo: AbsolutePathInfo): Promise<void> {
