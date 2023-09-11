@@ -1,7 +1,7 @@
 {
   "$schema": "../../dist/schemas/schema.json",
   "projects": {
-    "test-project": {
+    "hello-project": {
       "root": ".",
       "tasks": {
         "hello": {
@@ -9,6 +9,9 @@
         },
         "echo": {
           "handler": "exec: echo \"Hello exec!\""
+        },
+        "build": {
+          "handler": "exec: echo \"Hello custom build handler\""
         }
       }
     }
