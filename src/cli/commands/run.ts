@@ -23,7 +23,7 @@ export function builder(argv: Argv): Argv<CommandOptions> {
             })
 
             // Shared task options
-            .group(['logLevel', 'workspace', 'project', 'env', 'dryRun'], colors.cyan('Common task options:'))
+            .group(['logLevel', 'workspace', 'project', 'env', 'dryRun'], colors.lightCyan('Common task options:'))
             .option('logLevel', {
                 describe: 'Set logging level for output information',
                 choices: ['debug', 'info', 'warn', 'error', 'none'] as const
@@ -46,7 +46,10 @@ export function builder(argv: Argv): Argv<CommandOptions> {
             })
 
             // Buuild task options
-            .group(['outDir', 'clean', 'copy', 'style', 'script', 'packageVersion'], colors.cyan('Build task options:'))
+            .group(
+                ['outDir', 'clean', 'copy', 'style', 'script', 'packageVersion'],
+                colors.lightCyan('Build task options:')
+            )
 
             .option('outDir', {
                 describe: 'Set output directory for build results',
@@ -116,19 +119,19 @@ export async function run(argv: CommandOptions): Promise<void> {
                 if (handlerStr.length > index) {
                     const execCmd = handlerStr.substring(index).trim();
 
-                    logger.group(`\u25B7 ${colors.blue(taskPath)}`);
+                    logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
                     const start = Date.now();
 
                     await exec(execCmd);
 
                     logger.groupEnd();
                     logger.info(
-                        `${colors.green('\u25B6')} ${colors.blue(taskPath)} ${colors.green(
+                        `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
                             ` completed in ${Date.now() - start}ms.`
                         )}`
                     );
                 } else {
-                    logger.warn(`No exec command found for ${colors.blue(taskPath)} task, skipping...`);
+                    logger.warn(`No exec command found for ${colors.lightBlue(taskPath)} task, skipping...`);
                     continue;
                 }
             } else {
@@ -154,11 +157,11 @@ export async function run(argv: CommandOptions): Promise<void> {
 
                 const taskHandlerFn = nameTaskHander ?? defaultTaskHander;
                 if (!taskHandlerFn) {
-                    logger.warn(`No handler found for ${colors.blue(taskPath)} task, skipping...`);
+                    logger.warn(`No handler found for ${colors.lightBlue(taskPath)} task, skipping...`);
                     continue;
                 }
 
-                logger.group(`\u25B7 ${colors.blue(taskPath)}`);
+                logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
                 const start = Date.now();
 
                 const result = taskHandlerFn({
@@ -173,7 +176,7 @@ export async function run(argv: CommandOptions): Promise<void> {
 
                 logger.groupEnd();
                 logger.info(
-                    `${colors.green('\u25B6')} ${colors.blue(taskPath)} ${colors.green(
+                    `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
                         ` completed in ${Date.now() - start}ms.`
                     )}`
                 );
@@ -181,7 +184,7 @@ export async function run(argv: CommandOptions): Promise<void> {
         } else if (task._taskName === 'build') {
             const buildHandlerModule = await import('../../handlers/build/index.js');
 
-            logger.group(`\u25B7 ${colors.blue(taskPath)}`);
+            logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
             const start = Date.now();
 
             await buildHandlerModule.default({
@@ -193,12 +196,12 @@ export async function run(argv: CommandOptions): Promise<void> {
 
             logger.groupEnd();
             logger.info(
-                `${colors.green('\u25B6')} ${colors.blue(taskPath)} ${colors.green(
+                `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
                     ` completed in ${Date.now() - start}ms.`
                 )}`
             );
         } else {
-            logger.warn(`No handler is defined for ${colors.blue(taskPath)} task, skipping...`);
+            logger.warn(`No handler is defined for ${colors.lightBlue(taskPath)} task, skipping...`);
             continue;
         }
     }

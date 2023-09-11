@@ -41,10 +41,10 @@ export default async function (): Promise<void> {
             'camel-case-expansion': false
         })
         .updateStrings({
-            'Commands:': colors.cyan('Commands:'),
-            'Options:': colors.cyan('Options:'),
-            'Positionals:': colors.cyan('Arguments:'),
-            'Examples:': colors.cyan('Examples:'),
+            'Commands:': colors.lightCyan('Commands:'),
+            'Options:': colors.lightCyan('Options:'),
+            'Positionals:': colors.lightCyan('Arguments:'),
+            'Examples:': colors.lightCyan('Examples:'),
             deprecated: colors.yellow('deprecated'),
             'deprecated: %s': colors.yellow('deprecated:') + ' %s',
             'Did you mean %s?': 'Unknown command. Did you mean %s?'
