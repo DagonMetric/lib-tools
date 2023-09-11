@@ -122,7 +122,7 @@ export async function run(argv: CommandOptions): Promise<void> {
                     logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
                     const start = Date.now();
 
-                    await exec(execCmd);
+                    await exec(execCmd, logger);
 
                     logger.groupEnd();
                     logger.info(
