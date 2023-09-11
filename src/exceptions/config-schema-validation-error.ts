@@ -5,7 +5,7 @@ import { colors } from '../utils/index.js';
 const seeMoreWikiLink = 'https://github.com/DagonMetric/lib-tools/wiki/Lib-Tools-Workspace-Configuration';
 
 function formatMessage(errors: ErrorObject[], configPath: string): string {
-    let formattedMessage = colors.cyan(configPath) + ' - ' + colors.red('Configuration validation errors:');
+    let formattedMessage = colors.lightCyan(configPath) + ' - ' + colors.red('Configuration validation errors:');
     const anyOfFinishedGroups: string[] = [];
 
     for (const error of errors) {
@@ -62,7 +62,7 @@ function formatMessage(errors: ErrorObject[], configPath: string): string {
         formattedMessage += `\n  ${msg}.`;
     }
 
-    formattedMessage += `\nSee more about libconfig.json configuration at ${colors.cyan(seeMoreWikiLink)}.`;
+    formattedMessage += `\nSee more about libconfig.json configuration at ${colors.lightCyan(seeMoreWikiLink)}.`;
 
     return formattedMessage;
 }

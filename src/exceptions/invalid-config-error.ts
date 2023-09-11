@@ -4,7 +4,7 @@ function formatMessage(message: string, configPath: string | null, configLocatio
     let formattedMsg = '';
 
     if (configPath) {
-        formattedMsg += `${colors.cyan(configPath)} - `;
+        formattedMsg += `${colors.lightCyan(configPath)} - `;
     }
 
     formattedMsg += colors.red('Configuration error:') + ` ${message}`;
