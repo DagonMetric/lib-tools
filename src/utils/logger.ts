@@ -1,3 +1,9 @@
+import { Console } from 'node:console';
+import { inspect } from 'node:util';
+
+inspect.styles.string = 'blueBright'; // Default: 'green'
+inspect.styles.symbol = 'blueBright'; // Default: 'green'
+
 export enum LogLevel {
     None = 0,
     Error = 2,
@@ -15,6 +21,7 @@ export interface LoggerOptions {
     readonly infoPrefix?: string;
     readonly warnPrefix?: string;
     readonly errorPrefix?: string;
+    readonly groupIndentation?: number;
 }
 
 export interface LoggerBase {
@@ -23,18 +30,30 @@ export interface LoggerBase {
     info(message: string, optionalParams?: unknown): void;
     warn(message: string, optionalParams?: unknown): void;
     error(message: string, optionalParams?: unknown): void;
+    group(label?: string): void;
+    groupEnd(): void;
 }
 
 export class Logger implements LoggerBase {
+    private readonly _console: Console;
     private _minLogLevel: LogLevel = LogLevel.Info;
 
-    constructor(readonly loggerOptions: LoggerOptions) {
-        if (this.loggerOptions.logLevel != null) {
+    constructor(private readonly options: LoggerOptions) {
+        if (this.options.logLevel != null) {
             this._minLogLevel =
-                typeof this.loggerOptions.logLevel === 'string'
-                    ? this.toLogLevel(this.loggerOptions.logLevel)
-                    : this.loggerOptions.logLevel;
+                typeof this.options.logLevel === 'string'
+                    ? this.toLogLevel(this.options.logLevel)
+                    : this.options.logLevel;
         }
+
+        this._console = new Console({
+            stdout: process.stdout,
+            stderr: process.stderr,
+            groupIndentation: this.options.groupIndentation,
+            inspectOptions: {
+                colors: true
+            }
+        });
     }
 
     set minLogLevel(minLogLevel: LogLevel | LogLevelString) {
@@ -54,15 +73,15 @@ export class Logger implements LoggerBase {
 
         if (optionalParams) {
             if (logLevel === LogLevel.Warn) {
-                console.warn(logMsg, optionalParams);
+                this._console.warn(logMsg, optionalParams);
             } else {
-                console.log(logMsg, optionalParams);
+                this._console.log(logMsg, optionalParams);
             }
         } else {
             if (logLevel === LogLevel.Warn) {
-                console.warn(logMsg);
+                this._console.warn(logMsg);
             } else {
-                console.log(logMsg);
+                this._console.log(logMsg);
             }
         }
     }
@@ -81,6 +100,14 @@ export class Logger implements LoggerBase {
 
     error(message: string, optionalParams?: unknown): void {
         this.log(LogLevel.Error, message, optionalParams);
+    }
+
+    group(label?: string): void {
+        this._console.group(label);
+    }
+
+    groupEnd(): void {
+        this._console.groupEnd();
     }
 
     private toLogLevel(logLevelString: LogLevelString): LogLevel {
@@ -102,18 +129,18 @@ export class Logger implements LoggerBase {
 
     private getPrefix(logLevel: LogLevel): string {
         let prefix = '';
-        if (this.loggerOptions.name) {
-            prefix += `${this.loggerOptions.name} `;
+        if (this.options.name) {
+            prefix += `${this.options.name} `;
         }
 
-        if (logLevel === LogLevel.Debug && this.loggerOptions.debugPrefix) {
-            prefix += `${this.loggerOptions.debugPrefix} `;
-        } else if (logLevel === LogLevel.Info && this.loggerOptions.infoPrefix) {
-            prefix += `${this.loggerOptions.infoPrefix} `;
-        } else if (logLevel === LogLevel.Warn && this.loggerOptions.warnPrefix) {
-            prefix += `${this.loggerOptions.warnPrefix} `;
-        } else if (logLevel === LogLevel.Error && this.loggerOptions.errorPrefix) {
-            prefix += `${this.loggerOptions.errorPrefix} `;
+        if (logLevel === LogLevel.Debug && this.options.debugPrefix) {
+            prefix += `${this.options.debugPrefix} `;
+        } else if (logLevel === LogLevel.Info && this.options.infoPrefix) {
+            prefix += `${this.options.infoPrefix} `;
+        } else if (logLevel === LogLevel.Warn && this.options.warnPrefix) {
+            prefix += `${this.options.warnPrefix} `;
+        } else if (logLevel === LogLevel.Error && this.options.errorPrefix) {
+            prefix += `${this.options.errorPrefix} `;
         }
 
         return prefix;
