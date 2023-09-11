@@ -96,7 +96,7 @@ export async function run(argv: CommandOptions): Promise<void> {
         logLevel,
         warnPrefix: colors.yellow('Warning:'),
         errorPrefix: colors.red('Error:'),
-        groupIndentation: 2
+        groupIndentation: 4
     });
 
     if (!tasks.length) {
@@ -116,16 +116,17 @@ export async function run(argv: CommandOptions): Promise<void> {
                 if (handlerStr.length > index) {
                     const execCmd = handlerStr.substring(index).trim();
 
-                    logger.group(taskPath);
-                    logger.info(`Running ${colors.blue(taskPath)} task`);
+                    logger.group(`\u25B7 ${colors.blue(taskPath)}`);
                     const start = Date.now();
 
                     await exec(execCmd);
 
-                    logger.info(
-                        `Running ${colors.blue(taskPath)} task completed in ${colors.green(`${Date.now() - start}ms`)}.`
-                    );
                     logger.groupEnd();
+                    logger.info(
+                        `${colors.green('\u25B6')} ${colors.blue(taskPath)} ${colors.green(
+                            ` completed in ${Date.now() - start}ms.`
+                        )}`
+                    );
                 } else {
                     logger.warn(`No exec command found for ${colors.blue(taskPath)} task, skipping...`);
                     continue;
@@ -157,8 +158,7 @@ export async function run(argv: CommandOptions): Promise<void> {
                     continue;
                 }
 
-                logger.group(taskPath);
-                logger.info(`Running ${colors.blue(taskPath)} task`);
+                logger.group(`\u25B7 ${colors.blue(taskPath)}`);
                 const start = Date.now();
 
                 const result = taskHandlerFn({
@@ -171,16 +171,17 @@ export async function run(argv: CommandOptions): Promise<void> {
                     await result;
                 }
 
-                logger.info(
-                    `Running ${colors.blue(taskPath)} task completed in ${colors.green(`${Date.now() - start}ms`)}.`
-                );
                 logger.groupEnd();
+                logger.info(
+                    `${colors.green('\u25B6')} ${colors.blue(taskPath)} ${colors.green(
+                        ` completed in ${Date.now() - start}ms.`
+                    )}`
+                );
             }
         } else if (task._taskName === 'build') {
             const buildHandlerModule = await import('../../handlers/build/index.js');
 
-            logger.group(taskPath);
-            logger.info(`Running ${colors.blue(taskPath)} task`);
+            logger.group(`\u25B7 ${colors.blue(taskPath)}`);
             const start = Date.now();
 
             await buildHandlerModule.default({
@@ -190,10 +191,12 @@ export async function run(argv: CommandOptions): Promise<void> {
                 dryRun
             });
 
-            logger.info(
-                `Running ${colors.blue(taskPath)} task completed in ${colors.green(`${Date.now() - start}ms`)}.`
-            );
             logger.groupEnd();
+            logger.info(
+                `${colors.green('\u25B6')} ${colors.blue(taskPath)} ${colors.green(
+                    ` completed in ${Date.now() - start}ms.`
+                )}`
+            );
         } else {
             logger.warn(`No handler is defined for ${colors.blue(taskPath)} task, skipping...`);
             continue;
