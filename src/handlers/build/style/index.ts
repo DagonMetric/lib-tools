@@ -59,7 +59,7 @@ async function runWebpack(webpackConfig: Configuration, logger: Logger, logLevel
                             let formattedLine = '';
 
                             const errorFilePath = moduleIdentifiers[moduleIdentifiers.length - 1];
-                            formattedLine += colors.cyan(normalizePathToPOSIXStyle(errorFilePath));
+                            formattedLine += colors.lightCyan(normalizePathToPOSIXStyle(errorFilePath));
                             if (err.loc) {
                                 formattedLine += colors.yellow(':' + err.loc);
                             }

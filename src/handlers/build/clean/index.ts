@@ -270,7 +270,9 @@ export class CleanTaskRunner {
         cleanMsg += '.';
         this.logger.info(cleanMsg);
         this.logger.groupEnd();
-        this.logger.info(`${colors.green('\u25B6')} clean [${colors.green(`${Date.now() - this.startTime}ms`)}]`);
+        this.logger.info(
+            `${colors.lightGreen('\u25B6')} clean [${colors.lightGreen(`${Date.now() - this.startTime}ms`)}]`
+        );
     }
 
     private async delete(cleanPathInfo: AbsolutePathInfo): Promise<void> {
