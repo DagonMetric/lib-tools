@@ -91,12 +91,12 @@ export async function run(argv: CommandOptions): Promise<void> {
     const tasks = await getTasks(argv, taskName);
 
     const dryRun = argv.dryRun ? true : false;
-
     const logLevel = argv.logLevel ?? 'info';
     const logger = new Logger({
         logLevel,
         warnPrefix: colors.yellow('Warning:'),
-        errorPrefix: colors.red('Error:')
+        errorPrefix: colors.red('Error:'),
+        groupIndentation: 2
     });
 
     if (!tasks.length) {
@@ -115,11 +115,19 @@ export async function run(argv: CommandOptions): Promise<void> {
                 const index = handlerStr.indexOf(':') + 1;
                 if (handlerStr.length > index) {
                     const execCmd = handlerStr.substring(index).trim();
-                    logger.info(`Executing ${taskPath} task: ${execCmd}`);
+
+                    logger.group(taskPath);
+                    logger.info(`Running ${colors.blue(taskPath)} task`);
+                    const start = Date.now();
+
                     await exec(execCmd);
-                    logger.info(`Executing ${taskPath} task completed.`);
+
+                    logger.info(
+                        `Running ${colors.blue(taskPath)} task completed in ${colors.green(`${Date.now() - start}ms`)}.`
+                    );
+                    logger.groupEnd();
                 } else {
-                    logger.warn(`No command found for ${taskPath} task.`);
+                    logger.warn(`No exec command found for ${colors.blue(taskPath)} task, skipping...`);
                     continue;
                 }
             } else {
@@ -145,11 +153,14 @@ export async function run(argv: CommandOptions): Promise<void> {
 
                 const taskHandlerFn = nameTaskHander ?? defaultTaskHander;
                 if (!taskHandlerFn) {
-                    logger.warn(`No handler found for ${taskPath} task.`);
+                    logger.warn(`No handler found for ${colors.blue(taskPath)} task, skipping...`);
                     continue;
                 }
 
-                logger.info(`Executing ${taskPath} task`);
+                logger.group(taskPath);
+                logger.info(`Running ${colors.blue(taskPath)} task`);
+                const start = Date.now();
+
                 const result = taskHandlerFn({
                     taskOptions: task,
                     logger,
@@ -159,20 +170,32 @@ export async function run(argv: CommandOptions): Promise<void> {
                 if (result && result instanceof Promise) {
                     await result;
                 }
-                logger.info(`Executing ${taskPath} task completed.`);
+
+                logger.info(
+                    `Running ${colors.blue(taskPath)} task completed in ${colors.green(`${Date.now() - start}ms`)}.`
+                );
+                logger.groupEnd();
             }
         } else if (task._taskName === 'build') {
             const buildHandlerModule = await import('../../handlers/build/index.js');
-            logger.info(`Executing ${taskPath} task`);
+
+            logger.group(taskPath);
+            logger.info(`Running ${colors.blue(taskPath)} task`);
+            const start = Date.now();
+
             await buildHandlerModule.default({
                 taskOptions: task as ParsedBuildTaskConfig,
                 logger,
                 logLevel,
                 dryRun
             });
-            logger.info(`Executing ${taskPath} task completed.`);
+
+            logger.info(
+                `Running ${colors.blue(taskPath)} task completed in ${colors.green(`${Date.now() - start}ms`)}.`
+            );
+            logger.groupEnd();
         } else {
-            logger.warn(`No handler is defined for ${taskPath} task.`);
+            logger.warn(`No handler is defined for ${colors.blue(taskPath)} task, skipping...`);
             continue;
         }
     }
