@@ -7,8 +7,8 @@ body {
 }
 
 h1 {
-    font1: bold 12pt/14pt Helvetica;
+    font: bold 12pt/14pt Helvetica;
 }
 
 @import url("components/_sidebar.css");
-// @import url("components/_print.css") print;
+@import url("components/_print.css") print;

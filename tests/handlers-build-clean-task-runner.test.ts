@@ -315,9 +315,12 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
 
-                assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path),
+                    [runner.options.outDir]
+                );
             });
 
             void it('should delete output directory when custom paths include /', async () => {
@@ -332,9 +335,12 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
 
-                assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path),
+                    [runner.options.outDir]
+                );
             });
 
             void it('should delete output directory when custom paths include \\', async () => {
@@ -349,9 +355,12 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
 
-                assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path),
+                    [runner.options.outDir]
+                );
             });
 
             void it('should delete output directory when custom paths include .', async () => {
@@ -366,9 +375,12 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
 
-                assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path),
+                    [runner.options.outDir]
+                );
             });
 
             void it('should delete with before build clean options', async () => {
@@ -383,7 +395,7 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'src'),
                     path.resolve(runner.options.outDir, 'path-1/p1.js'),
@@ -395,7 +407,10 @@ void describe('handlers/build/clean', () => {
                     path.resolve(runner.options.outDir, 'index.js')
                 ];
 
-                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
 
             void it('should delete with after build clean options', async () => {
@@ -410,7 +425,7 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'README.md'),
                     path.resolve(runner.options.outDir, 'src'),
@@ -420,7 +435,10 @@ void describe('handlers/build/clean', () => {
                     path.resolve(runner.options.outDir, 'path-2/note.md')
                 ];
 
-                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
 
             void it('should respect exclude when cleaning paths - #1', async () => {
@@ -436,9 +454,12 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
 
-                assert.deepStrictEqual(cleanedPaths, []);
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path),
+                    []
+                );
             });
 
             void it('should respect exclude when cleaning paths - #2', async () => {
@@ -454,7 +475,7 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths: string[] = [
                     path.resolve(runner.options.outDir, 'LICENSE'),
                     path.resolve(runner.options.outDir, 'README.md'),
@@ -465,7 +486,10 @@ void describe('handlers/build/clean', () => {
                     path.resolve(runner.options.outDir, 'src/nested/nested.ts')
                 ];
 
-                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
 
             void it('should respect exclude when cleaning paths - #3', async () => {
@@ -481,14 +505,17 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'src/b.ts'),
                     path.resolve(runner.options.outDir, 'src/c.ts'),
                     path.resolve(runner.options.outDir, 'src/nested/nested.ts')
                 ];
 
-                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
 
             void it('should respect exclude when cleaning paths - #4', async () => {
@@ -504,13 +531,16 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'path-2/note.md'),
                     path.resolve(runner.options.outDir, 'path-2/p2.js')
                 ];
 
-                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
         });
 
@@ -550,7 +580,7 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths = [runner.options.outDir];
                 for (const cleanedPath of expectedPaths) {
                     const fileDeleted = await fs
@@ -559,7 +589,10 @@ void describe('handlers/build/clean', () => {
                         .catch(() => true);
                     assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
                 }
-                assert.deepStrictEqual(cleanedPaths, expectedPaths);
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
 
             void it('should delete with after build clean options [Actual Delete]', async () => {
@@ -574,7 +607,7 @@ void describe('handlers/build/clean', () => {
                     logger: new Logger({ logLevel: 'error' })
                 });
 
-                const cleanedPaths = await runner.run();
+                const cleanResult = await runner.run();
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'README.md'),
                     path.resolve(runner.options.outDir, 'src/README.md'),
@@ -589,7 +622,10 @@ void describe('handlers/build/clean', () => {
                     assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
                 }
 
-                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
             });
         });
     });
