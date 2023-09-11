@@ -1,7 +1,7 @@
 {
   "$schema": "../../dist/schemas/schema.json",
   "projects": {
-    "hello-project": {
+    "test-project": {
       "root": ".",
       "tasks": {
         "hello": {

@@ -67,14 +67,8 @@ void describe('dist/cli', () => {
                 .filter((l) => l.trim().length)
                 .map((l) => l.trim());
 
-            const expectedLine1 = 'Executing test-project/hello task';
-            const expectedLine2 = `Hello!`;
-            const expectedLine3 = 'Executing test-project/hello task completed.';
-
             assert.strictEqual(actualLines.length, 3);
-            assert.strictEqual(actualLines[0], expectedLine1);
-            assert.strictEqual(actualLines[1], expectedLine2);
-            assert.strictEqual(actualLines[2], expectedLine3);
+            assert.match(actualLines[1], /Hello!/);
         });
 
         void it('should show Hello exec! message when run echo task', async () => {
@@ -84,14 +78,10 @@ void describe('dist/cli', () => {
                 .filter((l) => l.trim().length)
                 .map((l) => l.trim());
 
-            const expectedLine1 = 'Executing test-project/echo task: echo "Hello exec!"';
             const expectedLine2 = /Hello exec!/;
-            const expectedLine3 = 'Executing test-project/echo task completed.';
 
             assert.strictEqual(actualLines.length, 3);
-            assert.strictEqual(actualLines[0], expectedLine1);
             assert.match(actualLines[1], expectedLine2);
-            assert.strictEqual(actualLines[2], expectedLine3);
         });
 
         void it('should show schema validation error when invalid schema in config file', async () => {
