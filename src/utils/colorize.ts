@@ -28,14 +28,18 @@ function supportColor(): boolean {
 }
 
 const openTags: Record<string, string> = {
-    black: '\u001b[30m',
     red: '\u001b[31m',
     green: '\u001b[32m',
     yellow: '\u001b[33m',
     blue: '\u001b[34m',
     magenta: '\u001b[35m',
     cyan: '\u001b[36m',
-    white: '\u001b[37m'
+    lightRed: '\u001b[91m',
+    lightGreen: '\u001b[92m',
+    lightYellow: '\u001b[93m',
+    lightBlue: '\u001b[94m',
+    lightMagenta: '\u001b[95m',
+    lightCyan: '\u001b[96m'
 };
 
 const closeTag = '\u001b[39m';
@@ -62,12 +66,16 @@ function colorize(str: string, colorKey: string): string {
 }
 
 export const colors = {
-    black: (str: string) => colorize(str, 'black'),
     red: (str: string) => colorize(str, 'red'),
     green: (str: string) => colorize(str, 'green'),
     yellow: (str: string) => colorize(str, 'yellow'),
     blue: (str: string) => colorize(str, 'blue'),
     magenta: (str: string) => colorize(str, 'magenta'),
     cyan: (str: string) => colorize(str, 'cyan'),
-    white: (str: string) => colorize(str, 'whte')
+    lightRed: (str: string) => colorize(str, 'lightRed'),
+    lightGreen: (str: string) => colorize(str, 'lightGreen'),
+    lightYellow: (str: string) => colorize(str, 'lightYellow'),
+    lightBlue: (str: string) => colorize(str, 'lightBlue'),
+    lightMagenta: (str: string) => colorize(str, 'lightMagenta'),
+    lightCyan: (str: string) => colorize(str, 'lightCyan')
 };
