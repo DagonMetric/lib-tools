@@ -91,6 +91,8 @@ export class CopyTaskRunner {
             excludedPaths: []
         };
 
+        this.logStart();
+
         for (const copyEntry of this.options.copyEntries) {
             let normalizedFrom = normalizePathToPOSIXStyle(copyEntry.from);
 
@@ -257,6 +259,8 @@ export class CopyTaskRunner {
 
         await this.copy(copyResult.copiedFileInfoes);
 
+        this.logComplete(copyResult);
+
         return copyResult;
     }
 
@@ -272,6 +276,16 @@ export class CopyTaskRunner {
         }
 
         return false;
+    }
+
+    private logStart(): void {
+        this.logger.group('clean');
+        this.logger.info('Running copy task.');
+    }
+
+    private logComplete(result: CopyTaskResult): void {
+        this.logger.info(`Total ${result.copiedFileInfoes.length} files are copied.`);
+        this.logger.groupEnd();
     }
 
     private async copy(copyFileInfoes: CopyFileInfo[]): Promise<void> {

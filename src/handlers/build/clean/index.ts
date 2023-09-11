@@ -50,6 +50,8 @@ export class CleanTaskRunner {
     async run(): Promise<CleanTaskResult> {
         const outDir = this.options.outDir;
 
+        this.logStart();
+
         if (!(await pathExists(outDir))) {
             return {
                 cleanedPathInfoes: [],
@@ -142,6 +144,8 @@ export class CleanTaskRunner {
 
             cleanTaskResult.cleanedPathInfoes.push(cleanPathInfo);
         }
+
+        this.logComplete(cleanTaskResult);
 
         return cleanTaskResult;
     }
@@ -245,6 +249,27 @@ export class CleanTaskRunner {
         const cleanOptions = this.options.beforeOrAfterCleanOptions;
 
         return getAbsolutePathInfoes(cleanOptions.exclude ?? [], this.options.outDir);
+    }
+
+    private logStart(): void {
+        this.logger.group('clean');
+        const msg =
+            this.options.runFor === 'before' ? 'Running before build clean task.' : 'Running after build clean task.';
+        this.logger.info(msg);
+    }
+
+    private logComplete(result: CleanTaskResult): void {
+        const cleanedDirsCount = result.cleanedPathInfoes.filter((pathInfo) => pathInfo.isDirectory).length;
+        const cleanedFilesCount = result.cleanedPathInfoes.filter((pathInfo) => pathInfo.isFile).length;
+        const fileSuffix = cleanedFilesCount > 1 ? 'files' : 'file';
+        const dirSuffix = cleanedDirsCount > 1 ? 'directories' : 'directory';
+        let cleanMsg = `otal ${cleanedFilesCount} ${fileSuffix} and ${cleanedDirsCount} ${dirSuffix} cleaned`;
+        if (result.excludedPaths.length) {
+            cleanMsg += `, ${result.excludedPaths.length} excluded`;
+        }
+        cleanMsg += '.';
+        this.logger.info(cleanMsg);
+        this.logger.groupEnd();
     }
 
     private async delete(cleanPathInfo: AbsolutePathInfo): Promise<void> {
