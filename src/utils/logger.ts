@@ -1,8 +1,8 @@
 import { Console } from 'node:console';
-import { inspect } from 'node:util';
+// import { inspect } from 'node:util';
 
-inspect.styles.string = 'blueBright'; // Default: 'green'
-inspect.styles.symbol = 'blueBright'; // Default: 'green'
+// inspect.styles.string = 'blueBright'; // Default: 'green'
+// inspect.styles.symbol = 'blueBright'; // Default: 'green'
 
 export enum LogLevel {
     None = 0,
@@ -49,10 +49,7 @@ export class Logger implements LoggerBase {
         this._console = new Console({
             stdout: process.stdout,
             stderr: process.stderr,
-            groupIndentation: this.options.groupIndentation,
-            inspectOptions: {
-                colors: true
-            }
+            groupIndentation: this.options.groupIndentation
         });
     }
 
