@@ -4,7 +4,7 @@ import { Task } from '../task.js';
 
 export interface ParsedCommandOptions extends CommandOptions {
     readonly _projects: string[];
-    readonly _workspaceRoot: string | null;
+    readonly _workspaceRoot: string;
     readonly _configPath: string | null;
     readonly _env: Record<string, boolean>;
 
