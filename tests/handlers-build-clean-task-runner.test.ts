@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
@@ -589,31 +589,15 @@ void describe('handlers/build/clean', () => {
         });
 
         void describe('CleanTaskRunner:run [Actual Remove]', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-            const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
-            const dryRun = false;
+            void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
+                const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+                const tempOutDir = path.resolve(workspaceRoot, 'temp-out1');
+                const dryRun = false;
 
-            beforeEach(async () => {
                 await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
                     recursive: true
                 });
-            });
 
-            afterEach(async () => {
-                const tempOutDirExisted = await fs
-                    .access(tempOutDir)
-                    .then(() => true)
-                    .catch(() => false);
-
-                if (tempOutDirExisted) {
-                    await fs.rm(tempOutDir, {
-                        recursive: true,
-                        force: true
-                    });
-                }
-            });
-
-            void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
                 const workspaceInfo: WorkspaceInfo = {
                     workspaceRoot,
                     projectRoot: workspaceRoot,
@@ -646,9 +630,30 @@ void describe('handlers/build/clean', () => {
                     cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
                     expectedPaths.sort()
                 );
+
+                // after
+                const tempOutDirExisted = await fs
+                    .access(tempOutDir)
+                    .then(() => true)
+                    .catch(() => false);
+
+                if (tempOutDirExisted) {
+                    await fs.rm(tempOutDir, {
+                        recursive: true,
+                        force: true
+                    });
+                }
             });
 
             void it('should delete with after build clean options [Actual Delete]', async () => {
+                const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+                const tempOutDir = path.resolve(workspaceRoot, 'temp-out2');
+                const dryRun = false;
+
+                await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
+                    recursive: true
+                });
+
                 const workspaceInfo: WorkspaceInfo = {
                     workspaceRoot,
                     projectRoot: workspaceRoot,
@@ -687,6 +692,19 @@ void describe('handlers/build/clean', () => {
                     cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
                     expectedPaths.sort()
                 );
+
+                // after
+                const tempOutDirExisted = await fs
+                    .access(tempOutDir)
+                    .then(() => true)
+                    .catch(() => false);
+
+                if (tempOutDirExisted) {
+                    await fs.rm(tempOutDir, {
+                        recursive: true,
+                        force: true
+                    });
+                }
             });
         });
     });
