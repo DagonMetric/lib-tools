@@ -17,7 +17,7 @@ export interface Project {
     /**
      * Task configurations.
      */
-    tasks: {
+    tasks?: {
         [Property in keyof Record<string, CustomTask> as Exclude<Property, 'build'>]: CustomTask;
     } & {
         /**
