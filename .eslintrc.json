@@ -185,17 +185,6 @@
   "overrides": [
     { "files": ["*.ts", "*.mts", "*.cts", "*.mjs", "*.cjs"] },
     {
-      "files": ["src/utils/logger.*"],
-      "rules": {
-        "no-console": [
-          "error",
-          {
-            "allow": ["log", "warn", "error"]
-          }
-        ]
-      }
-    },
-    {
       "files": ["bin/*", "tools/*"],
       "rules": {
         "no-console": [
