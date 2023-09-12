@@ -4,8 +4,8 @@ import { Argv } from 'yargs';
 
 import { getTasks } from '../../config-helpers/index.js';
 import { CommandOptions } from '../../config-models/index.js';
-import { ParsedBuildTaskConfig } from '../../config-models/parsed/index.js';
-import { TaskHandlerFn } from '../../handlers/interfaces/index.js';
+import { ParsedBuildTaskConfig, ParsedCustomTaskConfig } from '../../config-models/parsed/index.js';
+import { CustomTaskHandlerFn } from '../../handlers/interfaces/index.js';
 import { Logger, colors, dashCaseToCamelCase, exec, resolvePath } from '../../utils/index.js';
 
 export const command = 'run <task> [options..]';
@@ -111,8 +111,33 @@ export async function run(argv: CommandOptions): Promise<void> {
     for (const task of tasks) {
         const taskPath = `${task._workspaceInfo.projectName ?? '0'}/${task._taskName}`;
 
-        if (task.handler?.trim().length) {
-            const handlerStr = task.handler?.trim();
+        if (task._taskName === 'build') {
+            const buildHandlerModule = await import('../../handlers/build/index.js');
+
+            logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
+            const start = Date.now();
+
+            await buildHandlerModule.default({
+                taskOptions: task as ParsedBuildTaskConfig,
+                logger,
+                logLevel,
+                dryRun
+            });
+
+            logger.groupEnd();
+            logger.info(
+                `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
+                    ` completed in ${Date.now() - start}ms.`
+                )}`
+            );
+        } else {
+            const customTask = task as ParsedCustomTaskConfig;
+            const handlerStr = customTask.handler?.trim();
+            if (!handlerStr) {
+                logger.warn(`No handler is defined for ${colors.lightBlue(taskPath)} task, skipping...`);
+                continue;
+            }
+
             if (handlerStr.toLocaleLowerCase().startsWith('exec:')) {
                 const index = handlerStr.indexOf(':') + 1;
                 if (handlerStr.length > index) {
@@ -140,14 +165,14 @@ export async function run(argv: CommandOptions): Promise<void> {
                 const handlerModule = (await import(pathToFileURL(handlerPath).toString())) as {};
 
                 const taskNameCamelCase = dashCaseToCamelCase(task._taskName);
-                let defaultTaskHander: TaskHandlerFn | null = null;
-                let nameTaskHander: TaskHandlerFn | null = null;
+                let defaultTaskHander: CustomTaskHandlerFn | null = null;
+                let nameTaskHander: CustomTaskHandlerFn | null = null;
 
                 for (const [key, value] of Object.entries(handlerModule)) {
-                    if (key === 'default') {
-                        defaultTaskHander = value as TaskHandlerFn;
-                    } else if (key === taskNameCamelCase) {
-                        nameTaskHander = value as TaskHandlerFn;
+                    if (key === 'default' && typeof value === 'function') {
+                        defaultTaskHander = value as CustomTaskHandlerFn;
+                    } else if (key === taskNameCamelCase && typeof value === 'function') {
+                        nameTaskHander = value as CustomTaskHandlerFn;
                         break;
                     }
                 }
@@ -162,11 +187,12 @@ export async function run(argv: CommandOptions): Promise<void> {
                 const start = Date.now();
 
                 const result = taskHandlerFn({
-                    taskOptions: task,
+                    taskOptions: customTask,
                     logger,
                     logLevel,
                     dryRun
                 });
+
                 if (result && result instanceof Promise) {
                     await result;
                 }
@@ -178,28 +204,6 @@ export async function run(argv: CommandOptions): Promise<void> {
                     )}`
                 );
             }
-        } else if (task._taskName === 'build') {
-            const buildHandlerModule = await import('../../handlers/build/index.js');
-
-            logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
-            const start = Date.now();
-
-            await buildHandlerModule.default({
-                taskOptions: task as ParsedBuildTaskConfig,
-                logger,
-                logLevel,
-                dryRun
-            });
-
-            logger.groupEnd();
-            logger.info(
-                `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
-                    ` completed in ${Date.now() - start}ms.`
-                )}`
-            );
-        } else {
-            logger.warn(`No handler is defined for ${colors.lightBlue(taskPath)} task, skipping...`);
-            continue;
         }
     }
 }
