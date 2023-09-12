@@ -16,13 +16,13 @@ export interface ParsedCommandOptions extends CommandOptions {
 }
 
 export interface PackageJsonInfo {
-    readonly packageJson: Record<string, unknown>;
+    readonly packageJson: { [key: string]: unknown; name?: string; version?: string };
     readonly packageJsonPath: string;
     readonly packageName: string;
     readonly packageNameWithoutScope: string;
     readonly packageScope: string | null;
     readonly isNestedPackage: boolean;
-    readonly packageVersion: string | null;
+    readonly rootPackageVersion: string | null;
 }
 
 export interface WorkspaceInfo {
