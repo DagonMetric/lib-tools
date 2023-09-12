@@ -10,15 +10,7 @@ import {
     WorkspaceInfo
 } from '../config-models/parsed/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
-import {
-    findUp,
-    isInFolder,
-    isSamePaths,
-    normalizePathToPOSIXStyle,
-    pathExists,
-    readJsonWithComments,
-    resolvePath
-} from '../utils/index.js';
+import { findUp, isInFolder, isSamePaths, pathExists, readJsonWithComments, resolvePath } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
@@ -99,17 +91,12 @@ async function getPackageJsonInfo(workspaceInfo: {
     };
 }
 
-function getBuildTaskFromCmdOptions(
-    cmdOptions: ParsedCommandOptions,
-    buildTask: BuildTask,
-    projectRoot: string | null | undefined
-): boolean {
+function getBuildTaskFromCmdOptions(cmdOptions: ParsedCommandOptions, buildTask: BuildTask): boolean {
     let merged = false;
 
     // outDir
-    if (cmdOptions._outDir) {
-        const root = projectRoot ?? cmdOptions._workspaceRoot ?? process.cwd();
-        buildTask.outDir = normalizePathToPOSIXStyle(path.relative(root, cmdOptions._outDir));
+    if (cmdOptions.outDir) {
+        // outDir assign is already done in toParsedBuildTask
         merged = true;
     }
 
@@ -231,15 +218,17 @@ export function toParsedBuildTask(
     buildTask: BuildTask,
     workspaceInfo: WorkspaceInfo,
     packageJsonInfo: PackageJsonInfo | null,
-    cmdOptionsOutDirAbs: string | null
+    cmdOptions: { outDir?: string }
 ): ParsedBuildTaskConfig {
     const projectRoot = workspaceInfo.projectRoot;
 
-    const outDir = buildTask.outDir?.trim().length
-        ? resolvePath(projectRoot, buildTask.outDir)
-        : cmdOptionsOutDirAbs
-        ? cmdOptionsOutDirAbs
-        : path.resolve(projectRoot, 'dist');
+    let outDir = path.resolve(projectRoot, 'dist');
+    if (cmdOptions.outDir) {
+        buildTask.outDir = cmdOptions.outDir;
+        outDir = resolvePath(projectRoot, cmdOptions.outDir);
+    } else if (buildTask.outDir?.trim().length) {
+        outDir = resolvePath(projectRoot, buildTask.outDir);
+    }
 
     const parsedBuildTask: ParsedBuildTaskConfig = {
         _taskName: 'build',
@@ -254,14 +243,14 @@ export function toParsedBuildTask(
     return parsedBuildTask;
 }
 
-export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Promise<ParsedTaskConfig[]> {
+export async function getTasks(cmdOptions: CommandOptions, taskName: string): Promise<ParsedTaskConfig[]> {
     const parsedCmdOptions = await getParsedCommandOptions(cmdOptions);
 
     let configPath = parsedCmdOptions._configPath;
     if (!configPath) {
         let tempConfigPath: string | null = null;
 
-        if (parsedCmdOptions._workspaceRoot) {
+        if (parsedCmdOptions.workspace) {
             const testPath = path.resolve(parsedCmdOptions._workspaceRoot, 'libconfig.json');
             if (await pathExists(testPath)) {
                 tempConfigPath = testPath;
@@ -278,11 +267,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         }
     }
 
-    const workspaceRoot = configPath
-        ? path.dirname(configPath)
-        : parsedCmdOptions._workspaceRoot
-        ? parsedCmdOptions._workspaceRoot
-        : process.cwd();
+    const workspaceRoot = configPath ? path.dirname(configPath) : parsedCmdOptions._workspaceRoot;
     const nodeModulePath = await findUp('node_modules', workspaceRoot, path.parse(workspaceRoot).root);
 
     const tasks: ParsedTaskConfig[] = [];
@@ -320,8 +305,8 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 continue;
             }
 
-            for (const [taskName, task] of Object.entries(project.tasks)) {
-                if (task == null || !Object.keys(task).length || (forTask && forTask !== taskName)) {
+            for (const [currentTaskName, task] of Object.entries(project.tasks)) {
+                if (task == null || !Object.keys(task).length || taskName !== currentTaskName) {
                     continue;
                 }
 
@@ -331,7 +316,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                     continue;
                 }
 
-                if (taskName === 'build') {
+                if (currentTaskName === 'build') {
                     const buildTask = task as BuildTask;
 
                     const packageJsonInfo = await getPackageJsonInfo(workspaceInfo);
@@ -339,14 +324,14 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                         buildTask,
                         workspaceInfo,
                         packageJsonInfo,
-                        parsedCmdOptions._outDir
+                        parsedCmdOptions._outDir && parsedCmdOptions.outDir ? { outDir: parsedCmdOptions.outDir } : {}
                     );
 
                     tasks.push(parsedBuildTask);
                 } else {
                     const parsedTask = {
                         ...task,
-                        _taskName: taskName,
+                        _taskName: currentTaskName,
                         _workspaceInfo: workspaceInfo
                     };
                     tasks.push(parsedTask);
@@ -355,15 +340,11 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         }
     }
 
-    if (!forTask || forTask === 'build') {
+    if (taskName === 'build') {
         const foundBuildTask = tasks.find((t) => t._taskName === 'build' && !t.skip);
         const buildTask = foundBuildTask ?? ({} as BuildTask);
 
-        const hasBuildTask = getBuildTaskFromCmdOptions(
-            parsedCmdOptions,
-            buildTask,
-            foundBuildTask?._workspaceInfo?.projectRoot
-        );
+        const hasBuildTask = getBuildTaskFromCmdOptions(parsedCmdOptions, buildTask);
 
         if (hasBuildTask && !foundBuildTask) {
             const workspaceInfo: WorkspaceInfo = {
@@ -380,7 +361,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 buildTask,
                 workspaceInfo,
                 packageJsonInfo,
-                parsedCmdOptions._outDir
+                parsedCmdOptions._outDir && parsedCmdOptions.outDir ? { outDir: parsedCmdOptions.outDir } : {}
             );
 
             tasks.push(parsedBuildTask);
