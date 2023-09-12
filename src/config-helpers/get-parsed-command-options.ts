@@ -1,5 +1,6 @@
 import { glob } from 'glob';
 
+import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { CommandOptions } from '../config-models/index.js';
@@ -45,11 +46,21 @@ async function checkPaths(
 }
 
 async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): Promise<void> {
-    if (cmdOptions._configPath && !(await pathExists(cmdOptions._configPath))) {
-        throw new InvalidCommandOptionError(
-            `The workspace config file doesn't exist.`,
-            `workspace=${cmdOptions.workspace}`
-        );
+    if (cmdOptions._configPath) {
+        if (!(await pathExists(cmdOptions._configPath))) {
+            throw new InvalidCommandOptionError(
+                `The workspace config file doesn't exist.`,
+                `workspace=${cmdOptions.workspace}`
+            );
+        } else {
+            const configFileStats = await fs.stat(cmdOptions._configPath);
+            if (!configFileStats.isFile()) {
+                throw new InvalidCommandOptionError(
+                    `Config path ${cmdOptions._configPath} must be a file.`,
+                    `workspace=${cmdOptions.workspace}`
+                );
+            }
+        }
     }
 
     if (cmdOptions._workspaceRoot) {
@@ -70,12 +81,16 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
             );
         }
 
-        if (
-            isInFolder(outDir, process.cwd()) ||
-            (cmdOptions._workspaceRoot && isInFolder(outDir, cmdOptions._workspaceRoot))
-        ) {
+        if (isInFolder(outDir, process.cwd())) {
             throw new InvalidCommandOptionError(
                 `The outDir must not be parent directory of current working directory.`,
+                `outDir=${cmdOptions.outDir}`
+            );
+        }
+
+        if (cmdOptions._workspaceRoot && isInFolder(outDir, cmdOptions._workspaceRoot)) {
+            throw new InvalidCommandOptionError(
+                `The outDir must not be parent directory of workspace directory.`,
                 `outDir=${cmdOptions.outDir}`
             );
         }
@@ -111,14 +126,6 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
 export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promise<ParsedCommandOptions> {
     let workspaceRoot: string | null = null;
     let configPath: string | null = null;
-
-    const projects =
-        cmdOptions.project
-            ?.split(',')
-            .filter((projectName) => projectName && projectName.trim().length > 0)
-            .map((projectName) => projectName.trim())
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
     if (cmdOptions.workspace?.trim().length) {
         const pathAbs = resolvePath(process.cwd(), cmdOptions.workspace);
 
@@ -129,6 +136,13 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
             workspaceRoot = pathAbs;
         }
     }
+
+    const projects =
+        cmdOptions.project
+            ?.split(',')
+            .filter((projectName) => projectName && projectName.trim().length > 0)
+            .map((projectName) => projectName.trim())
+            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
 
     const env =
         cmdOptions.env
@@ -146,6 +160,8 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
                 {} as Record<string, boolean>
             ) ?? {};
 
+    // For build task
+    //
     const outDir = cmdOptions.outDir?.trim().length
         ? resolvePath(workspaceRoot ?? process.cwd(), cmdOptions.outDir)
         : null;

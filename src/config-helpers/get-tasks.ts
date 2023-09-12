@@ -10,7 +10,15 @@ import {
     WorkspaceInfo
 } from '../config-models/parsed/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
-import { findUp, isInFolder, isSamePaths, pathExists, resolvePath } from '../utils/index.js';
+import {
+    findUp,
+    isInFolder,
+    isSamePaths,
+    normalizePathToPOSIXStyle,
+    pathExists,
+    readJsonWithComments,
+    resolvePath
+} from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
@@ -24,17 +32,16 @@ async function readPackageJsonFile(packageJsonPath: string): Promise<Record<stri
         return cachedPackageJson;
     }
 
-    const content = await fs.readFile(packageJsonPath, { encoding: 'utf8' });
-    const packageJson = JSON.parse(content) as Record<string, unknown>;
+    const packageJson = (await readJsonWithComments(packageJsonPath)) as Record<string, unknown>;
     packageJsonCache.set(packageJsonPath, packageJson);
 
     return packageJson;
 }
 
-async function getPackageJsonInfo(
-    workspaceInfo: { projectRoot: string; workspaceRoot: string },
-    packageVersionToOverride: string | null | undefined
-): Promise<PackageJsonInfo | null> {
+async function getPackageJsonInfo(workspaceInfo: {
+    projectRoot: string;
+    workspaceRoot: string;
+}): Promise<PackageJsonInfo | null> {
     const { projectRoot, workspaceRoot } = workspaceInfo;
 
     const packageJsonPath = await findUp('package.json', projectRoot, workspaceRoot);
@@ -62,36 +69,23 @@ async function getPackageJsonInfo(
         packageNameWithoutScope = packageName.substring(slashIndex + 1);
     }
 
-    let rootPackageJson: Record<string, unknown> | null = null;
-
-    if (!isSamePaths(path.dirname(packageJsonPath), workspaceRoot) && isInFolder(workspaceRoot, packageJsonPath)) {
-        const rootPackageJsonPath = await findUp('package.json', null, workspaceRoot);
-        rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : null;
-    }
-
-    let packageVersion: string | null = null;
-    if (packageVersionToOverride) {
-        packageVersion = packageVersionToOverride;
-    } else {
-        if (
-            rootPackageJson?.version &&
-            rootPackageJson.version !== '0.0.0' &&
-            rootPackageJson.version !== '[PLACEHOLDER]' &&
-            !/0\.0\.0-PLACEHOLDER/i.test(rootPackageJson.version as string) &&
-            (!packageJson.version ||
-                packageJson.version === '0.0.0' ||
-                packageJson.version === '[PLACEHOLDER]' ||
-                (packageJson.version && /0\.0\.0-PLACEHOLDER/i.test(packageJson.version as string)))
-        ) {
-            packageVersion = rootPackageJson.version as string;
-        } else if (packageJson?.version) {
-            packageVersion = packageJson.version as string;
-        }
-    }
-
     let isNestedPackage = false;
     if (packageName.split('/').length > 2 || (!packageName.startsWith('@') && packageName.split('/').length >= 2)) {
         isNestedPackage = true;
+    }
+
+    let rootPackageVersion: string | null = null;
+    if (!isSamePaths(path.dirname(packageJsonPath), workspaceRoot) && isInFolder(workspaceRoot, packageJsonPath)) {
+        const rootPackageJsonPath = await findUp('package.json', null, workspaceRoot);
+        const rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : null;
+        if (
+            typeof rootPackageJson?.version === 'string' &&
+            rootPackageJson.version !== '0.0.0' &&
+            rootPackageJson.version !== '[PLACEHOLDER]' &&
+            !/0\.0\.0-PLACEHOLDER/i.test(rootPackageJson.version)
+        ) {
+            rootPackageVersion = rootPackageJson.version;
+        }
     }
 
     return {
@@ -100,22 +94,24 @@ async function getPackageJsonInfo(
         packageName,
         packageNameWithoutScope,
         packageScope,
-        packageVersion,
-        isNestedPackage
+        isNestedPackage,
+        rootPackageVersion
     };
 }
 
-function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buildTask: BuildTask): boolean {
-    if (
-        !cmdOptions.clean &&
-        !cmdOptions._copyEntries?.length &&
-        !cmdOptions._styleEntries?.length &&
-        !cmdOptions._scriptEntries?.length
-    ) {
-        return false;
-    }
-
+function getBuildTaskFromCmdOptions(
+    cmdOptions: ParsedCommandOptions,
+    buildTask: BuildTask,
+    projectRoot: string | null | undefined
+): boolean {
     let merged = false;
+
+    // outDir
+    if (cmdOptions._outDir) {
+        const root = projectRoot ?? cmdOptions._workspaceRoot ?? process.cwd();
+        buildTask.outDir = normalizePathToPOSIXStyle(path.relative(root, cmdOptions._outDir));
+        merged = true;
+    }
 
     // clean
     if (cmdOptions.clean != null) {
@@ -185,11 +181,11 @@ function mergeBuildTaskFromCommandOptions(cmdOptions: ParsedCommandOptions, buil
             buildTask.packageJson = {
                 packageVersion: cmdOptions.packageVersion
             };
-            merged = true;
-        } else if (!buildTask.packageJson.packageVersion) {
+        } else {
             buildTask.packageJson.packageVersion = cmdOptions.packageVersion;
-            merged = true;
         }
+
+        merged = true;
     }
 
     return merged;
@@ -263,13 +259,22 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
 
     let configPath = parsedCmdOptions._configPath;
     if (!configPath) {
+        let tempConfigPath: string | null = null;
+
         if (parsedCmdOptions._workspaceRoot) {
             const testPath = path.resolve(parsedCmdOptions._workspaceRoot, 'libconfig.json');
             if (await pathExists(testPath)) {
-                configPath = testPath;
+                tempConfigPath = testPath;
             }
         } else {
-            configPath = await findUp('libconfig.json', process.cwd(), path.parse(process.cwd()).root);
+            tempConfigPath = await findUp('libconfig.json', process.cwd(), path.parse(process.cwd()).root);
+        }
+
+        if (tempConfigPath) {
+            const configStats = await fs.stat(tempConfigPath);
+            if (configStats.isFile()) {
+                configPath = tempConfigPath;
+            }
         }
     }
 
@@ -289,11 +294,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
         for (const [projectName, project] of Object.entries(libConfig.projects)) {
             applyProjectExtends(projectName, project, libConfig.projects, configPath);
 
-            const projectRoot = project.root
-                ? path.isAbsolute(project.root)
-                    ? path.resolve(project.root)
-                    : path.resolve(workspaceRoot, project.root)
-                : workspaceRoot;
+            const projectRoot = project.root ? resolvePath(workspaceRoot, project.root) : workspaceRoot;
 
             if (!isSamePaths(workspaceRoot, projectRoot) && !isInFolder(workspaceRoot, projectRoot)) {
                 throw new InvalidConfigError(
@@ -320,11 +321,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
             }
 
             for (const [taskName, task] of Object.entries(project.tasks)) {
-                if (forTask && forTask !== taskName) {
-                    continue;
-                }
-
-                if (task == null || !Object.keys(task).length) {
+                if (task == null || !Object.keys(task).length || (forTask && forTask !== taskName)) {
                     continue;
                 }
 
@@ -337,14 +334,7 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 if (taskName === 'build') {
                     const buildTask = task as BuildTask;
 
-                    const packageVersion =
-                        buildTask.packageJson &&
-                        typeof buildTask.packageJson === 'object' &&
-                        buildTask.packageJson.packageVersion
-                            ? buildTask.packageJson.packageVersion
-                            : parsedCmdOptions.packageVersion;
-
-                    const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, packageVersion);
+                    const packageJsonInfo = await getPackageJsonInfo(workspaceInfo);
                     const parsedBuildTask = toParsedBuildTask(
                         buildTask,
                         workspaceInfo,
@@ -366,11 +356,16 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
     }
 
     if (!forTask || forTask === 'build') {
-        const buildTasks = tasks.filter((t) => t._taskName === 'build');
-        const firstBuildTask = buildTasks.length ? (buildTasks[0] as ParsedBuildTaskConfig) : {};
-        const hasCommandOptionsBuildTask = mergeBuildTaskFromCommandOptions(parsedCmdOptions, firstBuildTask);
+        const foundBuildTask = tasks.find((t) => t._taskName === 'build' && !t.skip);
+        const buildTask = foundBuildTask ?? ({} as BuildTask);
 
-        if (hasCommandOptionsBuildTask && !buildTasks.length) {
+        const hasBuildTask = getBuildTaskFromCmdOptions(
+            parsedCmdOptions,
+            buildTask,
+            foundBuildTask?._workspaceInfo?.projectRoot
+        );
+
+        if (hasBuildTask && !foundBuildTask) {
             const workspaceInfo: WorkspaceInfo = {
                 workspaceRoot,
                 projectRoot: workspaceRoot,
@@ -379,10 +374,10 @@ export async function getTasks(cmdOptions: CommandOptions, forTask?: string): Pr
                 nodeModulePath
             };
 
-            const packageJsonInfo = await getPackageJsonInfo(workspaceInfo, parsedCmdOptions.packageVersion);
+            const packageJsonInfo = await getPackageJsonInfo(workspaceInfo);
 
             const parsedBuildTask = toParsedBuildTask(
-                firstBuildTask,
+                buildTask,
                 workspaceInfo,
                 packageJsonInfo,
                 parsedCmdOptions._outDir
