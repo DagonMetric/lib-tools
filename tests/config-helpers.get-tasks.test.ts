@@ -3,24 +3,29 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { getTasks, toParsedBuildTask, validateOutDir } from '../src/config-helpers/get-tasks.js';
-import { BuildTask } from '../src/config-models/index.js';
+import { BuildTask, CommandOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 
 void describe('config-helpers/get-tasks', () => {
     void describe('getTasks', () => {
         void it('should return tasks from libconfig.json file', async () => {
-            const result = await getTasks({
-                workspace: './tests/test-data/parsing/withconfig'
-            });
+            const workspaceRel = './tests/test-data/parsing/withconfig';
+
+            const result = await getTasks(
+                {
+                    workspace: workspaceRel
+                },
+                'build'
+            );
 
             const expected: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: {
-                    workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig'),
-                    projectRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/packages/package-1'),
+                    workspaceRoot: path.resolve(process.cwd(), workspaceRel),
+                    projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
                     projectName: 'project-1',
-                    configPath: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/libconfig.json'),
+                    configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
                     nodeModulePath: path.resolve(process.cwd(), 'node_modules')
                 },
                 _packageJsonInfo: {
@@ -28,17 +33,14 @@ void describe('config-helpers/get-tasks', () => {
                         name: '@scope/package-1',
                         version: '0.0.0'
                     },
-                    packageJsonPath: path.resolve(
-                        process.cwd(),
-                        './tests/test-data/parsing/withconfig/packages/package-1/package.json'
-                    ),
+                    packageJsonPath: path.resolve(process.cwd(), workspaceRel, './packages/package-1/package.json'),
                     packageName: '@scope/package-1',
                     packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
                     isNestedPackage: false,
                     rootPackageVersion: '1.0.0'
                 },
-                _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/packages/package-1/dist'),
+                _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
                 clean: false
             };
 
@@ -46,69 +48,59 @@ void describe('config-helpers/get-tasks', () => {
             assert.deepStrictEqual(result[0], expected);
         });
 
-        // void it('should return build task from command options', async () => {
-        //     const cmdOptions: CommandOptions = {
-        //         workspace: './tests/test-data/parsing',
-        //         outDir: 'dist',
-        //         env: 'prod ,ci',
-        //         project: 'a,b , c',
-        //         copy: '**/*.js, README.md',
-        //         clean: true,
-        //         style: 'style.scss , style.scss',
-        //         script: 'index.ts, index.ts',
-        //         packageVersion: '2.0.0',
-        //         logLevel: 'info',
-        //         dryRun: true
-        //     };
+        void it('should return tasks from command options with config file', async () => {
+            const workspaceRel = './tests/test-data/parsing/withconfig';
+            const cmdOptions: CommandOptions = {
+                workspace: workspaceRel,
 
-        //     const result = await getTasks(
-        //         cmdOptions ? { workspace: './tests/test-data/parsing' } : cmdOptions
-        //     );
+                env: 'prod, ci',
+                // project: 'project-1',
 
-        //     const expected: ParsedBuildTaskConfig = {
-        //         _taskName: 'build',
-        //         _workspaceInfo: {
-        //             workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing'),
-        //             projectRoot: path.resolve(
-        //                 process.cwd(),
-        //                 './tests/test-data/parsing/packages/package-1'
-        //             ),
-        //             projectName: 'project-1',
-        //             configPath: path.resolve(process.cwd(), './tests/test-data/parsing/libconfig.json'),
-        //             nodeModulePath: path.resolve(process.cwd(), 'node_modules')
-        //         },
-        //         _packageJsonInfo: {
-        //             packageJson: {
-        //                 name: '@scope/package-1',
-        //                 version: '0.0.0'
-        //             },
-        //             packageJsonPath: path.resolve(
-        //                 process.cwd(),
-        //                 './tests/test-data/parsing/packages/package-1/package.json'
-        //             ),
-        //             packageName: '@scope/package-1',
-        //             packageNameWithoutScope: 'package-1',
-        //             packageScope: '@scope',
-        //             isNestedPackage: false,
-        //             rootPackageVersion: '1.0.0'
-        //         },
-        //         _outDir: path.resolve(
-        //             process.cwd(),
-        //             './tests/test-data/parsing/packages/package-1/dist'
-        //         ),
-        //         outDir: 'dist',
-        //         clean: true,
-        //         copy: ['**/*.js', 'README.md'],
-        //         style: ['style.scss'],
-        //         script: ['index.ts'],
-        //         packageJson: {
-        //             packageVersion: '2.0.0'
-        //         }
-        //     };
+                outDir: 'dist',
+                copy: '**/*.js, README.md',
+                clean: true,
+                style: 'style.scss , style.scss',
+                script: 'index.ts, index.ts',
+                packageVersion: '2.0.0'
+            };
 
-        //     assert.equal(result.length, 1);
-        //     assert.deepStrictEqual(result[0], expected);
-        // });
+            const result = await getTasks(cmdOptions, 'build');
+
+            const expected: ParsedBuildTaskConfig = {
+                _taskName: 'build',
+                _workspaceInfo: {
+                    workspaceRoot: path.resolve(process.cwd(), workspaceRel),
+                    projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
+                    projectName: 'project-1',
+                    configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
+                    nodeModulePath: path.resolve(process.cwd(), 'node_modules')
+                },
+                _packageJsonInfo: {
+                    packageJson: {
+                        name: '@scope/package-1',
+                        version: '0.0.0'
+                    },
+                    packageJsonPath: path.resolve(process.cwd(), workspaceRel, './packages/package-1/package.json'),
+                    packageName: '@scope/package-1',
+                    packageNameWithoutScope: 'package-1',
+                    packageScope: '@scope',
+                    isNestedPackage: false,
+                    rootPackageVersion: '1.0.0'
+                },
+                _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
+                outDir: 'dist',
+                clean: true,
+                copy: ['**/*.js', 'README.md'],
+                style: ['style.scss'],
+                script: ['index.ts'],
+                packageJson: {
+                    packageVersion: '2.0.0'
+                }
+            };
+
+            assert.equal(result.length, 1);
+            assert.deepStrictEqual(result[0], expected);
+        });
     });
 
     void describe('toParsedBuildTask', () => {
@@ -127,7 +119,7 @@ void describe('config-helpers/get-tasks', () => {
                 nodeModulePath: null
             };
 
-            const result = toParsedBuildTask(buildTask, workspaceInfo, null, null);
+            const result = toParsedBuildTask(buildTask, workspaceInfo, null, {});
 
             const expected: ParsedBuildTaskConfig = {
                 ...buildTask,
@@ -154,16 +146,14 @@ void describe('config-helpers/get-tasks', () => {
                 nodeModulePath: null
             };
 
-            const cmdOptionsOutDir = path.resolve(process.cwd(), 'dist');
-
-            const result = toParsedBuildTask(buildTask, workspaceInfo, null, cmdOptionsOutDir);
+            const result = toParsedBuildTask(buildTask, workspaceInfo, null, { outDir: 'dist' });
 
             const expected: ParsedBuildTaskConfig = {
                 ...buildTask,
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
-                _outDir: cmdOptionsOutDir
+                _outDir: path.resolve(process.cwd(), 'dist')
             };
 
             assert.deepStrictEqual(result, expected);
