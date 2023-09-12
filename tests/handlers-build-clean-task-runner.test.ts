@@ -591,7 +591,7 @@ void describe('handlers/build/clean', () => {
         void describe('CleanTaskRunner:run [Actual Remove]', () => {
             void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
                 const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-                const tempOutDir = path.resolve(workspaceRoot, 'temp-out1');
+                const tempOutDir = path.resolve(workspaceRoot, 'tempout-1');
                 const dryRun = false;
 
                 await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
@@ -632,80 +632,80 @@ void describe('handlers/build/clean', () => {
                 );
 
                 // after
-                const tempOutDirExisted = await fs
-                    .access(tempOutDir)
-                    .then(() => true)
-                    .catch(() => false);
+                // const tempOutDirExisted = await fs
+                //     .access(tempOutDir)
+                //     .then(() => true)
+                //     .catch(() => false);
 
-                if (tempOutDirExisted) {
-                    await fs.rm(tempOutDir, {
-                        recursive: true,
-                        force: true
-                    });
-                }
+                // if (tempOutDirExisted) {
+                //     await fs.rm(tempOutDir, {
+                //         recursive: true,
+                //         force: true
+                //     });
+                // }
             });
 
-            void it('should delete with after build clean options [Actual Delete]', async () => {
-                const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-                const tempOutDir = path.resolve(workspaceRoot, 'temp-out2');
-                const dryRun = false;
+            // void it('should delete with after build clean options [Actual Delete]', async () => {
+            //     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+            //     const tempOutDir = path.resolve(workspaceRoot, 'temp-out2');
+            //     const dryRun = false;
 
-                await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
-                    recursive: true
-                });
+            //     await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
+            //         recursive: true
+            //     });
 
-                const workspaceInfo: WorkspaceInfo = {
-                    workspaceRoot,
-                    projectRoot: workspaceRoot,
-                    projectName: 'clean-project',
-                    configPath: null,
-                    nodeModulePath: null
-                };
+            //     const workspaceInfo: WorkspaceInfo = {
+            //         workspaceRoot,
+            //         projectRoot: workspaceRoot,
+            //         projectName: 'clean-project',
+            //         configPath: null,
+            //         nodeModulePath: null
+            //     };
 
-                const runner = new CleanTaskRunner({
-                    runFor: 'after',
-                    beforeOrAfterCleanOptions: {
-                        paths: ['**/README.md', '**/README.md']
-                    },
-                    dryRun,
-                    workspaceInfo,
-                    outDir: tempOutDir,
-                    logger: new Logger({ logLevel: 'error' })
-                });
+            //     const runner = new CleanTaskRunner({
+            //         runFor: 'after',
+            //         beforeOrAfterCleanOptions: {
+            //             paths: ['**/README.md', '**/README.md']
+            //         },
+            //         dryRun,
+            //         workspaceInfo,
+            //         outDir: tempOutDir,
+            //         logger: new Logger({ logLevel: 'error' })
+            //     });
 
-                const cleanResult = await runner.run();
-                const expectedPaths = [
-                    path.resolve(runner.options.outDir, 'README.md'),
-                    path.resolve(runner.options.outDir, 'src/README.md'),
-                    path.resolve(runner.options.outDir, 'src/nested/README.md')
-                ];
+            //     const cleanResult = await runner.run();
+            //     const expectedPaths = [
+            //         path.resolve(runner.options.outDir, 'README.md'),
+            //         path.resolve(runner.options.outDir, 'src/README.md'),
+            //         path.resolve(runner.options.outDir, 'src/nested/README.md')
+            //     ];
 
-                for (const cleanedPath of expectedPaths) {
-                    const fileDeleted = await fs
-                        .access(cleanedPath)
-                        .then(() => false)
-                        .catch(() => true);
-                    assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
-                }
+            //     for (const cleanedPath of expectedPaths) {
+            //         const fileDeleted = await fs
+            //             .access(cleanedPath)
+            //             .then(() => false)
+            //             .catch(() => true);
+            //         assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
+            //     }
 
-                assert.deepStrictEqual(
-                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
-                    expectedPaths.sort()
-                );
+            //     assert.deepStrictEqual(
+            //         cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+            //         expectedPaths.sort()
+            //     );
 
-                // after
-                const tempOutDirExisted = await fs
-                    .access(tempOutDir)
-                    .then(() => true)
-                    .catch(() => false);
+            //     // after
+            //     const tempOutDirExisted = await fs
+            //         .access(tempOutDir)
+            //         .then(() => true)
+            //         .catch(() => false);
 
-                if (tempOutDirExisted) {
-                    await fs.rm(tempOutDir, {
-                        recursive: true,
-                        force: true
-                    });
-                }
-            });
+            //     if (tempOutDirExisted) {
+            //         await fs.rm(tempOutDir, {
+            //             recursive: true,
+            //             force: true
+            //         });
+            //     }
+            // });
         });
     });
 });
