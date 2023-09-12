@@ -588,15 +588,8 @@ void describe('handlers/build/clean', () => {
             });
         });
 
-        void describe('CleanTaskRunner:run [Actual Remove]', { skip: process.platform !== 'win32' }, () => {
+        void describe('CleanTaskRunner:run [Actual Remove]', () => {
             const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null,
-                nodeModulePath: null
-            };
             const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
             const dryRun = false;
 
@@ -621,15 +614,21 @@ void describe('handlers/build/clean', () => {
             });
 
             void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
+                const workspaceInfo: WorkspaceInfo = {
+                    workspaceRoot,
+                    projectRoot: workspaceRoot,
+                    projectName: 'clean-project',
+                    configPath: null,
+                    nodeModulePath: null
+                };
+
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
                         cleanOutDir: true
                     },
                     dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
-                    },
+                    workspaceInfo,
                     outDir: tempOutDir,
                     logger: new Logger({ logLevel: 'error' })
                 });
@@ -650,15 +649,21 @@ void describe('handlers/build/clean', () => {
             });
 
             void it('should delete with after build clean options [Actual Delete]', async () => {
+                const workspaceInfo: WorkspaceInfo = {
+                    workspaceRoot,
+                    projectRoot: workspaceRoot,
+                    projectName: 'clean-project',
+                    configPath: null,
+                    nodeModulePath: null
+                };
+
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
                         paths: ['**/README.md', '**/README.md']
                     },
                     dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
-                    },
+                    workspaceInfo,
                     outDir: tempOutDir,
                     logger: new Logger({ logLevel: 'error' })
                 });
