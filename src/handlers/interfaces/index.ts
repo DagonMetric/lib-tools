@@ -1,4 +1,4 @@
-import { ParsedBuildTaskConfig, ParsedTaskConfig } from '../../config-models/parsed/index.js';
+import { ParsedBuildTaskConfig, ParsedCustomTaskConfig, ParsedTaskConfig } from '../../config-models/parsed/index.js';
 import { LogLevelString, Logger } from '../../utils/index.js';
 
 export interface TaskHandleContext {
@@ -12,4 +12,8 @@ export interface BuildTaskHandleContext extends TaskHandleContext {
     readonly taskOptions: ParsedBuildTaskConfig;
 }
 
-export type TaskHandlerFn = (context: TaskHandleContext) => Promise<void> | void;
+export interface CustomTaskHandleContext extends TaskHandleContext {
+    readonly taskOptions: ParsedCustomTaskConfig;
+}
+
+export type CustomTaskHandlerFn = (context: CustomTaskHandleContext) => Promise<void> | void;
