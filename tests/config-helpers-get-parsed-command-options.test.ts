@@ -10,6 +10,32 @@ import { InvalidCommandOptionError } from '../src/exceptions/index.js';
 
 void describe('config-helpers/get-parsed-command-options', () => {
     void describe('getParsedCommandOptions', () => {
+        void it('should parse command options without any file args', async () => {
+            const cmdOptions: CommandOptions = {
+                env: 'prod ,ci',
+                project: 'a,b , c',
+                packageVersion: '1.0.0',
+                logLevel: 'info',
+                dryRun: true
+            };
+
+            const result = await getParsedCommandOptions(cmdOptions);
+
+            const expected: ParsedCommandOptions = {
+                ...cmdOptions,
+                _configPath: null,
+                _workspaceRoot: process.cwd(),
+                _outDir: null,
+                _env: { prod: true, ci: true },
+                _projects: ['a', 'b', 'c'],
+                _copyEntries: [],
+                _styleEntries: [],
+                _scriptEntries: []
+            };
+
+            assert.deepStrictEqual(result, expected);
+        });
+
         void it('should parse command options without config file', async () => {
             const cmdOptions: CommandOptions = {
                 workspace: './tests/test-data/parsing/withoutconfig',
