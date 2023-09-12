@@ -30,17 +30,33 @@ function applyProjectExtendsInternal(
         applyProjectExtendsInternal(projectName, baseProject, projectCollection, prevExtends, configPath);
     }
 
-    if (baseProject.tasks) {
-        for (const [key, task] of Object.entries(baseProject.tasks)) {
-            if (!task) {
+    for (const [key, data] of Object.entries(baseProject)) {
+        if (key === 'extends') {
+            continue;
+        } else if (key === 'tasks') {
+            if (!data || typeof data !== 'object') {
                 continue;
             }
 
-            const baseTask = JSON.parse(JSON.stringify(task)) as Task;
-            projectConfig.tasks = projectConfig.tasks ?? {};
-            const currentTasks = projectConfig.tasks as Record<string, Task>;
-            const currentTask = currentTasks[key] || {};
-            currentTasks[key] = { ...baseTask, ...currentTask };
+            for (const [taskName, task] of Object.entries(data as Record<string, Task>)) {
+                if (!task) {
+                    continue;
+                }
+
+                const baseTask = JSON.parse(JSON.stringify(task)) as Task;
+                projectConfig.tasks = projectConfig.tasks ?? {};
+                const projectConfigTasks = projectConfig.tasks as Record<string, Task>;
+                const projectConfigTask = projectConfigTasks[taskName] || {};
+                projectConfigTasks[taskName] = { ...baseTask, ...projectConfigTask };
+            }
+
+            continue;
+        } else {
+            if (typeof data === 'object') {
+                (projectConfig as Record<string, unknown>)[key] = JSON.parse(JSON.stringify(data)) as unknown;
+            } else {
+                (projectConfig as Record<string, unknown>)[key] = data as unknown;
+            }
         }
     }
 }
