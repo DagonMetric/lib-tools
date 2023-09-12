@@ -1,4 +1,3 @@
-import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { Argv } from 'yargs';
@@ -7,7 +6,7 @@ import { getTasks } from '../../config-helpers/index.js';
 import { CommandOptions } from '../../config-models/index.js';
 import { ParsedBuildTaskConfig } from '../../config-models/parsed/index.js';
 import { TaskHandlerFn } from '../../handlers/interfaces/index.js';
-import { Logger, colors, dashCaseToCamelCase, exec } from '../../utils/index.js';
+import { Logger, colors, dashCaseToCamelCase, exec, resolvePath } from '../../utils/index.js';
 
 export const command = 'run <task> [options..]';
 
@@ -136,9 +135,7 @@ export async function run(argv: CommandOptions): Promise<void> {
                 }
             } else {
                 const projectRoot = task._workspaceInfo.projectRoot;
-                const handlerPath = path.isAbsolute(handlerStr)
-                    ? path.resolve(handlerStr)
-                    : path.resolve(projectRoot, handlerStr);
+                const handlerPath = resolvePath(projectRoot, handlerStr);
 
                 const handlerModule = (await import(pathToFileURL(handlerPath).toString())) as {};
 
