@@ -10,9 +10,19 @@ import { InvalidCommandOptionError } from '../src/exceptions/index.js';
 
 void describe('config-helpers/get-parsed-command-options', () => {
     void describe('getParsedCommandOptions', () => {
-        void it('should parse command options - env', async () => {
+        void it('should parse command options without config file', async () => {
             const cmdOptions: CommandOptions = {
-                env: 'prod,ci'
+                workspace: './tests/test-data/parsing/withoutconfig',
+                outDir: 'out',
+                env: 'prod ,ci',
+                project: 'a,b , c',
+                copy: '**/*.js, README.md',
+                clean: true,
+                style: 'style.scss , style.scss',
+                script: 'index.ts, index.ts',
+                packageVersion: '1.0.0',
+                logLevel: 'info',
+                dryRun: true
             };
 
             const result = await getParsedCommandOptions(cmdOptions);
@@ -20,43 +30,44 @@ void describe('config-helpers/get-parsed-command-options', () => {
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
                 _configPath: null,
-                _workspaceRoot: null,
-                _outDir: null,
+                _workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig'),
+                _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig/out'),
                 _env: { prod: true, ci: true },
-                _projects: [],
-                _copyEntries: [],
-                _styleEntries: [],
-                _scriptEntries: []
+                _projects: ['a', 'b', 'c'],
+                _copyEntries: ['**/*.js', 'README.md'],
+                _styleEntries: ['style.scss'],
+                _scriptEntries: ['index.ts']
             };
 
             assert.deepStrictEqual(result, expected);
         });
 
-        void it('should parse command options - all', async () => {
+        void it('should parse command options with config file', async () => {
             const cmdOptions: CommandOptions = {
-                workspace: './tests/test-data/libconfig.json',
-                outDir: 'dist',
+                workspace: './tests/test-data/parsing/withconfig/libconfig.json',
+                outDir: 'out',
                 env: 'prod ,ci',
                 project: 'a,b , c',
-                copy: 'README.md, **/*.js',
+                copy: '**/*.js, README.md',
                 clean: true,
-                style: 'styles.scss , styles.scss',
+                style: 'style.scss , style.scss',
                 script: 'index.ts, index.ts',
                 packageVersion: '1.0.0',
-                logLevel: 'info'
+                logLevel: 'info',
+                dryRun: true
             };
 
             const result = await getParsedCommandOptions(cmdOptions);
 
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
-                _configPath: path.resolve(process.cwd(), './tests/test-data/libconfig.json'),
-                _workspaceRoot: path.resolve(process.cwd(), './tests/test-data'),
-                _outDir: path.resolve(process.cwd(), './tests/test-data/dist'),
+                _configPath: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/libconfig.json'),
+                _workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig'),
+                _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/out'),
                 _env: { prod: true, ci: true },
                 _projects: ['a', 'b', 'c'],
-                _copyEntries: ['README.md', '**/*.js'],
-                _styleEntries: ['styles.scss'],
+                _copyEntries: ['**/*.js', 'README.md'],
+                _styleEntries: ['style.scss'],
                 _scriptEntries: ['index.ts']
             };
 

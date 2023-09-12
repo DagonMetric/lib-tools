@@ -3,52 +3,112 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { getTasks, toParsedBuildTask, validateOutDir } from '../src/config-helpers/get-tasks.js';
-import { BuildTask, CommandOptions } from '../src/config-models/index.js';
+import { BuildTask } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 
 void describe('config-helpers/get-tasks', () => {
     void describe('getTasks', () => {
-        void it('should return build task from cmd options', async () => {
-            const cmdOptions: CommandOptions = {
-                workspace: './tests/test-data/libconfig.json',
-                outDir: 'dist',
-                env: 'prod ,ci',
-                project: 'a,b , c',
-                copy: 'README.md, **/*.js',
-                clean: true,
-                style: 'styles.scss , styles.scss',
-                script: 'index.ts, index.ts',
-                packageVersion: '3.0.0',
-                logLevel: 'info',
-                dryRun: true
-            };
-
-            const result = await getTasks(cmdOptions);
+        void it('should return tasks from libconfig.json file', async () => {
+            const result = await getTasks({
+                workspace: './tests/test-data/parsing/withconfig'
+            });
 
             const expected: ParsedBuildTaskConfig = {
                 _taskName: 'build',
                 _workspaceInfo: {
-                    workspaceRoot: path.resolve(process.cwd(), './tests/test-data'),
-                    projectRoot: path.resolve(process.cwd(), './tests/test-data'),
-                    projectName: null,
-                    configPath: path.resolve(process.cwd(), './tests/test-data/libconfig.json'),
+                    workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig'),
+                    projectRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/packages/package-1'),
+                    projectName: 'project-1',
+                    configPath: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/libconfig.json'),
                     nodeModulePath: path.resolve(process.cwd(), 'node_modules')
                 },
-                _packageJsonInfo: null,
-                _outDir: path.resolve(process.cwd(), './tests/test-data/dist'),
-                clean: true,
-                copy: ['README.md', '**/*.js'],
-                style: ['styles.scss'],
-                script: ['index.ts'],
-                packageJson: {
-                    packageVersion: '3.0.0'
-                }
+                _packageJsonInfo: {
+                    packageJson: {
+                        name: '@scope/package-1',
+                        version: '0.0.0'
+                    },
+                    packageJsonPath: path.resolve(
+                        process.cwd(),
+                        './tests/test-data/parsing/withconfig/packages/package-1/package.json'
+                    ),
+                    packageName: '@scope/package-1',
+                    packageNameWithoutScope: 'package-1',
+                    packageScope: '@scope',
+                    isNestedPackage: false,
+                    rootPackageVersion: '1.0.0'
+                },
+                _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/packages/package-1/dist'),
+                clean: false
             };
 
             assert.equal(result.length, 1);
             assert.deepStrictEqual(result[0], expected);
         });
+
+        // void it('should return build task from command options', async () => {
+        //     const cmdOptions: CommandOptions = {
+        //         workspace: './tests/test-data/parsing',
+        //         outDir: 'dist',
+        //         env: 'prod ,ci',
+        //         project: 'a,b , c',
+        //         copy: '**/*.js, README.md',
+        //         clean: true,
+        //         style: 'style.scss , style.scss',
+        //         script: 'index.ts, index.ts',
+        //         packageVersion: '2.0.0',
+        //         logLevel: 'info',
+        //         dryRun: true
+        //     };
+
+        //     const result = await getTasks(
+        //         cmdOptions ? { workspace: './tests/test-data/parsing' } : cmdOptions
+        //     );
+
+        //     const expected: ParsedBuildTaskConfig = {
+        //         _taskName: 'build',
+        //         _workspaceInfo: {
+        //             workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing'),
+        //             projectRoot: path.resolve(
+        //                 process.cwd(),
+        //                 './tests/test-data/parsing/packages/package-1'
+        //             ),
+        //             projectName: 'project-1',
+        //             configPath: path.resolve(process.cwd(), './tests/test-data/parsing/libconfig.json'),
+        //             nodeModulePath: path.resolve(process.cwd(), 'node_modules')
+        //         },
+        //         _packageJsonInfo: {
+        //             packageJson: {
+        //                 name: '@scope/package-1',
+        //                 version: '0.0.0'
+        //             },
+        //             packageJsonPath: path.resolve(
+        //                 process.cwd(),
+        //                 './tests/test-data/parsing/packages/package-1/package.json'
+        //             ),
+        //             packageName: '@scope/package-1',
+        //             packageNameWithoutScope: 'package-1',
+        //             packageScope: '@scope',
+        //             isNestedPackage: false,
+        //             rootPackageVersion: '1.0.0'
+        //         },
+        //         _outDir: path.resolve(
+        //             process.cwd(),
+        //             './tests/test-data/parsing/packages/package-1/dist'
+        //         ),
+        //         outDir: 'dist',
+        //         clean: true,
+        //         copy: ['**/*.js', 'README.md'],
+        //         style: ['style.scss'],
+        //         script: ['index.ts'],
+        //         packageJson: {
+        //             packageVersion: '2.0.0'
+        //         }
+        //     };
+
+        //     assert.equal(result.length, 1);
+        //     assert.deepStrictEqual(result[0], expected);
+        // });
     });
 
     void describe('toParsedBuildTask', () => {

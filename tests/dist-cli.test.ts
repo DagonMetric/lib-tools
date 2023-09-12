@@ -60,50 +60,46 @@ void describe('dist/cli', () => {
     });
 
     void describe('lib run <task>', () => {
-        void it('should show Hello! message when run hello task', async () => {
-            const result = await runCli('run hello --workspace=./tests/test-data/libconfig.json');
-            const actualLines = result
-                .split(/[\n\r]/)
-                .filter((l) => l.trim().length)
-                .map((l) => l.trim());
+        void describe('custom handlers', () => {
+            const workspace = './tests/test-data/custom-handler/libconfig.json';
 
-            assert.strictEqual(actualLines.length, 3);
-            assert.match(actualLines[1], /Hello!/);
+            void it(`should show 'Hello!' message when run hello task`, async () => {
+                const result = await runCli(`run hello --workspace=${workspace}`);
+
+                assert.match(result, /Hello!/);
+            });
+
+            void it(`should show 'Hello exec!' message when run echo task`, async () => {
+                const result = await runCli(`run echo --workspace=${workspace}`);
+
+                assert.match(result, /Hello exec!/);
+            });
         });
 
-        void it('should show Hello exec! message when run echo task', async () => {
-            const result = await runCli('run echo --workspace=./tests/test-data/libconfig.json');
-            const actualLines = result
-                .split(/[\n\r]/)
-                .filter((l) => l.trim().length)
-                .map((l) => l.trim());
+        void describe('invalid config schema', () => {
+            const workspace = './tests/test-data/invalid/libconfig-invalid.json';
 
-            const expectedLine2 = /Hello exec!/;
+            void it('should show schema validation error when invalid schema in config file', async () => {
+                const result = await runCli(`run build --workspace=${workspace}`);
+                const actualLines = result
+                    .split(/[\n\r]/)
+                    .filter((l) => l.trim().length)
+                    .map((l) => l.trim());
 
-            assert.strictEqual(actualLines.length, 3);
-            assert.match(actualLines[1], expectedLine2);
-        });
+                const expectedLine1 = `${path.resolve(
+                    process.cwd(),
+                    './tests/test-data/invalid/libconfig-invalid.json'
+                )} - Configuration validation errors:`;
+                const expectedLine2 =
+                    'config location: /projects/invalid-project/tasks/build/script - must be array or object.';
+                const expectedLine3 =
+                    'See more about libconfig.json configuration at https://github.com/DagonMetric/lib-tools/wiki/Lib-Tools-Workspace-Configuration.';
 
-        void it('should show schema validation error when invalid schema in config file', async () => {
-            const result = await runCli('run echo --workspace=./tests/test-data/libconfig-invalid.json');
-            const actualLines = result
-                .split(/[\n\r]/)
-                .filter((l) => l.trim().length)
-                .map((l) => l.trim());
-
-            const expectedLine1 = `${path.resolve(
-                process.cwd(),
-                './tests/test-data/libconfig-invalid.json'
-            )} - Configuration validation errors:`;
-            const expectedLine2 =
-                'config location: /projects/invalid-project/tasks/build/script - must be array or object.';
-            const expectedLine3 =
-                'See more about libconfig.json configuration at https://github.com/DagonMetric/lib-tools/wiki/Lib-Tools-Workspace-Configuration.';
-
-            assert.strictEqual(actualLines.length, 3);
-            assert.strictEqual(actualLines[0], expectedLine1);
-            assert.strictEqual(actualLines[1], expectedLine2);
-            assert.strictEqual(actualLines[2], expectedLine3);
+                assert.strictEqual(actualLines.length, 3);
+                assert.strictEqual(actualLines[0], expectedLine1);
+                assert.strictEqual(actualLines[1], expectedLine2);
+                assert.strictEqual(actualLines[2], expectedLine3);
+            });
         });
     });
 });

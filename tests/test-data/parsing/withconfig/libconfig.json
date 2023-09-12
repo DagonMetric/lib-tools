@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../dist/schemas/schema.json",
+  "projects": {
+    "project-1": {
+      "root": "./packages/package-1",
+      "tasks": {
+        "build": {
+          "clean": false
+        }
+      }
+    }
+  }
+}

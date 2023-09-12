@@ -9,16 +9,16 @@ import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/in
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/copy', () => {
-    void describe('getCopyTaskRunner', () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy-project');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'copy-project',
-            configPath: null,
-            nodeModulePath: null
-        };
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'copy-project',
+        configPath: null,
+        nodeModulePath: null
+    };
 
+    void describe('getCopyTaskRunner', () => {
         void it('should not get runner when empty copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
@@ -188,15 +188,7 @@ void describe('handlers/build/copy', () => {
     });
 
     void describe('CopyTaskRunner', () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy-project');
         const outDir = path.resolve(workspaceRoot, 'dist');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'copy-project',
-            configPath: null,
-            nodeModulePath: null
-        };
 
         void describe('CopyTaskRunner:run [Dry Run]', () => {
             const dryRun = true;
