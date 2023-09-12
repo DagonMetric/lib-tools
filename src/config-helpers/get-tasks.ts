@@ -1,12 +1,12 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { BuildTask, CommandOptions } from '../config-models/index.js';
+import { BuildTask, CommandOptions, CustomTask } from '../config-models/index.js';
 import {
     PackageJsonInfo,
     ParsedBuildTaskConfig,
     ParsedCommandOptions,
-    ParsedTaskConfig,
+    ParsedCustomTaskConfig,
     WorkspaceInfo
 } from '../config-models/parsed/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
@@ -243,7 +243,10 @@ export function toParsedBuildTask(
     return parsedBuildTask;
 }
 
-export async function getTasks(cmdOptions: CommandOptions, taskName: string): Promise<ParsedTaskConfig[]> {
+export async function getTasks(
+    cmdOptions: CommandOptions,
+    taskName: string
+): Promise<(ParsedBuildTaskConfig | ParsedCustomTaskConfig)[]> {
     const parsedCmdOptions = await getParsedCommandOptions(cmdOptions);
 
     let configPath = parsedCmdOptions._configPath;
@@ -270,7 +273,7 @@ export async function getTasks(cmdOptions: CommandOptions, taskName: string): Pr
     const workspaceRoot = configPath ? path.dirname(configPath) : parsedCmdOptions._workspaceRoot;
     const nodeModulePath = await findUp('node_modules', workspaceRoot, path.parse(workspaceRoot).root);
 
-    const tasks: ParsedTaskConfig[] = [];
+    const tasks: (ParsedBuildTaskConfig | ParsedCustomTaskConfig)[] = [];
 
     if (configPath) {
         const libConfig = await readLibConfigJsonFile(configPath);
@@ -329,8 +332,9 @@ export async function getTasks(cmdOptions: CommandOptions, taskName: string): Pr
 
                     tasks.push(parsedBuildTask);
                 } else {
-                    const parsedTask = {
-                        ...task,
+                    const customTask = task as CustomTask;
+                    const parsedTask: ParsedCustomTaskConfig = {
+                        ...customTask,
                         _taskName: currentTaskName,
                         _workspaceInfo: workspaceInfo
                     };
