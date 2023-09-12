@@ -8,17 +8,17 @@ import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parse
 import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/clean', { skip: process.platform !== 'win32' }, () => {
-    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-    const workspaceInfo: WorkspaceInfo = {
-        workspaceRoot,
-        projectRoot: workspaceRoot,
-        projectName: 'clean-project',
-        configPath: null,
-        nodeModulePath: null
-    };
-
+void describe('handlers/build/clean', () => {
     void describe('getCleanTaskRunner', () => {
+        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+        const workspaceInfo: WorkspaceInfo = {
+            workspaceRoot,
+            projectRoot: workspaceRoot,
+            projectName: 'clean-project',
+            configPath: null,
+            nodeModulePath: null
+        };
+
         void it('should not get runner when clean=false', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
@@ -147,7 +147,16 @@ void describe('handlers/build/clean', { skip: process.platform !== 'win32' }, ()
         });
     });
 
-    void describe('CleanTaskRunner', () => {
+    void describe('CleanTaskRunner', { skip: process.platform !== 'win32' }, () => {
+        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+        const workspaceInfo: WorkspaceInfo = {
+            workspaceRoot,
+            projectRoot: workspaceRoot,
+            projectName: 'clean-project',
+            configPath: null,
+            nodeModulePath: null
+        };
+
         void describe('CleanTaskRunner:run [Error throws]', () => {
             void it(
                 'should throw an error if cleaning system root directory - C:\\ on Windows',
