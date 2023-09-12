@@ -1,27 +1,28 @@
 import { OverridableTaskOptions, Task } from '../config-models/index.js';
 
-function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>): void {
-    Object.keys(newConfig)
-        .filter((key: string) => key !== 'envOverrides')
-        .forEach((key: string) => {
-            oldConfig[key] = JSON.parse(JSON.stringify(newConfig[key])) as unknown;
-        });
-}
-
 export function applyEnvOverrides<TTaskOptions extends Task>(
     taskConfig: OverridableTaskOptions<TTaskOptions>,
-    env: Record<string, boolean>
+    envNames: string[]
 ): void {
-    if (!taskConfig.envOverrides || !Object.keys(taskConfig.envOverrides).length) {
+    if (!taskConfig.envOverrides || !envNames.length) {
         return;
     }
 
-    const envNames = Object.keys(env);
+    const envOverridesConfig = taskConfig.envOverrides;
+    const normalizedEnvNames = envNames
+        .map((envName) => envName.toLowerCase())
+        .filter((value, index, array) => array.indexOf(value) === index);
 
-    Object.keys(taskConfig.envOverrides)
-        .filter((configName) => envNames.includes(configName))
-        .forEach((configName: string) => {
-            const newConfig = taskConfig.envOverrides?.[configName];
+    const overrideConfig = (oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>) => {
+        Object.keys(newConfig).forEach((key: string) => {
+            oldConfig[key] = JSON.parse(JSON.stringify(newConfig[key])) as unknown;
+        });
+    };
+
+    Object.keys(envOverridesConfig)
+        .filter((envName) => normalizedEnvNames.includes(envName.toLowerCase()))
+        .forEach((envName: string) => {
+            const newConfig = envOverridesConfig[envName];
             if (newConfig && typeof newConfig === 'object') {
                 overrideConfig(taskConfig as Record<string, unknown>, newConfig);
             }
