@@ -145,18 +145,9 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
     const env =
         cmdOptions.env
             ?.split(',')
-            .filter((envName) => envName && envName.trim().length > 0)
+            .filter((envName) => envName?.trim().length > 0)
             .map((envName) => envName.trim())
-            .filter((value, index, array) => array.indexOf(value) === index)
-            .reduce(
-                (obj, key) => {
-                    return {
-                        ...obj,
-                        [key]: true
-                    };
-                },
-                {} as Record<string, boolean>
-            ) ?? {};
+            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
 
     // For build task
     //
