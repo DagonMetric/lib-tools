@@ -91,6 +91,7 @@ export class CleanTaskRunner {
                 isFile: false,
                 isSymbolicLink: outDirStats.isSymbolicLink()
             };
+
             await this.delete(outDirPathInfo);
 
             return {
