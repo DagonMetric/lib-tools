@@ -1,5 +1,6 @@
 import { BuildTask } from '../build-task.js';
 import { CommandOptions } from '../command-options.js';
+import { CustomTask } from '../custom-task.js';
 import { Task } from '../task.js';
 
 export interface ParsedCommandOptions extends CommandOptions {
@@ -42,3 +43,5 @@ export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _outDir: string;
     readonly _packageJsonInfo: PackageJsonInfo | null;
 }
+
+export interface ParsedCustomTaskConfig extends CustomTask, ParsedTaskConfig {}
