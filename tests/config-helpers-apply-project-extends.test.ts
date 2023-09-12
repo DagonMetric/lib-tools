@@ -3,51 +3,49 @@ import { describe, it } from 'node:test';
 
 import { applyProjectExtends } from '../src/config-helpers/apply-project-extends.js';
 
-import { CustomTask, Project } from '../src/config-models/index.js';
+import { BuildTask, CustomTask, Project } from '../src/config-models/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
 
 void describe('config-helpers/apply-project-extends', () => {
     void describe('applyProjectExtends', () => {
         void it('should extend', () => {
-            const projectATasks = {
-                build: {
-                    banner: 'a',
-                    clean: true,
-                    copy: ['a.txt', 'b.txt']
-                },
-                lint: {
-                    handler: './handler.mjs'
-                }
-            };
-
-            const projectBTasks = {
-                build: {
-                    clean: false,
-                    style: ['a.css']
-                },
-                test: {
-                    handler: './handler.mjs'
-                }
-            };
-
-            const projectCTasks = {
-                build: {
-                    banner: 'c',
-                    script: ['a.js']
-                }
-            };
-
             const projects: Record<string, Project> = {
                 a: {
-                    tasks: projectATasks as unknown as Record<string, CustomTask>
+                    root: './package-a',
+                    tasks: {
+                        build: {
+                            banner: 'a',
+                            clean: true,
+                            copy: ['a.txt', 'b.txt']
+                        },
+                        lint: {
+                            handler: './handler.mjs',
+                            options: {
+                                config: '.eslintrc.json'
+                            }
+                        }
+                    } as unknown as Record<string, CustomTask & BuildTask>
                 },
                 b: {
                     extends: 'a',
-                    tasks: projectBTasks as unknown as Record<string, CustomTask>
+                    tasks: {
+                        build: {
+                            clean: false,
+                            style: ['a.css']
+                        },
+                        test: {
+                            handler: './handler.mjs'
+                        }
+                    } as unknown as Record<string, CustomTask & BuildTask>
                 },
                 c: {
                     extends: 'b',
-                    tasks: projectCTasks as unknown as Record<string, CustomTask>
+                    tasks: {
+                        build: {
+                            banner: 'c',
+                            script: ['a.js']
+                        }
+                    } as unknown as Record<string, CustomTask & BuildTask>
                 }
             };
 
@@ -55,8 +53,9 @@ void describe('config-helpers/apply-project-extends', () => {
 
             applyProjectExtends('c', projectC, projects, null);
 
-            const expectedConfig = {
+            const expectedConfig: Project = {
                 extends: 'b',
+                root: './package-a',
                 tasks: {
                     build: {
                         banner: 'c',
@@ -66,12 +65,15 @@ void describe('config-helpers/apply-project-extends', () => {
                         script: ['a.js']
                     },
                     lint: {
-                        handler: './handler.mjs'
+                        handler: './handler.mjs',
+                        options: {
+                            config: '.eslintrc.json'
+                        }
                     },
                     test: {
                         handler: './handler.mjs'
                     }
-                }
+                } as unknown as Record<string, CustomTask & BuildTask>
             };
 
             assert.deepStrictEqual(projectC, expectedConfig);

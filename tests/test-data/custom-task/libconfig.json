@@ -1,5 +1,5 @@
 {
-  "$schema": "../../dist/schemas/schema.json",
+  "$schema": "../../../dist/schemas/schema.json",
   "projects": {
     "test-project": {
       "root": ".",
@@ -9,9 +9,6 @@
         },
         "echo": {
           "handler": "exec: echo \"Hello exec!\""
-        },
-        "build": {
-          "handler": "exec: echo \"Hello custom build handler\""
         }
       }
     }

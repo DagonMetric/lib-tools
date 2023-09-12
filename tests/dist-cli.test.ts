@@ -61,7 +61,7 @@ void describe('dist/cli', () => {
 
     void describe('lib run <task>', () => {
         void describe('custom handlers', () => {
-            const workspace = './tests/test-data/custom-handler/libconfig.json';
+            const workspace = './tests/test-data/custom-task/libconfig.json';
 
             void it(`should show 'Hello!' message when run hello task`, async () => {
                 const result = await runCli(`run hello --workspace=${workspace}`);

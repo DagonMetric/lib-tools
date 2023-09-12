@@ -52,7 +52,7 @@ void describe('config-helpers/apply-env-overrides', () => {
 
             applyEnvOverrides(config, ['prod']);
 
-            const expectedConfig: BuildTask = {
+            const expectedConfig: CustomTask = {
                 handler: 'b.js',
                 skip: true,
                 envOverrides: {

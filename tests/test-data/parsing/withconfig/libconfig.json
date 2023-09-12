@@ -8,6 +8,9 @@
           "clean": false
         }
       }
+    },
+    "project-2": {
+      "extends": "project-1"
     }
   }
 }

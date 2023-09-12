@@ -12,22 +12,24 @@ void describe('config-helpers/get-tasks', () => {
         void it('should return tasks from libconfig.json file', async () => {
             const workspaceRel = './tests/test-data/parsing/withconfig';
 
-            const result = await getTasks(
+            const tasks = await getTasks(
                 {
                     workspace: workspaceRel
                 },
                 'build'
             );
 
-            const expected: ParsedBuildTaskConfig = {
+            const workspace1: WorkspaceInfo = {
+                workspaceRoot: path.resolve(process.cwd(), workspaceRel),
+                projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
+                projectName: 'project-1',
+                configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
+                nodeModulePath: path.resolve(process.cwd(), 'node_modules')
+            };
+
+            const task1: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: {
-                    workspaceRoot: path.resolve(process.cwd(), workspaceRel),
-                    projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
-                    projectName: 'project-1',
-                    configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
-                    nodeModulePath: path.resolve(process.cwd(), 'node_modules')
-                },
+                _workspaceInfo: workspace1,
                 _packageJsonInfo: {
                     packageJson: {
                         name: '@scope/package-1',
@@ -44,8 +46,17 @@ void describe('config-helpers/get-tasks', () => {
                 clean: false
             };
 
-            assert.equal(result.length, 1);
-            assert.deepStrictEqual(result[0], expected);
+            const task2 = {
+                ...task1,
+                _workspaceInfo: {
+                    ...workspace1,
+                    projectName: 'project-2'
+                }
+            };
+
+            const expectedTasks = [task1, task2];
+
+            assert.deepStrictEqual(tasks, expectedTasks);
         });
 
         void it('should return tasks from command options with config file', async () => {
@@ -64,17 +75,19 @@ void describe('config-helpers/get-tasks', () => {
                 packageVersion: '2.0.0'
             };
 
-            const result = await getTasks(cmdOptions, 'build');
+            const tasks = await getTasks(cmdOptions, 'build');
 
-            const expected: ParsedBuildTaskConfig = {
+            const workspace1: WorkspaceInfo = {
+                workspaceRoot: path.resolve(process.cwd(), workspaceRel),
+                projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
+                projectName: 'project-1',
+                configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
+                nodeModulePath: path.resolve(process.cwd(), 'node_modules')
+            };
+
+            const task1: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: {
-                    workspaceRoot: path.resolve(process.cwd(), workspaceRel),
-                    projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
-                    projectName: 'project-1',
-                    configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
-                    nodeModulePath: path.resolve(process.cwd(), 'node_modules')
-                },
+                _workspaceInfo: workspace1,
                 _packageJsonInfo: {
                     packageJson: {
                         name: '@scope/package-1',
@@ -98,8 +111,17 @@ void describe('config-helpers/get-tasks', () => {
                 }
             };
 
-            assert.equal(result.length, 1);
-            assert.deepStrictEqual(result[0], expected);
+            const task2 = {
+                ...task1,
+                _workspaceInfo: {
+                    ...workspace1,
+                    projectName: 'project-2'
+                }
+            };
+
+            const expectedTasks = [task1, task2];
+
+            assert.deepStrictEqual(tasks[0], expectedTasks[0]);
         });
     });
 
