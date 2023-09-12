@@ -147,17 +147,17 @@ void describe('handlers/build/clean', () => {
         });
     });
 
-    void describe('CleanTaskRunner', { skip: process.platform !== 'win32' }, () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'clean-project',
-            configPath: null,
-            nodeModulePath: null
-        };
-
+    void describe('CleanTaskRunner', () => {
         void describe('CleanTaskRunner:run [Error throws]', () => {
+            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+            const workspaceInfo: WorkspaceInfo = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                configPath: null,
+                nodeModulePath: null
+            };
+
             void it(
                 'should throw an error if cleaning system root directory - C:\\ on Windows',
                 { skip: process.platform !== 'win32' },
@@ -316,6 +316,14 @@ void describe('handlers/build/clean', () => {
         });
 
         void describe('CleanTaskRunner:run [Dry Run]', () => {
+            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+            const workspaceInfo: WorkspaceInfo = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                configPath: null,
+                nodeModulePath: null
+            };
             const outDir = path.resolve(workspaceRoot, 'theout');
             const dryRun = true;
 
@@ -580,7 +588,15 @@ void describe('handlers/build/clean', () => {
             });
         });
 
-        void describe('CleanTaskRunner:run [Actual Remove]', () => {
+        void describe('CleanTaskRunner:run [Actual Remove]', { skip: process.platform !== 'win32' }, () => {
+            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+            const workspaceInfo: WorkspaceInfo = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                configPath: null,
+                nodeModulePath: null
+            };
             const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
             const dryRun = false;
 
