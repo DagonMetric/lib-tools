@@ -9,20 +9,20 @@ import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/in
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/copy', () => {
-    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
-    const workspaceInfo: WorkspaceInfo = {
-        workspaceRoot,
-        projectRoot: workspaceRoot,
-        projectName: 'copy-project',
-        configPath: null,
-        nodeModulePath: null
-    };
-
     void describe('getCopyTaskRunner', () => {
+        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
+        const workspaceInfo: WorkspaceInfo = {
+            workspaceRoot,
+            projectRoot: workspaceRoot,
+            projectName: 'copy-project',
+            configPath: null,
+            nodeModulePath: null
+        };
+
         void it('should not get runner when empty copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
+                _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 copy: []
@@ -41,7 +41,7 @@ void describe('handlers/build/copy', () => {
         void it('should not get runner when no valid copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
+                _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 copy: [' ', { from: ' ' }]
@@ -60,7 +60,7 @@ void describe('handlers/build/copy', () => {
         void it('should get runner with string entry array', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
+                _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 copy: ['a.txt', 'b.txt', '**/*.md']
@@ -93,7 +93,7 @@ void describe('handlers/build/copy', () => {
         void it('should get runner with object entry array', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
+                _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 copy: [
@@ -142,7 +142,7 @@ void describe('handlers/build/copy', () => {
         void it('should get runner with string and object mixed entry array', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
+                _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
                 copy: [
@@ -188,6 +188,14 @@ void describe('handlers/build/copy', () => {
     });
 
     void describe('CopyTaskRunner', () => {
+        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
+        const workspaceInfo: WorkspaceInfo = {
+            workspaceRoot,
+            projectRoot: workspaceRoot,
+            projectName: 'copy-project',
+            configPath: null,
+            nodeModulePath: null
+        };
         const outDir = path.resolve(workspaceRoot, 'dist');
 
         void describe('CopyTaskRunner:run [Dry Run]', () => {
