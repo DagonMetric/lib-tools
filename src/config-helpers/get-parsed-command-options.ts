@@ -63,7 +63,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
         }
     }
 
-    if (cmdOptions._workspaceRoot) {
+    if (cmdOptions.workspace) {
         if (!(await pathExists(cmdOptions._workspaceRoot))) {
             throw new InvalidCommandOptionError(
                 `The workspace directory doesn't exist.`,
@@ -88,7 +88,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
             );
         }
 
-        if (cmdOptions._workspaceRoot && isInFolder(outDir, cmdOptions._workspaceRoot)) {
+        if (cmdOptions.workspace && isInFolder(outDir, cmdOptions._workspaceRoot)) {
             throw new InvalidCommandOptionError(
                 `The outDir must not be parent directory of workspace directory.`,
                 `outDir=${cmdOptions.outDir}`
@@ -96,16 +96,14 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
         }
     }
 
-    const cwd = cmdOptions._workspaceRoot ?? process.cwd();
-
     if (cmdOptions._copyEntries.length) {
-        if (!(await checkPaths(cmdOptions._copyEntries, cwd, true))) {
+        if (!(await checkPaths(cmdOptions._copyEntries, cmdOptions._workspaceRoot, true))) {
             throw new InvalidCommandOptionError('Could not find the file(s) to copy.', `copy=${cmdOptions.copy}`);
         }
     }
 
     if (cmdOptions._styleEntries.length) {
-        if (!(await checkPaths(cmdOptions._styleEntries, cwd, false))) {
+        if (!(await checkPaths(cmdOptions._styleEntries, cmdOptions._workspaceRoot, false))) {
             throw new InvalidCommandOptionError(
                 'Could not find some style file(s) to bundle.',
                 `style=${cmdOptions.style}`
@@ -114,7 +112,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
     }
 
     if (cmdOptions._scriptEntries.length) {
-        if (!(await checkPaths(cmdOptions._scriptEntries, cwd, false))) {
+        if (!(await checkPaths(cmdOptions._scriptEntries, cmdOptions._workspaceRoot, false))) {
             throw new InvalidCommandOptionError(
                 'Could not find some script file(s) to bundle.',
                 `script=${cmdOptions.script}`
@@ -124,7 +122,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
 }
 
 export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promise<ParsedCommandOptions> {
-    let workspaceRoot: string | null = null;
+    let workspaceRoot = process.cwd();
     let configPath: string | null = null;
     if (cmdOptions.workspace?.trim().length) {
         const pathAbs = resolvePath(process.cwd(), cmdOptions.workspace);
@@ -162,9 +160,7 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
 
     // For build task
     //
-    const outDir = cmdOptions.outDir?.trim().length
-        ? resolvePath(workspaceRoot ?? process.cwd(), cmdOptions.outDir)
-        : null;
+    const outDir = cmdOptions.outDir?.trim().length ? resolvePath(workspaceRoot, cmdOptions.outDir) : null;
 
     const copyEntries =
         cmdOptions.copy
