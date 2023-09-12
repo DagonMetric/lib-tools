@@ -21,7 +21,7 @@ void describe('config-helpers/apply-env-overrides', () => {
                 }
             };
 
-            applyEnvOverrides(config, { prod: true });
+            applyEnvOverrides(config, ['prod']);
 
             const expectedConfig: BuildTask = {
                 banner: 'b2',
@@ -50,7 +50,7 @@ void describe('config-helpers/apply-env-overrides', () => {
                 }
             };
 
-            applyEnvOverrides(config, { prod: true });
+            applyEnvOverrides(config, ['prod']);
 
             const expectedConfig: BuildTask = {
                 handler: 'b.js',
