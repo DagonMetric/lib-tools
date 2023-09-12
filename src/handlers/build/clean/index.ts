@@ -285,9 +285,9 @@ export class CleanTaskRunner {
             if (cleanPathInfo.isDirectory && !cleanPathInfo.isSymbolicLink) {
                 await fs.rm(cleanPathInfo.path, {
                     recursive: true,
-                    force: true,
-                    maxRetries: 2,
-                    retryDelay: 1000
+                    force: true
+                    // maxRetries: 2,
+                    // retryDelay: 1000
                 });
             } else {
                 await fs.unlink(cleanPathInfo.path);

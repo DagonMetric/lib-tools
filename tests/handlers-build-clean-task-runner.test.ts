@@ -591,7 +591,7 @@ void describe('handlers/build/clean', () => {
         void describe('CleanTaskRunner:run [Actual Remove]', () => {
             void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
                 const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-                const tempOutDir = path.resolve(workspaceRoot, 'tempout-1');
+                const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
                 const dryRun = false;
 
                 await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
@@ -619,6 +619,7 @@ void describe('handlers/build/clean', () => {
 
                 const cleanResult = await runner.run();
                 const expectedPaths = [runner.options.outDir];
+
                 for (const cleanedPath of expectedPaths) {
                     const fileDeleted = await fs
                         .access(cleanedPath)
@@ -626,23 +627,24 @@ void describe('handlers/build/clean', () => {
                         .catch(() => true);
                     assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
                 }
+
                 assert.deepStrictEqual(
                     cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
                     expectedPaths.sort()
                 );
 
                 // after
-                // const tempOutDirExisted = await fs
-                //     .access(tempOutDir)
-                //     .then(() => true)
-                //     .catch(() => false);
+                const tempOutDirExisted = await fs
+                    .access(tempOutDir)
+                    .then(() => true)
+                    .catch(() => false);
 
-                // if (tempOutDirExisted) {
-                //     await fs.rm(tempOutDir, {
-                //         recursive: true,
-                //         force: true
-                //     });
-                // }
+                if (tempOutDirExisted) {
+                    await fs.rm(tempOutDir, {
+                        recursive: true,
+                        force: true
+                    });
+                }
             });
 
             // void it('should delete with after build clean options [Actual Delete]', async () => {
