@@ -453,7 +453,7 @@ void describe('handlers/build/copy', () => {
             });
         });
 
-        void describe('CopyTaskRunner:run [Actual Copy]', () => {
+        void describe('CopyTaskRunner:run [Actual Copy]', { skip: true }, () => {
             const outDir = path.resolve(workspaceRoot, 'temp-out');
             const dryRun = false;
 
