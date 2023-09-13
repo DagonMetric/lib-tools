@@ -556,47 +556,38 @@ void describe('handlers/build/clean', () => {
             });
         });
     });
-});
 
-void describe('handlers/build/clean/CleanTaskRunner:run [Actual Remove]', () => {
-    void it('should delete output directory when cleanOutDir=true', async () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'clean-project',
-            configPath: null,
-            nodeModulePath: null
-        };
+    void describe('CleanTaskRunner:run [Actual Remove]', { skip: process.platform === 'linux' }, () => {
+        void it('should delete output directory when cleanOutDir=true', async () => {
+            const tempOutDir = path.resolve(workspaceRoot, 'temp/out');
+            const dryRun = false;
 
-        const tempOutDir = path.resolve(workspaceRoot, 'temp/out');
-        const dryRun = false;
+            // Prepare resources
+            fs.mkdirSync(tempOutDir, { recursive: true });
+            fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
 
-        // Prepare resources
-        fs.mkdirSync(tempOutDir, { recursive: true });
-        fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
+            const runner = new CleanTaskRunner({
+                runFor: 'before',
+                beforeOrAfterCleanOptions: {
+                    cleanOutDir: true
+                },
+                dryRun,
+                workspaceInfo,
+                outDir: tempOutDir,
+                logger: new Logger({ logLevel: 'error' })
+            });
 
-        const runner = new CleanTaskRunner({
-            runFor: 'before',
-            beforeOrAfterCleanOptions: {
-                cleanOutDir: true
-            },
-            dryRun,
-            workspaceInfo,
-            outDir: tempOutDir,
-            logger: new Logger({ logLevel: 'error' })
+            const cleanResult = await runner.run();
+            const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
+
+            const expectedPaths = [runner.options.outDir];
+
+            for (const cleanedPath of expectedPaths) {
+                const fileExisted = fs.existsSync(cleanedPath);
+                assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
+            }
+
+            assert.deepStrictEqual(cleanedPaths, expectedPaths);
         });
-
-        const cleanResult = await runner.run();
-        const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
-
-        const expectedPaths = [runner.options.outDir];
-
-        for (const cleanedPath of expectedPaths) {
-            const fileExisted = fs.existsSync(cleanedPath);
-            assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
-        }
-
-        assert.deepStrictEqual(cleanedPaths, expectedPaths);
     });
 });
