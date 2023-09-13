@@ -616,31 +616,29 @@ void describe('handlers/build/clean', () => {
                 assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
             });
 
-            // void it('should delete with after build clean options', async () => {
-            //     const runner = new CleanTaskRunner({
-            //         runFor: 'after',
-            //         beforeOrAfterCleanOptions: {
-            //             paths: ['**/README.md', '**/README.md']
-            //         },
-            //         dryRun,
-            //         workspaceInfo,
-            //         outDir: tempOutDir,
-            //         logger: new Logger({ logLevel: 'error' })
-            //     });
+            void it('should delete with after build clean options', async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['**/README.md', '**/README.md']
+                    },
+                    dryRun,
+                    workspaceInfo,
+                    outDir: tempOutDir,
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            //     const cleanResult = await runner.run();
-            //     const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
+                const cleanResult = await runner.run();
+                const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
+                const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
 
-            //     for (const cleanedPath of expectedPaths) {
-            //         const fileExisted = fs.existsSync(cleanedPath);
-            //         assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
-            //     }
+                for (const cleanedPath of expectedPaths) {
+                    const fileExisted = fs.existsSync(cleanedPath);
+                    assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
+                }
 
-            //     assert.deepStrictEqual(
-            //         cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
-            //         expectedPaths.sort()
-            //     );
-            // });
+                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
+            });
         });
     });
 });
