@@ -283,16 +283,12 @@ export class CleanTaskRunner {
         this.logger.info(`${msgPrefix} ${normalizePathToPOSIXStyle(path.relative(process.cwd(), cleanPathInfo.path))}`);
 
         if (!this.options.dryRun) {
-            if (!cleanPathInfo.isSymbolicLink) {
-                await fs.rm(cleanPathInfo.path, {
-                    recursive: true,
-                    force: true
-                    // maxRetries: 2,
-                    // retryDelay: 1000
-                });
-            } else {
-                await fs.unlink(cleanPathInfo.path);
-            }
+            await fs.rm(cleanPathInfo.path, {
+                recursive: true,
+                force: true
+                // maxRetries: 2,
+                // retryDelay: 1000
+            });
         }
     }
 }
