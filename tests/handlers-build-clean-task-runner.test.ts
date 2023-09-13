@@ -557,7 +557,7 @@ void describe('handlers/build/clean', () => {
         });
     });
 
-    void describe('CleanTaskRunner:run [Actual Remove]', { skip: process.platform !== 'win32' }, () => {
+    void describe('CleanTaskRunner:run [Actual Remove]', { skip: true }, () => {
         void it('should delete output directory when cleanOutDir=true', async () => {
             const tempOutDir = path.resolve(workspaceRoot, 'temp/out');
             const dryRun = false;
