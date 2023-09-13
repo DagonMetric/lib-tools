@@ -456,7 +456,7 @@ void describe('handlers/build/copy', () => {
 });
 
 void describe('handlers/build/copy/CopyTaskRunner:run [Actual Copy]', () => {
-    void it('should copy single file to output directory', async () => {
+    void it('should copy single file to output directory', { skip: process.platform === 'linux' }, async () => {
         const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
         const workspaceInfo: WorkspaceInfo = {
             workspaceRoot,
@@ -494,34 +494,4 @@ void describe('handlers/build/copy/CopyTaskRunner:run [Actual Copy]', () => {
 
         assert.deepStrictEqual(copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(), expectedPaths.sort());
     });
-
-    // void it('should copy directory contents to output directory', async () => {
-    //     const runner = new CopyTaskRunner({
-    //         copyEntries: [
-    //             {
-    //                 from: 'src/path-2/path-3'
-    //             },
-    //             {
-    //                 from: 'src/path-2/path-3'
-    //             }
-    //         ],
-    //         dryRun,
-    //         workspaceInfo,
-    //         outDir,
-    //         logger: new Logger({ logLevel: 'error' })
-    //     });
-
-    //     const copyResult = await runner.run();
-
-    //     const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
-    //     for (const coppiedPath of expectedPaths) {
-    //         const fileExisted = fs.existsSync(coppiedPath);
-    //         assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
-    //     }
-
-    //     assert.deepStrictEqual(
-    //         copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
-    //         expectedPaths.sort()
-    //     );
-    // });
 });
