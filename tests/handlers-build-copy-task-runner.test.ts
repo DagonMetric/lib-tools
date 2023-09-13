@@ -8,7 +8,7 @@ import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parse
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/copy', { skip: true }, () => {
+void describe('handlers/build/copy', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
@@ -18,7 +18,7 @@ void describe('handlers/build/copy', { skip: true }, () => {
         nodeModulePath: null
     };
 
-    void describe('getCopyTaskRunner', { skip: process.platform !== 'win32' }, () => {
+    void describe('getCopyTaskRunner', () => {
         void it('should not get runner when empty copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
@@ -187,7 +187,7 @@ void describe('handlers/build/copy', { skip: true }, () => {
         });
     });
 
-    void describe('CopyTaskRunner', { skip: process.platform !== 'win32' }, () => {
+    void describe('CopyTaskRunner', { skip: process.platform === 'linux' }, () => {
         void describe('CopyTaskRunner:run [Dry Run]', () => {
             const outDir = path.resolve(workspaceRoot, 'dist');
             const dryRun = true;
@@ -454,7 +454,7 @@ void describe('handlers/build/copy', { skip: true }, () => {
         });
     });
 
-    void describe('CopyTaskRunner:run [Actual Copy]', { skip: process.platform !== 'win32' }, () => {
+    void describe('CopyTaskRunner:run [Actual Copy]', { skip: process.platform === 'linux' }, () => {
         void it('should copy single file to output directory', async () => {
             const outDir = path.resolve(workspaceRoot, 'temp/out');
             const dryRun = false;
