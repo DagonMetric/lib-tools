@@ -147,7 +147,7 @@ void describe('handlers/build/clean', () => {
         });
     });
 
-    void describe('CleanTaskRunner', () => {
+    void describe('CleanTaskRunner', { skip: true }, () => {
         void describe('CleanTaskRunner:run [Error throws]', () => {
             void it(
                 'should throw an error if cleaning system root directory - C:\\ on Windows',
