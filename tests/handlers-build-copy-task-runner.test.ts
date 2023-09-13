@@ -187,7 +187,7 @@ void describe('handlers/build/copy', () => {
         });
     });
 
-    void describe('CopyTaskRunner', { skip: true }, () => {
+    void describe('CopyTaskRunner', () => {
         void describe('CopyTaskRunner:run [Dry Run]', () => {
             const outDir = path.resolve(workspaceRoot, 'dist');
             const dryRun = true;
@@ -452,77 +452,83 @@ void describe('handlers/build/copy', () => {
                 );
             });
         });
-
-        void describe('CopyTaskRunner:run [Actual Copy]', { skip: true }, () => {
-            const outDir = path.resolve(workspaceRoot, 'temp-out');
-            const dryRun = false;
-
-            // afterEach(() => {
-            //     const outDirExist = fs.existsSync(outDir);
-            //     if (outDirExist) {
-            //         fs.rmSync(outDir);
-            //     }
-            // });
-
-            void it('should copy single file to output directory', async () => {
-                const runner = new CopyTaskRunner({
-                    copyEntries: [
-                        {
-                            from: 'README.md'
-                        },
-                        {
-                            from: 'README.md'
-                        }
-                    ],
-                    dryRun,
-                    workspaceInfo,
-                    outDir,
-                    logger: new Logger({ logLevel: 'error' })
-                });
-
-                const copyResult = await runner.run();
-
-                const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
-                for (const coppiedPath of expectedPaths) {
-                    const fileExisted = fs.existsSync(coppiedPath);
-                    assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
-                }
-
-                assert.deepStrictEqual(
-                    copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
-                    expectedPaths.sort()
-                );
-            });
-
-            // void it('should copy directory contents to output directory', async () => {
-            //     const runner = new CopyTaskRunner({
-            //         copyEntries: [
-            //             {
-            //                 from: 'src/path-2/path-3'
-            //             },
-            //             {
-            //                 from: 'src/path-2/path-3'
-            //             }
-            //         ],
-            //         dryRun,
-            //         workspaceInfo,
-            //         outDir,
-            //         logger: new Logger({ logLevel: 'error' })
-            //     });
-
-            //     const copyResult = await runner.run();
-
-            //     const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
-            //     for (const coppiedPath of expectedPaths) {
-            //         const fileExisted = fs.existsSync(coppiedPath);
-            //         assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
-            //     }
-
-            //     assert.deepStrictEqual(
-            //         copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
-            //         expectedPaths.sort()
-            //     );
-            // });
-        });
     });
+});
+
+void describe('handlers/build/copy/CopyTaskRunner:run [Actual Copy]', { skip: true }, () => {
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'copy-project',
+        configPath: null,
+        nodeModulePath: null
+    };
+
+    const outDir = path.resolve(workspaceRoot, 'temp-out');
+    const dryRun = false;
+
+    // afterEach(() => {
+    //     const outDirExist = fs.existsSync(outDir);
+    //     if (outDirExist) {
+    //         fs.rmSync(outDir);
+    //     }
+    // });
+
+    void it('should copy single file to output directory', async () => {
+        const runner = new CopyTaskRunner({
+            copyEntries: [
+                {
+                    from: 'README.md'
+                },
+                {
+                    from: 'README.md'
+                }
+            ],
+            dryRun,
+            workspaceInfo,
+            outDir,
+            logger: new Logger({ logLevel: 'error' })
+        });
+
+        const copyResult = await runner.run();
+
+        const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
+        for (const coppiedPath of expectedPaths) {
+            const fileExisted = fs.existsSync(coppiedPath);
+            assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
+        }
+
+        assert.deepStrictEqual(copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(), expectedPaths.sort());
+    });
+
+    // void it('should copy directory contents to output directory', async () => {
+    //     const runner = new CopyTaskRunner({
+    //         copyEntries: [
+    //             {
+    //                 from: 'src/path-2/path-3'
+    //             },
+    //             {
+    //                 from: 'src/path-2/path-3'
+    //             }
+    //         ],
+    //         dryRun,
+    //         workspaceInfo,
+    //         outDir,
+    //         logger: new Logger({ logLevel: 'error' })
+    //     });
+
+    //     const copyResult = await runner.run();
+
+    //     const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
+    //     for (const coppiedPath of expectedPaths) {
+    //         const fileExisted = fs.existsSync(coppiedPath);
+    //         assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
+    //     }
+
+    //     assert.deepStrictEqual(
+    //         copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
+    //         expectedPaths.sort()
+    //     );
+    // });
 });
