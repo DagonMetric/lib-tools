@@ -615,9 +615,9 @@ void describe('handlers/build/clean', () => {
                 });
 
                 const cleanResult = await runner.run();
-                const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort();
+                const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
 
-                const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')].sort();
+                const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
 
                 for (const cleanedPath of expectedPaths) {
                     const fileExisted = fs.existsSync(cleanedPath);
@@ -625,6 +625,9 @@ void describe('handlers/build/clean', () => {
                 }
 
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
+
+                // clean resources
+                fs.rmSync(tempOutDir);
             });
         });
     });
