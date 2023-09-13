@@ -187,7 +187,7 @@ void describe('handlers/build/copy', () => {
         });
     });
 
-    void describe('CopyTaskRunner', () => {
+    void describe('CopyTaskRunner', { skip: process.platform !== 'win32' }, () => {
         void describe('CopyTaskRunner:run [Dry Run]', () => {
             const outDir = path.resolve(workspaceRoot, 'dist');
             const dryRun = true;
