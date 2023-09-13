@@ -572,7 +572,7 @@ void describe('handlers/build/clean', () => {
         });
 
         void describe('CleanTaskRunner:run [Actual Remove]', () => {
-            const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
+            const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
             const dryRun = false;
 
             beforeEach(() => {
@@ -609,7 +609,6 @@ void describe('handlers/build/clean', () => {
 
                 for (const cleanedPath of expectedPaths) {
                     const fileExisted = fs.existsSync(cleanedPath);
-
                     assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
                 }
 
@@ -619,58 +618,31 @@ void describe('handlers/build/clean', () => {
                 );
             });
 
-            // void it('should delete with after build clean options [Actual Delete]', async () => {
-            //     const tempOutDir = path.resolve(workspaceRoot, 'temp-out2');
-            //     const dryRun = false;
+            void it('should delete with after build clean options [Actual Delete]', async () => {
+                const runner = new CleanTaskRunner({
+                    runFor: 'after',
+                    beforeOrAfterCleanOptions: {
+                        paths: ['**/README.md', '**/README.md']
+                    },
+                    dryRun,
+                    workspaceInfo,
+                    outDir: tempOutDir,
+                    logger: new Logger({ logLevel: 'error' })
+                });
 
-            //     await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
-            //         recursive: true
-            //     });
+                const cleanResult = await runner.run();
+                const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
 
-            //     const runner = new CleanTaskRunner({
-            //         runFor: 'after',
-            //         beforeOrAfterCleanOptions: {
-            //             paths: ['**/README.md', '**/README.md']
-            //         },
-            //         dryRun,
-            //         workspaceInfo,
-            //         outDir: tempOutDir,
-            //         logger: new Logger({ logLevel: 'error' })
-            //     });
+                for (const cleanedPath of expectedPaths) {
+                    const fileExisted = fs.existsSync(cleanedPath);
+                    assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
+                }
 
-            //     const cleanResult = await runner.run();
-            //     const expectedPaths = [
-            //         path.resolve(runner.options.outDir, 'README.md'),
-            //         path.resolve(runner.options.outDir, 'src/README.md'),
-            //         path.resolve(runner.options.outDir, 'src/nested/README.md')
-            //     ];
-
-            //     for (const cleanedPath of expectedPaths) {
-            //         const fileDeleted = await fs
-            //             .access(cleanedPath)
-            //             .then(() => false)
-            //             .catch(() => true);
-            //         assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
-            //     }
-
-            //     assert.deepStrictEqual(
-            //         cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
-            //         expectedPaths.sort()
-            //     );
-
-            //     // after
-            //     const tempOutDirExisted = await fs
-            //         .access(tempOutDir)
-            //         .then(() => true)
-            //         .catch(() => false);
-
-            //     if (tempOutDirExisted) {
-            //         await fs.rm(tempOutDir, {
-            //             recursive: true,
-            //             force: true
-            //         });
-            //     }
-            // });
+                assert.deepStrictEqual(
+                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
+                    expectedPaths.sort()
+                );
+            });
         });
     });
 });
