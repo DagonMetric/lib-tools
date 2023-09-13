@@ -592,7 +592,7 @@ void describe('handlers/build/clean', () => {
                 }
             });
 
-            void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
+            void it('should delete output directory when cleanOutDir=true', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -618,7 +618,7 @@ void describe('handlers/build/clean', () => {
                 );
             });
 
-            void it('should delete with after build clean options [Actual Delete]', async () => {
+            void it('should delete with after build clean options', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
