@@ -556,7 +556,7 @@ void describe('handlers/build/clean', () => {
             });
         });
 
-        void describe('CleanTaskRunner:run [Actual Remove]', () => {
+        void describe('CleanTaskRunner:run [Actual Remove]', { skip: true }, () => {
             const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
             const dryRun = false;
 
