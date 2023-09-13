@@ -91,7 +91,7 @@ async function getPackageJsonInfo(workspaceInfo: {
     };
 }
 
-function getBuildTaskFromCmdOptions(cmdOptions: ParsedCommandOptions, buildTask: BuildTask): boolean {
+function applyBuildTaskWithCmdOptions(cmdOptions: ParsedCommandOptions, buildTask: BuildTask): boolean {
     let merged = false;
 
     // outDir
@@ -345,30 +345,35 @@ export async function getTasks(
     }
 
     if (taskName === 'build') {
-        const foundBuildTask = tasks.find((t) => t._taskName === 'build' && !t.skip);
-        const buildTask = foundBuildTask ?? ({} as BuildTask);
+        const foundBuildTasks = tasks.filter((t) => t._taskName === 'build');
 
-        const hasBuildTask = getBuildTaskFromCmdOptions(parsedCmdOptions, buildTask);
+        if (foundBuildTasks.length) {
+            for (const buildTask of foundBuildTasks) {
+                applyBuildTaskWithCmdOptions(parsedCmdOptions, buildTask);
+            }
+        } else {
+            const newBuildTask = {} as BuildTask;
+            const applied = applyBuildTaskWithCmdOptions(parsedCmdOptions, newBuildTask);
+            if (applied) {
+                const workspaceInfo: WorkspaceInfo = {
+                    workspaceRoot,
+                    projectRoot: workspaceRoot,
+                    projectName: null,
+                    configPath,
+                    nodeModulePath
+                };
 
-        if (hasBuildTask && !foundBuildTask) {
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: null,
-                configPath,
-                nodeModulePath
-            };
+                const packageJsonInfo = await getPackageJsonInfo(workspaceInfo);
 
-            const packageJsonInfo = await getPackageJsonInfo(workspaceInfo);
+                const parsedBuildTask = toParsedBuildTask(
+                    newBuildTask,
+                    workspaceInfo,
+                    packageJsonInfo,
+                    parsedCmdOptions._outDir && parsedCmdOptions.outDir ? { outDir: parsedCmdOptions.outDir } : {}
+                );
 
-            const parsedBuildTask = toParsedBuildTask(
-                buildTask,
-                workspaceInfo,
-                packageJsonInfo,
-                parsedCmdOptions._outDir && parsedCmdOptions.outDir ? { outDir: parsedCmdOptions.outDir } : {}
-            );
-
-            tasks.push(parsedBuildTask);
+                tasks.push(parsedBuildTask);
+            }
         }
     }
 
