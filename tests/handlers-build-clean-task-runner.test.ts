@@ -625,9 +625,6 @@ void describe('handlers/build/clean', () => {
                 }
 
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
-
-                // clean resources
-                fs.rmSync(tempOutDir);
             });
         });
     });
