@@ -558,8 +558,8 @@ void describe('handlers/build/clean', () => {
     });
 });
 
-await describe('handlers/build/clean/CleanTaskRunner:run [Actual Remove]', async () => {
-    await it('should delete output directory when cleanOutDir=true', async () => {
+void describe('handlers/build/clean/CleanTaskRunner:run [Actual Remove]', () => {
+    void it('should delete output directory when cleanOutDir=true', async () => {
         const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
         const workspaceInfo: WorkspaceInfo = {
             workspaceRoot,
