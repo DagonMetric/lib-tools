@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, it } from 'node:test';
+import { beforeEach, describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
@@ -581,16 +581,16 @@ void describe('handlers/build/clean', () => {
                 fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
             });
 
-            afterEach(() => {
-                // Cleaning resources
-                const tempOutDirExisted = fs.existsSync(tempOutDir);
-                if (tempOutDirExisted) {
-                    fs.rmSync(tempOutDir, {
-                        recursive: true,
-                        force: true
-                    });
-                }
-            });
+            // afterEach(() => {
+            //     // Cleaning resources
+            //     const tempOutDirExisted = fs.existsSync(tempOutDir);
+            //     if (tempOutDirExisted) {
+            //         fs.rmSync(tempOutDir, {
+            //             recursive: true,
+            //             force: true
+            //         });
+            //     }
+            // });
 
             void it('should delete output directory when cleanOutDir=true', async () => {
                 const runner = new CleanTaskRunner({
@@ -605,6 +605,7 @@ void describe('handlers/build/clean', () => {
                 });
 
                 const cleanResult = await runner.run();
+                const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
                 const expectedPaths = [runner.options.outDir];
 
                 for (const cleanedPath of expectedPaths) {
@@ -612,10 +613,7 @@ void describe('handlers/build/clean', () => {
                     assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
                 }
 
-                assert.deepStrictEqual(
-                    cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
-                    expectedPaths.sort()
-                );
+                assert.deepStrictEqual(cleanedPaths.sort(), expectedPaths.sort());
             });
 
             // void it('should delete with after build clean options', async () => {
