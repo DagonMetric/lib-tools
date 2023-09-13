@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import * as fs from 'node:fs/promises';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
@@ -8,17 +8,17 @@ import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parse
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/copy', { skip: process.platform !== 'win32' }, () => {
-    void describe('getCopyTaskRunner', () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'copy-project',
-            configPath: null,
-            nodeModulePath: null
-        };
+void describe('handlers/build/copy', () => {
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'copy-project',
+        configPath: null,
+        nodeModulePath: null
+    };
 
+    void describe('getCopyTaskRunner', () => {
         void it('should not get runner when empty copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
@@ -188,17 +188,8 @@ void describe('handlers/build/copy', { skip: process.platform !== 'win32' }, () 
     });
 
     void describe('CopyTaskRunner', () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'copy-project',
-            configPath: null,
-            nodeModulePath: null
-        };
-        const outDir = path.resolve(workspaceRoot, 'dist');
-
         void describe('CopyTaskRunner:run [Dry Run]', () => {
+            const outDir = path.resolve(workspaceRoot, 'dist');
             const dryRun = true;
 
             void it('should copy single file to output directory', async () => {
@@ -463,20 +454,14 @@ void describe('handlers/build/copy', { skip: process.platform !== 'win32' }, () 
         });
 
         void describe('CopyTaskRunner:run [Actual Copy]', () => {
+            const outDir = path.resolve(workspaceRoot, 'temp-out');
             const dryRun = false;
 
-            afterEach(async () => {
-                await fs
-                    .access(outDir)
-                    .then(async () => {
-                        await fs.rm(outDir, {
-                            recursive: true,
-                            force: true
-                        });
-                    })
-                    .catch(() => {
-                        // Do nothing
-                    });
+            afterEach(() => {
+                const outDirExist = fs.existsSync(outDir);
+                if (outDirExist) {
+                    fs.rmSync(outDir);
+                }
             });
 
             void it('should copy single file to output directory', async () => {
@@ -499,10 +484,7 @@ void describe('handlers/build/copy', { skip: process.platform !== 'win32' }, () 
 
                 const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
                 for (const coppiedPath of expectedPaths) {
-                    const fileExisted = await fs
-                        .access(coppiedPath)
-                        .then(() => true)
-                        .catch(() => false);
+                    const fileExisted = fs.existsSync(coppiedPath);
                     assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
                 }
 
@@ -532,10 +514,7 @@ void describe('handlers/build/copy', { skip: process.platform !== 'win32' }, () 
 
                 const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
                 for (const coppiedPath of expectedPaths) {
-                    const fileExisted = await fs
-                        .access(coppiedPath)
-                        .then(() => true)
-                        .catch(() => false);
+                    const fileExisted = fs.existsSync(coppiedPath);
                     assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
                 }
 
