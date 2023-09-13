@@ -8,7 +8,7 @@ import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parse
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/copy', { skip: true }, () => {
+void describe('handlers/build/copy', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
@@ -18,7 +18,7 @@ void describe('handlers/build/copy', { skip: true }, () => {
         nodeModulePath: null
     };
 
-    void describe('getCopyTaskRunner', { skip: true }, () => {
+    void describe('getCopyTaskRunner', () => {
         void it('should not get runner when empty copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
