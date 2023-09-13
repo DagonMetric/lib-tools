@@ -454,7 +454,7 @@ void describe('handlers/build/copy', () => {
         });
     });
 
-    void describe('CopyTaskRunner:run [Actual Copy]', { skip: process.platform === 'linux' }, () => {
+    void describe('CopyTaskRunner:run [Actual Copy]', { skip: process.platform !== 'win32' }, () => {
         void it('should copy single file to output directory', async () => {
             const outDir = path.resolve(workspaceRoot, 'temp/out');
             const dryRun = false;
