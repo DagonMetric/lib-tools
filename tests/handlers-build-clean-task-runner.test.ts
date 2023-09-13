@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
@@ -558,14 +558,24 @@ void describe('handlers/build/clean', () => {
     });
 
     void describe('CleanTaskRunner:run [Actual Remove]', { skip: process.platform === 'linux' }, () => {
-        void it('should delete output directory when cleanOutDir=true', async () => {
-            const tempOutDir = path.resolve(workspaceRoot, 'temp/out');
-            const dryRun = false;
+        const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
+        const dryRun = false;
 
+        beforeEach(() => {
             // Prepare resources
             fs.mkdirSync(tempOutDir, { recursive: true });
             fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
+        });
 
+        afterEach(() => {
+            // Clean resources
+            const tempOutDirexisted = fs.existsSync(tempOutDir);
+            if (tempOutDirexisted) {
+                fs.rmdirSync(tempOutDir, { recursive: true });
+            }
+        });
+
+        void it('should delete output directory when cleanOutDir=true', async () => {
             const runner = new CleanTaskRunner({
                 runFor: 'before',
                 beforeOrAfterCleanOptions: {

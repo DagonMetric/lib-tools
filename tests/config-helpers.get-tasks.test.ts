@@ -121,7 +121,7 @@ void describe('config-helpers/get-tasks', () => {
 
             const expectedTasks = [task1, task2];
 
-            assert.deepStrictEqual(tasks[0], expectedTasks[0]);
+            assert.deepStrictEqual(tasks, expectedTasks);
         });
     });
 

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { describe, it } from 'node:test';
+import { afterEach, describe, it } from 'node:test';
 
 import { CopyEntry } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
@@ -455,10 +455,18 @@ void describe('handlers/build/copy', () => {
     });
 
     void describe('CopyTaskRunner:run [Actual Copy]', { skip: process.platform === 'linux' }, () => {
-        void it('should copy single file to output directory', async () => {
-            const outDir = path.resolve(workspaceRoot, 'temp/out');
-            const dryRun = false;
+        const outDir = path.resolve(workspaceRoot, 'dist');
+        const dryRun = false;
 
+        void afterEach(() => {
+            // Clean resources
+            const tempOutDirexisted = fs.existsSync(outDir);
+            if (tempOutDirexisted) {
+                fs.rmdirSync(outDir, { recursive: true });
+            }
+        });
+
+        void it('should copy single file to output directory', async () => {
             const runner = new CopyTaskRunner({
                 copyEntries: [
                     {
@@ -475,17 +483,15 @@ void describe('handlers/build/copy', () => {
             });
 
             const copyResult = await runner.run();
+            const copiedPaths = copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort();
 
-            const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')];
+            const expectedPaths = [path.resolve(runner.options.outDir, 'README.md')].sort();
             for (const coppiedPath of expectedPaths) {
                 const fileExisted = fs.existsSync(coppiedPath);
                 assert.equal(fileExisted, true, `'${coppiedPath}' should be existed.`);
             }
 
-            assert.deepStrictEqual(
-                copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
-                expectedPaths.sort()
-            );
+            assert.deepStrictEqual(copiedPaths, expectedPaths);
         });
     });
 });
