@@ -8,7 +8,7 @@ import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parse
 import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/clean', { skip: true }, () => {
+void describe('handlers/build/clean', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
