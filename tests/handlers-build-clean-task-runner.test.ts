@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import * as fs from 'node:fs/promises';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
@@ -575,24 +575,17 @@ void describe('handlers/build/clean', () => {
             const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
             const dryRun = false;
 
-            beforeEach(async () => {
+            beforeEach(() => {
                 // Prepare resources
-                await fs.mkdir(tempOutDir, { recursive: true });
-                await fs.copyFile(
-                    path.resolve(workspaceRoot, 'theout/README.md'),
-                    path.resolve(tempOutDir, 'README.md')
-                );
+                fs.mkdirSync(tempOutDir, { recursive: true });
+                fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
             });
 
-            afterEach(async () => {
+            afterEach(() => {
                 // Cleaning resources
-                const tempOutDirExisted = await fs
-                    .access(tempOutDir)
-                    .then(() => true)
-                    .catch(() => false);
-
+                const tempOutDirExisted = fs.existsSync(tempOutDir);
                 if (tempOutDirExisted) {
-                    await fs.rm(tempOutDir, {
+                    fs.rmSync(tempOutDir, {
                         recursive: true,
                         force: true
                     });
@@ -615,11 +608,9 @@ void describe('handlers/build/clean', () => {
                 const expectedPaths = [runner.options.outDir];
 
                 for (const cleanedPath of expectedPaths) {
-                    const fileDeleted = await fs
-                        .access(cleanedPath)
-                        .then(() => false)
-                        .catch(() => true);
-                    assert.equal(fileDeleted, true, `'${cleanedPath}' should be deleted.`);
+                    const fileExisted = fs.existsSync(cleanedPath);
+
+                    assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
                 }
 
                 assert.deepStrictEqual(
