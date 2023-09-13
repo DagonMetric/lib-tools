@@ -569,7 +569,7 @@ void describe('handlers/build/clean/CleanTaskRunner:run [Actual Remove]', () => 
             nodeModulePath: null
         };
 
-        const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
+        const tempOutDir = path.resolve(workspaceRoot, 'temp/out');
         const dryRun = false;
 
         // Prepare resources

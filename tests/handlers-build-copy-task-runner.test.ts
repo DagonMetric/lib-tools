@@ -455,27 +455,20 @@ void describe('handlers/build/copy', () => {
     });
 });
 
-void describe('handlers/build/copy/CopyTaskRunner:run [Actual Copy]', { skip: true }, () => {
-    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
-    const workspaceInfo: WorkspaceInfo = {
-        workspaceRoot,
-        projectRoot: workspaceRoot,
-        projectName: 'copy-project',
-        configPath: null,
-        nodeModulePath: null
-    };
-
-    const outDir = path.resolve(workspaceRoot, 'temp-out');
-    const dryRun = false;
-
-    // afterEach(() => {
-    //     const outDirExist = fs.existsSync(outDir);
-    //     if (outDirExist) {
-    //         fs.rmSync(outDir);
-    //     }
-    // });
-
+void describe('handlers/build/copy/CopyTaskRunner:run [Actual Copy]', () => {
     void it('should copy single file to output directory', async () => {
+        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
+        const workspaceInfo: WorkspaceInfo = {
+            workspaceRoot,
+            projectRoot: workspaceRoot,
+            projectName: 'copy-project',
+            configPath: null,
+            nodeModulePath: null
+        };
+
+        const outDir = path.resolve(workspaceRoot, 'temp/out');
+        const dryRun = false;
+
         const runner = new CopyTaskRunner({
             copyEntries: [
                 {
