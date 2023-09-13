@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
@@ -9,16 +9,16 @@ import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/clean', () => {
-    void describe('getCleanTaskRunner', () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: workspaceRoot,
-            projectName: 'clean-project',
-            configPath: null,
-            nodeModulePath: null
-        };
+    const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+    const workspaceInfo: WorkspaceInfo = {
+        workspaceRoot,
+        projectRoot: workspaceRoot,
+        projectName: 'clean-project',
+        configPath: null,
+        nodeModulePath: null
+    };
 
+    void describe('getCleanTaskRunner', () => {
         void it('should not get runner when clean=false', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
@@ -149,15 +149,6 @@ void describe('handlers/build/clean', () => {
 
     void describe('CleanTaskRunner', () => {
         void describe('CleanTaskRunner:run [Error throws]', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null,
-                nodeModulePath: null
-            };
-
             void it(
                 'should throw an error if cleaning system root directory - C:\\ on Windows',
                 { skip: process.platform !== 'win32' },
@@ -316,14 +307,6 @@ void describe('handlers/build/clean', () => {
         });
 
         void describe('CleanTaskRunner:run [Dry Run]', () => {
-            const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot,
-                projectRoot: workspaceRoot,
-                projectName: 'clean-project',
-                configPath: null,
-                nodeModulePath: null
-            };
             const outDir = path.resolve(workspaceRoot, 'theout');
             const dryRun = true;
 
@@ -589,23 +572,34 @@ void describe('handlers/build/clean', () => {
         });
 
         void describe('CleanTaskRunner:run [Actual Remove]', () => {
+            const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
+            const dryRun = false;
+
+            beforeEach(async () => {
+                // Prepare resources
+                await fs.mkdir(tempOutDir, { recursive: true });
+                await fs.copyFile(
+                    path.resolve(workspaceRoot, 'theout/README.md'),
+                    path.resolve(tempOutDir, 'README.md')
+                );
+            });
+
+            afterEach(async () => {
+                // Cleaning resources
+                const tempOutDirExisted = await fs
+                    .access(tempOutDir)
+                    .then(() => true)
+                    .catch(() => false);
+
+                if (tempOutDirExisted) {
+                    await fs.rm(tempOutDir, {
+                        recursive: true,
+                        force: true
+                    });
+                }
+            });
+
             void it('should delete output directory when cleanOutDir=true [Actual Delete]', async () => {
-                const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-                const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
-                const dryRun = false;
-
-                await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
-                    recursive: true
-                });
-
-                const workspaceInfo: WorkspaceInfo = {
-                    workspaceRoot,
-                    projectRoot: workspaceRoot,
-                    projectName: 'clean-project',
-                    configPath: null,
-                    nodeModulePath: null
-                };
-
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -632,37 +626,15 @@ void describe('handlers/build/clean', () => {
                     cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path).sort(),
                     expectedPaths.sort()
                 );
-
-                // after
-                const tempOutDirExisted = await fs
-                    .access(tempOutDir)
-                    .then(() => true)
-                    .catch(() => false);
-
-                if (tempOutDirExisted) {
-                    await fs.rm(tempOutDir, {
-                        recursive: true,
-                        force: true
-                    });
-                }
             });
 
             // void it('should delete with after build clean options [Actual Delete]', async () => {
-            //     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
             //     const tempOutDir = path.resolve(workspaceRoot, 'temp-out2');
             //     const dryRun = false;
 
             //     await fs.cp(path.resolve(workspaceRoot, 'theout'), tempOutDir, {
             //         recursive: true
             //     });
-
-            //     const workspaceInfo: WorkspaceInfo = {
-            //         workspaceRoot,
-            //         projectRoot: workspaceRoot,
-            //         projectName: 'clean-project',
-            //         configPath: null,
-            //         nodeModulePath: null
-            //     };
 
             //     const runner = new CleanTaskRunner({
             //         runFor: 'after',
