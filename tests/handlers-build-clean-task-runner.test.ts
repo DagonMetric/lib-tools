@@ -147,7 +147,7 @@ void describe('handlers/build/clean', () => {
         });
     });
 
-    void describe('CleanTaskRunner', { skip: true }, () => {
+    void describe('CleanTaskRunner', { skip: process.platform === 'linux' }, () => {
         void describe('CleanTaskRunner:run [Error throws]', () => {
             void it(
                 'should throw an error if cleaning system root directory - C:\\ on Windows',
@@ -557,7 +557,7 @@ void describe('handlers/build/clean', () => {
         });
     });
 
-    void describe('CleanTaskRunner:run [Actual Remove]', { skip: true }, () => {
+    void describe('CleanTaskRunner:run [Actual Remove]', { skip: process.platform === 'linux' }, () => {
         void it('should delete output directory when cleanOutDir=true', async () => {
             const tempOutDir = path.resolve(workspaceRoot, 'temp/out');
             const dryRun = false;
