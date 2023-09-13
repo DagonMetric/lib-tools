@@ -568,8 +568,7 @@ void describe('handlers/build/clean', () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
-                        cleanOutDir: true,
-                        paths: ['**/*']
+                        cleanOutDir: true
                     },
                     dryRun,
                     workspaceInfo,
