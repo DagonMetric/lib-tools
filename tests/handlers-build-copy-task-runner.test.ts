@@ -18,7 +18,7 @@ void describe('handlers/build/copy', () => {
         nodeModulePath: null
     };
 
-    void describe('getCopyTaskRunner', () => {
+    void describe('getCopyTaskRunner', { skip: process.platform !== 'win32' }, () => {
         void it('should not get runner when empty copy entry', () => {
             const buildTask: ParsedBuildTaskConfig = {
                 _taskName: 'build',
