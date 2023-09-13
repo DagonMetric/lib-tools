@@ -556,8 +556,8 @@ void describe('handlers/build/clean', () => {
             });
         });
 
-        void describe('CleanTaskRunner:run [Actual Remove]', () => {
-            const tempOutDir = path.resolve(workspaceRoot, 'temp-out');
+        void describe('CleanTaskRunner:run #1 [Actual Remove]', () => {
+            const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
             const dryRun = false;
 
             beforeEach(() => {
@@ -565,17 +565,6 @@ void describe('handlers/build/clean', () => {
                 fs.mkdirSync(tempOutDir, { recursive: true });
                 fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
             });
-
-            // afterEach(() => {
-            //     // Cleaning resources
-            //     const tempOutDirExisted = fs.existsSync(tempOutDir);
-            //     if (tempOutDirExisted) {
-            //         fs.rmSync(tempOutDir, {
-            //             recursive: true,
-            //             force: true
-            //         });
-            //     }
-            // });
 
             void it('should delete output directory when cleanOutDir=true', async () => {
                 const runner = new CleanTaskRunner({
@@ -600,6 +589,17 @@ void describe('handlers/build/clean', () => {
                 }
 
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
+            });
+        });
+
+        void describe('CleanTaskRunner:run #2 [Actual Remove]', () => {
+            const tempOutDir = path.resolve(workspaceRoot, 'temp/out-2');
+            const dryRun = false;
+
+            beforeEach(() => {
+                // Prepare resources
+                fs.mkdirSync(tempOutDir, { recursive: true });
+                fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
             });
 
             void it('should delete with after build clean options', async () => {
