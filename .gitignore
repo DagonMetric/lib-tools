@@ -27,7 +27,6 @@ yarn-error.log*
 
 # Build results
 dist/
-temp-out/
 
 # sass
 .sass-cache/
@@ -48,4 +47,6 @@ junit/
 
 # Misc.
 tmp/
+temp/
+temp-out/
 .cache
