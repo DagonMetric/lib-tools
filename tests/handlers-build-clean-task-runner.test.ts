@@ -8,7 +8,7 @@ import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parse
 import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
 import { Logger } from '../src/utils/index.js';
 
-await describe('handlers/build/clean', async () => {
+void describe('handlers/build/clean', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
     const workspaceInfo: WorkspaceInfo = {
         workspaceRoot,
@@ -147,9 +147,9 @@ await describe('handlers/build/clean', async () => {
         });
     });
 
-    await describe('CleanTaskRunner', async () => {
-        await describe('CleanTaskRunner:run [Error throws]', async () => {
-            await it(
+    void describe('CleanTaskRunner', () => {
+        void describe('CleanTaskRunner:run [Error throws]', () => {
+            void it(
                 'should throw an error if cleaning system root directory - C:\\ on Windows',
                 { skip: process.platform !== 'win32' },
                 async () => {
@@ -170,7 +170,7 @@ await describe('handlers/build/clean', async () => {
                 }
             );
 
-            await it(
+            void it(
                 'should throw an error if cleaning system root directory - C:/',
                 { skip: process.platform !== 'win32' },
                 async () => {
@@ -191,7 +191,7 @@ await describe('handlers/build/clean', async () => {
                 }
             );
 
-            await it(
+            void it(
                 'should throw an error if cleaning unc root directory - \\\\server',
                 { skip: process.platform !== 'win32' },
                 async () => {
@@ -212,7 +212,7 @@ await describe('handlers/build/clean', async () => {
                 }
             );
 
-            await it(
+            void it(
                 'should throw an error if cleaning unc root directory - \\\\server\\public',
                 { skip: process.platform !== 'win32' },
                 async () => {
@@ -233,7 +233,7 @@ await describe('handlers/build/clean', async () => {
                 }
             );
 
-            await it(
+            void it(
                 'should throw an error if cleaning unc root directory - //erver//public',
                 { skip: process.platform !== 'win32' },
                 async () => {
@@ -254,7 +254,7 @@ await describe('handlers/build/clean', async () => {
                 }
             );
 
-            await it('should throw an error if cleaning workspace directory', async () => {
+            void it('should throw an error if cleaning workspace directory', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
@@ -271,7 +271,7 @@ await describe('handlers/build/clean', async () => {
                 await assert.rejects(async () => await runner.run());
             });
 
-            await it('should throw an error if cleaning outside of workspace directory', async () => {
+            void it('should throw an error if cleaning outside of workspace directory', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
@@ -288,7 +288,7 @@ await describe('handlers/build/clean', async () => {
                 await assert.rejects(async () => await runner.run());
             });
 
-            await it('should throw an error if cleaning outside of output directory', async () => {
+            void it('should throw an error if cleaning outside of output directory', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
@@ -306,11 +306,11 @@ await describe('handlers/build/clean', async () => {
             });
         });
 
-        await describe('CleanTaskRunner:run [Dry Run]', async () => {
+        void describe('CleanTaskRunner:run [Dry Run]', () => {
             const outDir = path.resolve(workspaceRoot, 'theout');
             const dryRun = true;
 
-            await it('should delete output directory when cleanOutDir=true', async () => {
+            void it('should delete output directory when cleanOutDir=true', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -330,7 +330,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
             });
 
-            await it('should delete output directory when custom paths include /', async () => {
+            void it('should delete output directory when custom paths include /', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -350,7 +350,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
             });
 
-            await it('should delete output directory when custom paths include \\', async () => {
+            void it('should delete output directory when custom paths include \\', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -370,7 +370,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
             });
 
-            await it('should delete output directory when custom paths include .', async () => {
+            void it('should delete output directory when custom paths include .', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -390,7 +390,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, [runner.options.outDir]);
             });
 
-            await it('should delete with before build clean options', async () => {
+            void it('should delete with before build clean options', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -421,7 +421,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
             });
 
-            await it('should delete with after build clean options', async () => {
+            void it('should delete with after build clean options', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
@@ -450,7 +450,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
             });
 
-            await it('should respect exclude when cleaning paths - #1', async () => {
+            void it('should respect exclude when cleaning paths - #1', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -471,7 +471,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, []);
             });
 
-            await it('should respect exclude when cleaning paths - #2', async () => {
+            void it('should respect exclude when cleaning paths - #2', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
@@ -502,7 +502,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
             });
 
-            await it('should respect exclude when cleaning paths - #3', async () => {
+            void it('should respect exclude when cleaning paths - #3', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
@@ -529,7 +529,7 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
             });
 
-            await it('should respect exclude when cleaning paths - #4', async () => {
+            void it('should respect exclude when cleaning paths - #4', async () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'after',
                     beforeOrAfterCleanOptions: {
@@ -555,39 +555,48 @@ await describe('handlers/build/clean', async () => {
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
             });
         });
+    });
+});
 
-        await describe('CleanTaskRunner:run [Actual Remove]', async () => {
-            await it('should delete output directory when cleanOutDir=true', async () => {
-                const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
-                const dryRun = false;
+await describe('handlers/build/clean/CleanTaskRunner:run [Actual Remove]', async () => {
+    await it('should delete output directory when cleanOutDir=true', async () => {
+        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
+        const workspaceInfo: WorkspaceInfo = {
+            workspaceRoot,
+            projectRoot: workspaceRoot,
+            projectName: 'clean-project',
+            configPath: null,
+            nodeModulePath: null
+        };
 
-                // Prepare resources
-                fs.mkdirSync(tempOutDir, { recursive: true });
-                fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
+        const tempOutDir = path.resolve(workspaceRoot, 'temp/out-1');
+        const dryRun = false;
 
-                const runner = new CleanTaskRunner({
-                    runFor: 'before',
-                    beforeOrAfterCleanOptions: {
-                        cleanOutDir: true
-                    },
-                    dryRun,
-                    workspaceInfo,
-                    outDir: tempOutDir,
-                    logger: new Logger({ logLevel: 'error' })
-                });
+        // Prepare resources
+        fs.mkdirSync(tempOutDir, { recursive: true });
+        fs.copyFileSync(path.resolve(workspaceRoot, 'theout/README.md'), path.resolve(tempOutDir, 'README.md'));
 
-                const cleanResult = await runner.run();
-                const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
-
-                const expectedPaths = [runner.options.outDir];
-
-                for (const cleanedPath of expectedPaths) {
-                    const fileExisted = fs.existsSync(cleanedPath);
-                    assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
-                }
-
-                assert.deepStrictEqual(cleanedPaths, expectedPaths);
-            });
+        const runner = new CleanTaskRunner({
+            runFor: 'before',
+            beforeOrAfterCleanOptions: {
+                cleanOutDir: true
+            },
+            dryRun,
+            workspaceInfo,
+            outDir: tempOutDir,
+            logger: new Logger({ logLevel: 'error' })
         });
+
+        const cleanResult = await runner.run();
+        const cleanedPaths = cleanResult.cleanedPathInfoes.map((pathInfo) => pathInfo.path);
+
+        const expectedPaths = [runner.options.outDir];
+
+        for (const cleanedPath of expectedPaths) {
+            const fileExisted = fs.existsSync(cleanedPath);
+            assert.equal(fileExisted, false, `'${cleanedPath}' should be deleted.`);
+        }
+
+        assert.deepStrictEqual(cleanedPaths, expectedPaths);
     });
 });
