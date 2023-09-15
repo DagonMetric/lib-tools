@@ -54,11 +54,15 @@ export class CleanTaskRunner {
 
         this.logStart();
 
+        const cleanTaskResult: CleanTaskResult = {
+            cleanedPathInfoes: [],
+            excludedPaths: []
+        };
+
         if (!(await pathExists(outDir))) {
-            return {
-                cleanedPathInfoes: [],
-                excludedPaths: []
-            };
+            this.logComplete(cleanTaskResult);
+
+            return cleanTaskResult;
         }
 
         const outDirStats = await fs.stat(outDir);
@@ -73,10 +77,9 @@ export class CleanTaskRunner {
         // cleanPathInfoes
         const cleanPathInfoes = await this.getCleanPathInfoes();
         if (!cleanPathInfoes.length) {
-            return {
-                cleanedPathInfoes: [],
-                excludedPaths: []
-            };
+            this.logComplete(cleanTaskResult);
+
+            return cleanTaskResult;
         }
 
         // excludes
@@ -94,19 +97,15 @@ export class CleanTaskRunner {
 
             await this.delete(outDirPathInfo);
 
-            return {
-                cleanedPathInfoes: [outDirPathInfo],
-                excludedPaths: []
-            };
+            cleanTaskResult.cleanedPathInfoes.push(outDirPathInfo);
+
+            this.logComplete(cleanTaskResult);
+
+            return cleanTaskResult;
         }
 
         // addAllFilesGlobMagicToCleanPathInfoes
         await this.addAllFilesGlobMagicToCleanPathInfoes(cleanPathInfoes, excludePathInfoes);
-
-        const cleanTaskResult: CleanTaskResult = {
-            cleanedPathInfoes: [],
-            excludedPaths: []
-        };
 
         for (const cleanPathInfo of cleanPathInfoes) {
             // Validation
@@ -289,6 +288,8 @@ export class CleanTaskRunner {
                 // maxRetries: 2,
                 // retryDelay: 1000
             });
+        } else {
+            this.logger.debug('Actual deleting is not performed because the dryRun parameter is passed.');
         }
     }
 }

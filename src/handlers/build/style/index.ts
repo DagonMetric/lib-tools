@@ -4,16 +4,14 @@ import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { FileImporter } from 'sass';
-import { Configuration, LoaderContext, RuleSetUseItem, Stats } from 'webpack';
-import * as webpack from 'webpack';
+import webpackDefault, { Configuration, LoaderContext, RuleSetUseItem, WebpackPluginInstance } from 'webpack';
 
 import { StyleOptions } from '../../../config-models/index.js';
 import { PackageJsonInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
-import { InvalidCommandOptionError, InvalidConfigError, WebpackCompilationError } from '../../../exceptions/index.js';
+import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
     LogLevelString,
     Logger,
-    colors,
     normalizePathToPOSIXStyle,
     pathExists,
     readJsonWithComments,
@@ -22,111 +20,19 @@ import {
 
 import { BuildTaskHandleContext } from '../../interfaces/index.js';
 
-import { SuppressJsWebpackPlugin } from './plugins/index.js';
+import { StyleWebpackPlugin } from './plugins/index.js';
 
 const require = createRequire(process.cwd() + '/');
 
-async function runWebpack(webpackConfig: Configuration, logger: Logger, logLevel: LogLevelString): Promise<unknown> {
-    const webpackCompiler = webpack.default(webpackConfig);
+async function runWebpack(webpackConfig: Configuration): Promise<unknown> {
+    const webpackCompiler = webpackDefault(webpackConfig);
 
     return new Promise((resolve, reject) => {
-        const cb = (err?: Error | null, stats?: Stats) => {
+        const cb = (err?: Error | null) => {
             if (err) {
                 reject(err);
 
                 return;
-            }
-
-            if (stats) {
-                if (stats.hasErrors()) {
-                    let errorMessage = '';
-
-                    if (logLevel === 'debug') {
-                        errorMessage = stats.toString('errors-only');
-                    } else {
-                        const errors = stats.toJson('errors-only').errors ?? [];
-                        const errorLines: string[] = [];
-                        for (const err of errors) {
-                            if (!err.moduleName) {
-                                continue;
-                            }
-
-                            const moduleIdentifiers = err.moduleName.split('!');
-                            if (!moduleIdentifiers.length) {
-                                continue;
-                            }
-
-                            let formattedLine = '';
-
-                            const errorFilePath = moduleIdentifiers[moduleIdentifiers.length - 1];
-                            formattedLine += colors.lightCyan(normalizePathToPOSIXStyle(errorFilePath));
-                            if (err.loc) {
-                                formattedLine += colors.yellow(':' + err.loc);
-                            }
-                            formattedLine += ' ';
-
-                            const formatedSubLines: string[] = [];
-                            for (let subLine of err.message.split(/[\r\n]/)) {
-                                subLine = subLine.trim();
-                                if (!subLine) {
-                                    continue;
-                                }
-
-                                if (
-                                    subLine.includes(
-                                        'Module build failed (from ./node_modules/mini-css-extract-plugin/dist/loader.js):'
-                                    )
-                                ) {
-                                    continue;
-                                }
-
-                                if (!formatedSubLines.length) {
-                                    const errPrefixRegExp = /^(\w*[\s\w]*\s?[:]?\s?Error:\s)/i;
-                                    const m = subLine.match(errPrefixRegExp);
-                                    if (m?.length) {
-                                        let errPrefix = m[0].replace(/\s?:\s?/, ' ').trim();
-                                        if (!errPrefix.endsWith(':')) {
-                                            errPrefix += ':';
-                                        }
-                                        if (errPrefix.split(' ').length > 1) {
-                                            errPrefix = errPrefix[0] + errPrefix.substring(1).toLowerCase();
-                                        }
-                                        subLine = colors.red(errPrefix) + ' ' + subLine.replace(errPrefixRegExp, '');
-                                    }
-                                } else if (
-                                    ((subLine.startsWith('at ') || subLine.startsWith('in ')) &&
-                                        subLine.includes('node_modules\\')) ||
-                                    subLine.includes('node_modules/')
-                                ) {
-                                    break;
-                                }
-
-                                formatedSubLines.push(subLine);
-                            }
-
-                            formattedLine += formatedSubLines.join(' ');
-                            errorLines.push(formattedLine.trim());
-                        }
-
-                        errorMessage = colors.red('Running style task failed.') + '\n' + errorLines.join('\n');
-                    }
-
-                    reject(new WebpackCompilationError(errorMessage));
-
-                    return;
-                }
-
-                if (logLevel === 'debug') {
-                    const msg = stats.toString();
-                    if (msg?.trim()) {
-                        logger.debug(msg);
-                    }
-                } else {
-                    const msg = stats.toString('errors-warnings');
-                    if (msg?.trim() && stats.hasWarnings()) {
-                        logger.warn(msg);
-                    }
-                }
             }
 
             webpackCompiler.close(() => {
@@ -240,11 +146,13 @@ export interface StyleTaskRunnerOptions {
     readonly logger: Logger;
     readonly logLevel: LogLevelString;
     readonly packageJsonInfo: PackageJsonInfo | null;
+    readonly bannerText: string | null;
 }
 
 export interface StyleBundleResult {
-    readonly files: string[];
+    readonly builtAssets: { path: string; size: number }[];
 }
+
 export class StyleTaskRunner {
     private readonly logger: Logger;
 
@@ -318,6 +226,21 @@ export class StyleTaskRunner {
             ];
         };
 
+        // result
+        const styleBundleResult: StyleBundleResult = {
+            builtAssets: []
+        };
+
+        const extraPlugins: WebpackPluginInstance[] = [];
+        if (this.options.bannerText) {
+            extraPlugins.push(
+                new webpackDefault.BannerPlugin({
+                    banner: this.options.bannerText,
+                    raw: true
+                })
+            );
+        }
+
         const webpackConfig: Configuration = {
             devtool: sourceMap ? 'source-map' : false,
             mode: 'production',
@@ -329,7 +252,16 @@ export class StyleTaskRunner {
                 new MiniCssExtractPlugin({
                     filename: '[name].css'
                 }),
-                new SuppressJsWebpackPlugin()
+                new StyleWebpackPlugin({
+                    logger: this.logger,
+                    logLevel: this.options.logLevel,
+                    dryRun: this.options.dryRun,
+                    outDir: this.options.outDir,
+                    onSuccess: (pluginResult) => {
+                        styleBundleResult.builtAssets.push(...pluginResult.builtAssets);
+                    }
+                }),
+                ...extraPlugins
             ],
             module: {
                 rules: [
@@ -417,12 +349,12 @@ export class StyleTaskRunner {
             }
         };
 
-        await runWebpack(webpackConfig, this.logger, logLevel);
+        await runWebpack(webpackConfig);
 
-        return { files: [] };
+        return styleBundleResult;
     }
 
-    async getEntryPoints(): Promise<Record<string, string[]>> {
+    private async getEntryPoints(): Promise<Record<string, string[]>> {
         const projectRoot = this.options.workspaceInfo.projectRoot;
         const projectName = this.options.workspaceInfo.projectName;
         const configPath = this.options.workspaceInfo.configPath;
@@ -534,7 +466,8 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         dryRun: context.dryRun,
         logger: context.logger,
         logLevel: context.logLevel,
-        packageJsonInfo: buildTask._packageJsonInfo
+        packageJsonInfo: buildTask._packageJsonInfo,
+        bannerText: buildTask._bannerText
     });
 
     return copyTaskRunner;

@@ -304,6 +304,7 @@ export class CopyTaskRunner {
             );
 
             if (this.options.dryRun) {
+                this.logger.debug('Actual copying is not performed because the dryRun parameter is passed.');
                 continue;
             }
 
