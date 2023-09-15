@@ -7,11 +7,11 @@ function formatMessage(message: string, configPath: string | null, configLocatio
         formattedMsg += `${colors.lightCyan(configPath)} - `;
     }
 
-    formattedMsg += colors.red('Configuration error:') + ` ${message}`;
+    formattedMsg += colors.lightRed('Configuration error:') + ` ${message}`;
 
     if (configLocation) {
         formattedMsg += `\n  config location: `;
-        formattedMsg += colors.red(configLocation);
+        formattedMsg += colors.lightRed(configLocation);
     }
 
     return formattedMsg;
