@@ -5,7 +5,7 @@ import { ConfigSchemaValidationError } from '../exceptions/index.js';
 import schema from '../schemas/schema.json' assert { type: 'json' };
 import { readJsonWithComments } from '../utils/index.js';
 
-const ajv = new Ajv.default({ allErrors: true });
+const ajv = new Ajv.default({ allErrors: true, allowUnionTypes: true });
 
 const libConfigCache = new Map<string, LibConfig>();
 
