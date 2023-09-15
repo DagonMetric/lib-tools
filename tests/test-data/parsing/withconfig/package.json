@@ -1,4 +1,8 @@
 {
   "name": "my-packages",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "description": "This is a test project.",
+  "author": "DagonMetric",
+  "license": "MIT",
+  "homepage": "https://github.com/dagonmetric/lib-tools"
 }

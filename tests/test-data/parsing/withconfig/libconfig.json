@@ -5,7 +5,11 @@
       "root": "./packages/package-1",
       "tasks": {
         "build": {
-          "clean": false
+          "clean": false,
+          "banner": true,
+          "packageJson": {
+            "packageVersion": "root"
+          }
         }
       }
     },

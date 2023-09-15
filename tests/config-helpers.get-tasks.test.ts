@@ -42,13 +42,21 @@ void describe('config-helpers/get-tasks', () => {
                     isNestedPackage: false,
                     rootPackageJson: {
                         name: 'my-packages',
-                        version: '1.0.0'
+                        version: '1.0.0',
+                        description: 'This is a test project.',
+                        author: 'DagonMetric',
+                        license: 'MIT',
+                        homepage: 'https://github.com/dagonmetric/lib-tools'
                     },
-                    newPackageVersion: null
+                    newPackageVersion: '1.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
-                _bannerText: null,
-                clean: false
+                _bannerText: `// DagonMetric, MIT, https://github.com/dagonmetric/lib-tools, @scope/package-1, 1.0.0, This is a test project.`,
+                clean: false,
+                banner: true,
+                packageJson: {
+                    packageVersion: 'root'
+                }
             };
 
             const task2 = {
@@ -105,14 +113,19 @@ void describe('config-helpers/get-tasks', () => {
                     isNestedPackage: false,
                     rootPackageJson: {
                         name: 'my-packages',
-                        version: '1.0.0'
+                        version: '1.0.0',
+                        description: 'This is a test project.',
+                        author: 'DagonMetric',
+                        license: 'MIT',
+                        homepage: 'https://github.com/dagonmetric/lib-tools'
                     },
                     newPackageVersion: '2.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
-                _bannerText: null,
+                _bannerText: `// DagonMetric, MIT, https://github.com/dagonmetric/lib-tools, @scope/package-1, 2.0.0, This is a test project.`,
                 outDir: 'dist',
                 clean: true,
+                banner: true,
                 copy: ['**/*.js', 'README.md'],
                 style: ['style.scss'],
                 script: ['index.ts'],
