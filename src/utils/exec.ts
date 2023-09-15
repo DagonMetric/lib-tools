@@ -4,7 +4,7 @@ import { Logger } from './logger.js';
 
 export class ExitCodeError extends Error {
     constructor(readonly exitCode: number) {
-        super('');
+        super(`Process was existed with code ${exitCode}.`);
     }
 }
 
