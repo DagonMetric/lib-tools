@@ -217,9 +217,9 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
-     * Banner text to add at the top of each generated files. It can be file path or raw text.
+     * Set true to search banner.txt file or set banner file path to add banner content to the top of each generated file.
      */
-    banner?: string;
+    banner?: boolean | string;
     /**
      * Options for updating package.json file.
      */

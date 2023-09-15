@@ -17,13 +17,21 @@ export interface ParsedCommandOptions extends CommandOptions {
 }
 
 export interface PackageJsonInfo {
-    readonly packageJson: { [key: string]: unknown; name?: string; version?: string };
+    readonly packageJson: {
+        [key: string]: unknown;
+        name?: string;
+        version?: string;
+    };
     readonly packageJsonPath: string;
     readonly packageName: string;
     readonly packageNameWithoutScope: string;
     readonly packageScope: string | null;
     readonly isNestedPackage: boolean;
-    readonly rootPackageVersion: string | null;
+    readonly rootPackageJson: {
+        [key: string]: unknown;
+        version?: string;
+    } | null;
+    readonly newPackageVersion: string | null;
 }
 
 export interface WorkspaceInfo {
@@ -41,6 +49,7 @@ export interface ParsedTaskConfig extends Task {
 
 export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _outDir: string;
+    readonly _bannerText: string | null;
     readonly _packageJsonInfo: PackageJsonInfo | null;
 }
 
