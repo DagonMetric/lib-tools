@@ -15,7 +15,9 @@
                 "out": "path-1/bundle.css"
               }
             ],
-            "minify": false
+            "minify": {
+              "separateMinifyFile": true
+            }
           }
         }
       }
