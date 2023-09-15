@@ -1,5 +1,7 @@
 import * as path from 'node:path';
 
+import { Compiler, sources } from 'webpack';
+
 import { WebpackCompilationError } from '../../../../../../exceptions/index.js';
 import { LogLevelString, Logger, colors, normalizePathToPOSIXStyle } from '../../../../../../utils/index.js';
 
@@ -22,6 +24,7 @@ export interface StyleWebpackPluginOptions {
     readonly logger: Logger;
     readonly logLevel: LogLevelString;
     readonly dryRun: boolean;
+    readonly separateMinifyFile: boolean;
     readonly onSuccess: (result: StyleWebpackPluginSuccessResult) => void;
 }
 
@@ -36,13 +39,46 @@ export class StyleWebpackPlugin {
         this.logger = this.options.logger;
     }
 
-    apply(compiler: import('webpack').Compiler): void {
+    apply(compiler: Compiler): void {
         compiler.hooks.initialize.tap(this.name, () => {
             this.logger.group('\u25B7 style');
             this.startTime = Date.now();
         });
 
         compiler.hooks.compilation.tap(this.name, (compilation) => {
+            compilation.hooks.processAssets.tap(
+                {
+                    name: this.name,
+                    stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_DERIVED
+                },
+                (assets) => {
+                    if (!this.options.separateMinifyFile) {
+                        return;
+                    }
+
+                    const minCssAssets: Record<string, sources.Source> = {};
+
+                    for (const [pathname, source] of Object.entries(assets)) {
+                        if (!/\.css$/i.test(pathname) || /\.min\.css$/i.test(pathname)) {
+                            continue;
+                        }
+
+                        const asset = compilation.getAsset(pathname);
+
+                        if (asset?.info.minimized ?? asset?.info.copied) {
+                            continue;
+                        }
+
+                        const filename = pathname.replace(/\.css$/i, '.min.css');
+                        minCssAssets[filename] = source;
+                    }
+
+                    for (const [pathname, source] of Object.entries(minCssAssets)) {
+                        compilation.assets[pathname] = source;
+                    }
+                }
+            );
+
             compilation.hooks.chunkAsset.tap(this.name, (chunk, filename) => {
                 if (!filename.endsWith('.js')) {
                     return;

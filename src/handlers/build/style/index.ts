@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { FileImporter } from 'sass';
 import webpackDefault, { Configuration, LoaderContext, RuleSetUseItem, WebpackPluginInstance } from 'webpack';
 
-import { StyleOptions } from '../../../config-models/index.js';
+import { StyleMinifyOptions, StyleOptions } from '../../../config-models/index.js';
 import { PackageJsonInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
@@ -173,7 +173,9 @@ export class StyleTaskRunner {
         const sourceMap = styleOptions.sourceMap ?? true;
 
         // minify
-        const minify = styleOptions.minify ?? true;
+        const minify = styleOptions.minify !== false ? true : false;
+        const minifyOptions: StyleMinifyOptions = typeof styleOptions.minify === 'object' ? styleOptions.minify : {};
+        const separateMinifyFile = minify && minifyOptions.separateMinifyFile !== false ? true : false;
         let cssnanoOptions: Record<string, unknown> | null = null;
         if (minify) {
             const cssnanoConfigFilePath = path.resolve(workspaceRoot, '.cssnanorc.config.json');
@@ -257,6 +259,7 @@ export class StyleTaskRunner {
                     logLevel: this.options.logLevel,
                     dryRun: this.options.dryRun,
                     outDir: this.options.outDir,
+                    separateMinifyFile,
                     onSuccess: (pluginResult) => {
                         styleBundleResult.builtAssets.push(...pluginResult.builtAssets);
                     }
@@ -335,6 +338,7 @@ export class StyleTaskRunner {
                 minimizer: minify
                     ? [
                           new CssMinimizerPlugin({
+                              test: separateMinifyFile ? /\.min\.css(\?.*)?$/i : /\.css(\?.*)?$/i,
                               warningsFilter: () => {
                                   return logLevel === 'error' ? false : true;
                               },
