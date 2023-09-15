@@ -1,0 +1,12 @@
+{
+  "name": "style-package",
+  "version": "1.0.0",
+  "description": "This is a style test project.",
+  "author": "DagonMetric",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dagonmetric/lib-tools.git"
+  },
+  "homepage": "https://github.com/dagonmetric/lib-tools"
+}

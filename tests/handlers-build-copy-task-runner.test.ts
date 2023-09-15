@@ -25,6 +25,7 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 copy: []
             };
 
@@ -44,6 +45,7 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 copy: [' ', { from: ' ' }]
             };
 
@@ -63,6 +65,7 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 copy: ['a.txt', 'b.txt', '**/*.md']
             };
 
@@ -96,6 +99,7 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 copy: [
                     {
                         from: 'a.txt'
@@ -145,6 +149,7 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 copy: [
                     'a.txt',
                     {

@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { getTasks, toParsedBuildTask, validateOutDir } from '../src/config-helpers/get-tasks.js';
+import { getParsedBuildTask, getTasks, validateOutDir } from '../src/config-helpers/get-tasks.js';
 import { BuildTask, CommandOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
@@ -21,10 +21,10 @@ void describe('config-helpers/get-tasks', () => {
 
             const workspace1: WorkspaceInfo = {
                 workspaceRoot: path.resolve(process.cwd(), workspaceRel),
-                projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
-                projectName: 'project-1',
                 configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
-                nodeModulePath: path.resolve(process.cwd(), 'node_modules')
+                nodeModulePath: path.resolve(process.cwd(), 'node_modules'),
+                projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
+                projectName: 'project-1'
             };
 
             const task1: ParsedBuildTaskConfig = {
@@ -40,9 +40,14 @@ void describe('config-helpers/get-tasks', () => {
                     packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
                     isNestedPackage: false,
-                    rootPackageVersion: '1.0.0'
+                    rootPackageJson: {
+                        name: 'my-packages',
+                        version: '1.0.0'
+                    },
+                    newPackageVersion: null
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
+                _bannerText: null,
                 clean: false
             };
 
@@ -79,10 +84,10 @@ void describe('config-helpers/get-tasks', () => {
 
             const workspace1: WorkspaceInfo = {
                 workspaceRoot: path.resolve(process.cwd(), workspaceRel),
-                projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
-                projectName: 'project-1',
                 configPath: path.resolve(process.cwd(), workspaceRel, './libconfig.json'),
-                nodeModulePath: path.resolve(process.cwd(), 'node_modules')
+                nodeModulePath: path.resolve(process.cwd(), 'node_modules'),
+                projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
+                projectName: 'project-1'
             };
 
             const task1: ParsedBuildTaskConfig = {
@@ -98,9 +103,14 @@ void describe('config-helpers/get-tasks', () => {
                     packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
                     isNestedPackage: false,
-                    rootPackageVersion: '1.0.0'
+                    rootPackageJson: {
+                        name: 'my-packages',
+                        version: '1.0.0'
+                    },
+                    newPackageVersion: '2.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
+                _bannerText: null,
                 outDir: 'dist',
                 clean: true,
                 copy: ['**/*.js', 'README.md'],
@@ -125,8 +135,8 @@ void describe('config-helpers/get-tasks', () => {
         });
     });
 
-    void describe('toParsedBuildTask', () => {
-        void it('should parse build task config', () => {
+    void describe('getParsedBuildTask', () => {
+        void it('should parse build task config', async () => {
             const buildTask: BuildTask = {
                 outDir: 'out',
                 clean: true,
@@ -141,20 +151,21 @@ void describe('config-helpers/get-tasks', () => {
                 nodeModulePath: null
             };
 
-            const result = toParsedBuildTask(buildTask, workspaceInfo, null, {});
+            const result = await getParsedBuildTask(buildTask, workspaceInfo, null);
 
             const expected: ParsedBuildTaskConfig = {
                 ...buildTask,
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
-                _outDir: path.resolve(process.cwd(), 'out')
+                _outDir: path.resolve(process.cwd(), 'out'),
+                _bannerText: null
             };
 
             assert.deepStrictEqual(result, expected);
         });
 
-        void it('should parse build task config with cmd options outDir', () => {
+        void it('should parse build task config with cmd options outDir', async () => {
             const buildTask: BuildTask = {
                 clean: true,
                 script: ['a.js', 'b.ts']
@@ -168,14 +179,15 @@ void describe('config-helpers/get-tasks', () => {
                 nodeModulePath: null
             };
 
-            const result = toParsedBuildTask(buildTask, workspaceInfo, null, { outDir: 'dist' });
+            const result = await getParsedBuildTask(buildTask, workspaceInfo, null);
 
             const expected: ParsedBuildTaskConfig = {
                 ...buildTask,
                 _taskName: 'build',
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
-                _outDir: path.resolve(process.cwd(), 'dist')
+                _outDir: path.resolve(process.cwd(), 'dist'),
+                _bannerText: null
             };
 
             assert.deepStrictEqual(result, expected);

@@ -1,0 +1,11 @@
+/**
+ * @license
+ * Copyright [author] All Rights Reserved.
+ *
+ * Use of this source code is governed by an [license]-style license that can be
+ * found in the LICENSE file at [homepage].
+ * packagename: [packagename]
+ * packageversion: [packageversion]
+ * packagedescription: [package_description]
+ * fullhash:[fullhash], chunkhash:[chunkhash], name:[name], filebase:[filebase], query:[query], file:[file]
+ */

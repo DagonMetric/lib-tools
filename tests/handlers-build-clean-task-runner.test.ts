@@ -25,6 +25,7 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 clean: false
             };
 
@@ -44,6 +45,7 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 clean: {
                     beforeBuild: {
                         paths: [' ']
@@ -67,6 +69,7 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 clean: true
             };
 
@@ -99,6 +102,7 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 clean: {
                     beforeBuild: beforeBuildCleanOptions
                 }
@@ -128,6 +132,7 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
+                _bannerText: null,
                 clean: {
                     afterBuild: afterBuildCleanOptions
                 }

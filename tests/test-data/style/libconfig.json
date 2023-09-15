@@ -7,11 +7,12 @@
         "build": {
           "outDir": "dist",
           "clean": true,
+          "banner": true,
           "style": {
             "bundles": [
               {
                 "entry": "./src/style.css",
-                "out": "bundle.css"
+                "out": "path-1/bundle.css"
               }
             ],
             "minify": false
