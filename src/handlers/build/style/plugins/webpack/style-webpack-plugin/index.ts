@@ -212,8 +212,12 @@ export class StyleWebpackPlugin {
                         this.logger.debug(colors.lightMagenta('Webpack stats end'));
                     }
                 } else {
-                    const msg = stats.toString('errors-warnings');
-                    if (msg?.trim() && stats.hasWarnings()) {
+                    if (stats.hasWarnings()) {
+                        let msg = stats.toString('errors-warnings').trim();
+                        const warningPrefixRegExp = /^(Warn(ing)?\s?:?\s*)/i;
+                        if (warningPrefixRegExp.test(msg)) {
+                            msg = msg.replace(warningPrefixRegExp, '').trim();
+                        }
                         this.logger.warn(msg);
                     }
                 }
