@@ -48,24 +48,7 @@ const runCli = async () => {
     process.title = `${cliInfo.packageName} v${cliInfo.version}`;
     const cliModule = await import(pathToFileURL(cliInfo.cliPath).toString());
 
-    await cliModule.default(cliInfo).catch((err) => {
-        if (!err) {
-            process.exitCode = 1;
-            return;
-        }
-
-        if (err.exitCode != null && typeof err.exitCode === 'number') {
-            process.exitCode = err.exitCode;
-            if (err.message) {
-                console.error(err.message);
-            }
-        } else {
-            console.error(err.message ?? err);
-            if (process.exitCode === 0) {
-                process.exitCode = 1;
-            }
-        }
-    });
+    await cliModule.default(cliInfo);
 };
 
 await runCli();
