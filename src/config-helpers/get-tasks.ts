@@ -287,6 +287,7 @@ export async function getParsedBuildTask(
 
         if (bannerFilePath) {
             bannerText = await fs.readFile(bannerFilePath, 'utf-8');
+            bannerText = bannerText.trim();
 
             if (packageJsonInfo) {
                 const packageName = packageJsonInfo.packageName;
