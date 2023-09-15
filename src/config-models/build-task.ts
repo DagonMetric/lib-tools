@@ -64,9 +64,6 @@ export interface CopyEntry {
     exclude?: string[];
 }
 
-/**
- * @additionalProperties false
- */
 export interface StyleBundle {
     /**
      * The entry style file. Supported formats are .scss, .sass or .css.
@@ -79,8 +76,15 @@ export interface StyleBundle {
 }
 
 /**
- * @additionalProperties false
+ * Css minify options.
  */
+export interface StyleMinifyOptions {
+    /**
+     * If true, both unminified and minified files will be generated.
+     */
+    separateMinifyFile?: boolean;
+}
+
 export interface StyleOptions {
     /**
      * List of style compilation / bundle entries.
@@ -95,14 +99,11 @@ export interface StyleOptions {
      */
     loadPaths?: string[];
     /**
-     * Set true to generate minify file. Default is `true`.
+     * Boolean value or css minify options to generate minify file. Default is `true`.
      */
-    minify?: boolean;
+    minify?: boolean | StyleMinifyOptions;
 }
 
-/**
- * @additionalProperties false
- */
 export interface ScriptBundleEntry {
     /**
      * Specify the format of the generated bundle.
@@ -178,7 +179,6 @@ export interface ScriptOptions {
 
 /**
  * Options for package.json file.
- * @additionalProperties false
  */
 export interface PackageJsonOptions {
     /**
