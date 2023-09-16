@@ -8,10 +8,10 @@ export class ExitCodeError extends Error {
     }
 }
 
-export async function exec(cmd: string, logger: Logger): Promise<void> {
+export async function exec(cmd: string, logger: Logger, env?: Record<string, string | undefined>): Promise<void> {
     return new Promise((resolve, reject) => {
         // const proc = spawn(cmd, { stdio: 'inherit', shell: true });
-        const proc = spawn(cmd, { shell: true });
+        const proc = spawn(cmd, { shell: true, env });
 
         proc.stdout?.on('data', (data) => {
             logger.info(`${(data as string)?.toString().trimEnd()}`);
