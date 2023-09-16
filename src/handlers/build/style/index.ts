@@ -282,14 +282,13 @@ export class StyleTaskRunner {
                 {
                     loader: require.resolve('postcss-loader'),
                     options: {
-                        // implementation: require('postcss'),
-                        sourceMap
-                        // postcssOptions: {
-                        //     plugins: [
-                        //         'postcss-preset-env'
-                        //         // Or
-                        //     ]
-                        // }
+                        implementation: require.resolve('postcss'),
+                        sourceMap,
+                        postcssOptions: {
+                            // Enables/Disables autoloading config.
+                            // config: false,
+                            plugins: [require.resolve('postcss-preset-env')]
+                        }
                     }
                 }
             ];
