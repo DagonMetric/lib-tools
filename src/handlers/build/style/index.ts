@@ -4,7 +4,13 @@ import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { FileImporter } from 'sass';
-import webpackDefault, { Configuration, LoaderContext, RuleSetUseItem, WebpackPluginInstance } from 'webpack';
+import webpackDefault, {
+    Configuration,
+    LoaderContext,
+    RuleSetUseItem,
+    StatsAsset,
+    WebpackPluginInstance
+} from 'webpack';
 
 import { StyleMinifyOptions, StyleOptions } from '../../../config-models/index.js';
 import { PackageJsonInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
@@ -12,6 +18,7 @@ import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptio
 import {
     LogLevelString,
     Logger,
+    colors,
     normalizePathToPOSIXStyle,
     pathExists,
     readJsonWithComments,
@@ -24,23 +31,68 @@ import { StyleWebpackPlugin } from './plugins/index.js';
 
 const require = createRequire(process.cwd() + '/');
 
-async function runWebpack(webpackConfig: Configuration): Promise<unknown> {
+function mapToResultAssets(
+    assets: StatsAsset[],
+    outputPath: string,
+    builtAssets: { path: string; size: number; emitted: boolean }[]
+): void {
+    for (const asset of assets) {
+        builtAssets.push({
+            path: path.resolve(outputPath, asset.name),
+            size: asset.size,
+            emitted: asset.emitted
+        });
+
+        if (asset.related && Array.isArray(asset.related)) {
+            mapToResultAssets(asset.related, outputPath, builtAssets);
+        }
+    }
+}
+
+async function runWebpack(webpackConfig: Configuration, outDir: string): Promise<StyleBundleResult> {
     const webpackCompiler = webpackDefault(webpackConfig);
 
     return new Promise((resolve, reject) => {
-        const cb = (err?: Error | null) => {
+        webpackCompiler.run((err, stats) => {
             if (err) {
                 reject(err);
 
                 return;
             }
 
-            webpackCompiler.close(() => {
-                resolve(null);
-            });
-        };
+            const statsJson = stats?.toJson({
+                version: false,
+                hash: false,
+                publicPath: false,
+                chunks: false,
+                chunkGroups: false,
+                modules: false,
+                entrypoints: false,
+                errors: false,
+                errorsCount: false,
+                warnings: false,
+                warningsCount: false,
+                builtAt: false,
+                children: false,
 
-        webpackCompiler.run(cb);
+                timings: true,
+                outputPath: true,
+                assets: true
+            });
+
+            const outputPath = statsJson?.outputPath ?? outDir;
+
+            const result: StyleBundleResult = {
+                builtAssets: [],
+                time: statsJson?.time ?? 0
+            };
+
+            mapToResultAssets(statsJson?.assets ?? [], outputPath, result.builtAssets);
+
+            webpackCompiler.close(() => {
+                resolve(result);
+            });
+        });
     });
 }
 
@@ -150,7 +202,8 @@ export interface StyleTaskRunnerOptions {
 }
 
 export interface StyleBundleResult {
-    readonly builtAssets: { path: string; size: number }[];
+    readonly builtAssets: { path: string; size: number; emitted: boolean }[];
+    readonly time: number;
 }
 
 export class StyleTaskRunner {
@@ -166,34 +219,48 @@ export class StyleTaskRunner {
         const projectRoot = workspaceInfo.projectRoot;
         const packageJsonInfo = this.options.packageJsonInfo;
         const logLevel = this.options.logLevel;
-
         const styleOptions = this.options.styleOptions;
 
-        // sourceMap
-        const sourceMap = styleOptions.sourceMap ?? true;
+        this.logger.group('\u25B7 style');
+
+        // entryPoints
+        const entryPoints = await this.getEntryPoints();
 
         // minify
         const minify = styleOptions.minify !== false ? true : false;
         const minifyOptions: StyleMinifyOptions = typeof styleOptions.minify === 'object' ? styleOptions.minify : {};
         const separateMinifyFile = minify && minifyOptions.separateMinifyFile !== false ? true : false;
+        const sourceMapInMinifyFile = separateMinifyFile && minifyOptions.sourceMapInMinifyFile ? true : false;
         let cssnanoOptions: Record<string, unknown> | null = null;
         if (minify) {
             const cssnanoConfigFilePath = path.resolve(workspaceRoot, '.cssnanorc.config.json');
             if (await pathExists(cssnanoConfigFilePath)) {
+                this.logger.debug(
+                    `Reading cssnano options from configuration file: ${normalizePathToPOSIXStyle(
+                        path.relative(process.cwd(), cssnanoConfigFilePath)
+                    )}.`
+                );
                 cssnanoOptions = (await readJsonWithComments(cssnanoConfigFilePath)) as Record<string, unknown>;
             } else if (
-                packageJsonInfo?.packageJson?.cssnano &&
-                typeof packageJsonInfo.packageJson.cssnano === 'object'
+                packageJsonInfo?.rootPackageJsonPath &&
+                packageJsonInfo.rootPackageJson?.cssnano &&
+                typeof packageJsonInfo.rootPackageJson.cssnano === 'object'
             ) {
-                cssnanoOptions = { ...packageJsonInfo.packageJson.cssnano };
+                this.logger.debug(
+                    `Reading cssnano options from package.json file: ${normalizePathToPOSIXStyle(
+                        path.relative(process.cwd(), packageJsonInfo.rootPackageJsonPath)
+                    )}.`
+                );
+                cssnanoOptions = { ...packageJsonInfo.rootPackageJson.cssnano };
             }
         }
 
-        // loadPaths
-        const absoluteLoadPaths = styleOptions.loadPaths?.map((loadPath) => resolvePath(projectRoot, loadPath));
+        // sourceMap
+        const sourceMap = styleOptions.sourceMap ?? true;
 
-        // entryPoints
-        const entryPoints = await this.getEntryPoints();
+        // loadPaths
+        // TODO:
+        const absoluteLoadPaths = styleOptions.loadPaths?.map((loadPath) => resolvePath(projectRoot, loadPath));
 
         const getSharedCssRuleUseItems = (importLoaders = 0): RuleSetUseItem[] => {
             return [
@@ -228,11 +295,7 @@ export class StyleTaskRunner {
             ];
         };
 
-        // result
-        const styleBundleResult: StyleBundleResult = {
-            builtAssets: []
-        };
-
+        // banner
         const extraPlugins: WebpackPluginInstance[] = [];
         if (this.options.bannerText) {
             extraPlugins.push(
@@ -260,11 +323,9 @@ export class StyleTaskRunner {
                     dryRun: this.options.dryRun,
                     outDir: this.options.outDir,
                     separateMinifyFile,
-                    onSuccess: (pluginResult) => {
-                        styleBundleResult.builtAssets.push(...pluginResult.builtAssets);
-                    }
-                }),
-                ...extraPlugins
+                    sourceMapInMinifyFile,
+                    bannerText: this.options.bannerText
+                })
             ],
             module: {
                 rules: [
@@ -353,9 +414,12 @@ export class StyleTaskRunner {
             }
         };
 
-        await runWebpack(webpackConfig);
+        const result = await runWebpack(webpackConfig, this.options.outDir);
 
-        return styleBundleResult;
+        this.logger.groupEnd();
+        this.logger.info(`${colors.lightGreen('\u25B6')} style [${colors.lightGreen(`${result.time} ms`)}]`);
+
+        return result;
     }
 
     private async getEntryPoints(): Promise<Record<string, string[]>> {
@@ -427,10 +491,10 @@ export class StyleTaskRunner {
                 outFileRelToOutDir = path.basename(entryFilePath).replace(supportdStyleExtRegExp, '.css');
             }
 
-            const chunkName = outFileRelToOutDir.substring(0, outFileRelToOutDir.length - 4);
-            entryPoints[chunkName] = entryPoints[chunkName] ?? [];
-            if (!entryPoints[chunkName].includes(entryFilePath)) {
-                entryPoints[chunkName].push(entryFilePath);
+            const outAssetName = outFileRelToOutDir.substring(0, outFileRelToOutDir.length - 4);
+            entryPoints[outAssetName] = entryPoints[outAssetName] ?? [];
+            if (!entryPoints[outAssetName].includes(entryFilePath)) {
+                entryPoints[outAssetName].push(entryFilePath);
             }
         }
 

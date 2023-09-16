@@ -1,1 +1,1 @@
-export * from './webpack/style-webpack-plugin/index.js';
+export * from './style-webpack-plugin/index.js';
