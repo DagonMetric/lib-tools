@@ -1,4 +1,5 @@
-/**
+/*!
+ * Cssnano Note - any special comments marked with ! are kept by default.
  * @license
  * Copyright [author] All Rights Reserved.
  *
