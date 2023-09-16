@@ -39,7 +39,7 @@ void describe('config-helpers/get-tasks', () => {
                     packageName: '@scope/package-1',
                     packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
-                    isNestedPackage: false,
+                    rootPackageJsonPath: path.resolve(process.cwd(), workspaceRel, './package.json'),
                     rootPackageJson: {
                         name: 'my-packages',
                         version: '1.0.0',
@@ -110,7 +110,7 @@ void describe('config-helpers/get-tasks', () => {
                     packageName: '@scope/package-1',
                     packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
-                    isNestedPackage: false,
+                    rootPackageJsonPath: path.resolve(process.cwd(), workspaceRel, './package.json'),
                     rootPackageJson: {
                         name: 'my-packages',
                         version: '1.0.0',
