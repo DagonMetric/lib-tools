@@ -3,9 +3,10 @@ import { LogLevelString, Logger } from '../../utils/index.js';
 
 export interface TaskHandleContext {
     readonly taskOptions: ParsedTaskConfig;
-    readonly dryRun: boolean;
     readonly logger: Logger;
     readonly logLevel: LogLevelString;
+    readonly dryRun: boolean;
+    readonly env: string | undefined;
 }
 
 export interface BuildTaskHandleContext extends TaskHandleContext {
