@@ -103,6 +103,7 @@ export async function run(argv: CommandOptions): Promise<void> {
 
         const tasks = await getTasks(argv, taskName);
 
+        const env = argv.env;
         const dryRun = argv.dryRun ? true : false;
 
         if (!tasks.length) {
@@ -125,7 +126,8 @@ export async function run(argv: CommandOptions): Promise<void> {
                     taskOptions: task as ParsedBuildTaskConfig,
                     logger,
                     logLevel,
-                    dryRun
+                    dryRun,
+                    env
                 });
 
                 logger.groupEnd();
@@ -150,7 +152,16 @@ export async function run(argv: CommandOptions): Promise<void> {
                         logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
                         const start = Date.now();
 
-                        await exec(execCmd, logger);
+                        const envObj: Record<string, string | undefined> = { ...process.env };
+                        envObj.logLevel = logLevel;
+                        if (env) {
+                            envObj[env] = 'true';
+                        }
+                        if (dryRun) {
+                            envObj.dryRun = 'true';
+                        }
+
+                        await exec(execCmd, logger, envObj);
 
                         logger.groupEnd();
                         logger.info(
@@ -194,7 +205,8 @@ export async function run(argv: CommandOptions): Promise<void> {
                         taskOptions: customTask,
                         logger,
                         logLevel,
-                        dryRun
+                        dryRun,
+                        env
                     });
 
                     if (result && result instanceof Promise) {
