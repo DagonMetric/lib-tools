@@ -33,7 +33,8 @@ void describe('handlers/build/copy', () => {
                 taskOptions: buildTask,
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             assert.equal(runner, null);
@@ -53,7 +54,8 @@ void describe('handlers/build/copy', () => {
                 taskOptions: buildTask,
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             assert.equal(runner, null);
@@ -73,7 +75,8 @@ void describe('handlers/build/copy', () => {
                 taskOptions: buildTask,
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             const expectedCopyEntries: CopyEntry[] = [
@@ -120,7 +123,8 @@ void describe('handlers/build/copy', () => {
                 taskOptions: buildTask,
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             const expectedCopyEntries: CopyEntry[] = [
@@ -168,7 +172,8 @@ void describe('handlers/build/copy', () => {
                 taskOptions: buildTask,
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             const expectedCopyEntries: CopyEntry[] = [

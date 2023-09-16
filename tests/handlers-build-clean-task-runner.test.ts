@@ -33,7 +33,8 @@ void describe('handlers/build/clean', () => {
                 taskOptions: buildTask,
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             assert.equal(runner, null);
@@ -57,7 +58,8 @@ void describe('handlers/build/clean', () => {
                 taskOptions: buildTask,
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             assert.equal(runner, null);
@@ -77,7 +79,8 @@ void describe('handlers/build/clean', () => {
                 taskOptions: buildTask,
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             const expectedBeforeBuildCleanOptions: BeforeBuildCleanOptions = {
@@ -112,7 +115,8 @@ void describe('handlers/build/clean', () => {
                 taskOptions: buildTask,
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             assert.ok(runner != null);
@@ -142,7 +146,8 @@ void describe('handlers/build/clean', () => {
                 taskOptions: buildTask,
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
-                logLevel: 'error'
+                logLevel: 'error',
+                env: undefined
             });
 
             assert.ok(runner != null);

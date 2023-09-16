@@ -12,7 +12,7 @@ void describe('config-helpers/get-parsed-command-options', () => {
     void describe('getParsedCommandOptions', () => {
         void it('should parse command options without any file args', async () => {
             const cmdOptions: CommandOptions = {
-                env: 'prod ,ci',
+                env: 'prod',
                 project: 'a,b , c',
                 packageVersion: '1.0.0',
                 logLevel: 'info',
@@ -26,7 +26,6 @@ void describe('config-helpers/get-parsed-command-options', () => {
                 _configPath: null,
                 _workspaceRoot: process.cwd(),
                 _outDir: null,
-                _env: ['prod', 'ci'],
                 _projects: ['a', 'b', 'c'],
                 _copyEntries: [],
                 _styleEntries: [],
@@ -40,7 +39,7 @@ void describe('config-helpers/get-parsed-command-options', () => {
             const cmdOptions: CommandOptions = {
                 workspace: './tests/test-data/parsing/withoutconfig',
                 outDir: 'out',
-                env: 'prod ,ci',
+                env: 'prod',
                 project: 'a,b , c',
                 copy: '**/*.js, README.md',
                 clean: true,
@@ -58,7 +57,6 @@ void describe('config-helpers/get-parsed-command-options', () => {
                 _configPath: null,
                 _workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig'),
                 _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig/out'),
-                _env: ['prod', 'ci'],
                 _projects: ['a', 'b', 'c'],
                 _copyEntries: ['**/*.js', 'README.md'],
                 _styleEntries: ['style.scss'],
@@ -72,7 +70,7 @@ void describe('config-helpers/get-parsed-command-options', () => {
             const cmdOptions: CommandOptions = {
                 workspace: './tests/test-data/parsing/withconfig/libconfig.json',
                 outDir: 'out',
-                env: 'prod ,ci',
+                env: 'prod',
                 project: 'a,b , c',
                 copy: '**/*.js, README.md',
                 clean: true,
@@ -90,7 +88,6 @@ void describe('config-helpers/get-parsed-command-options', () => {
                 _configPath: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/libconfig.json'),
                 _workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig'),
                 _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/out'),
-                _env: ['prod', 'ci'],
                 _projects: ['a', 'b', 'c'],
                 _copyEntries: ['**/*.js', 'README.md'],
                 _styleEntries: ['style.scss'],
