@@ -131,7 +131,7 @@ export async function run(argv: CommandOptions): Promise<void> {
                 logger.groupEnd();
                 logger.info(
                     `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
-                        ` completed in ${Date.now() - start}ms.`
+                        ` completed in ${Date.now() - start} ms.`
                     )}`
                 );
             } else {
@@ -204,7 +204,7 @@ export async function run(argv: CommandOptions): Promise<void> {
                     logger.groupEnd();
                     logger.info(
                         `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
-                            ` completed in ${Date.now() - start}ms.`
+                            ` completed in ${Date.now() - start} ms.`
                         )}`
                     );
                 }
