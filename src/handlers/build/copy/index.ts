@@ -289,7 +289,7 @@ export class CopyTaskRunner {
         this.logger.info(`Total ${result.copiedFileInfoes.length} files are copied.`);
         this.logger.groupEnd();
         this.logger.info(
-            `${colors.lightGreen('\u25B6')} copy [${colors.lightGreen(`${Date.now() - this.startTime}ms`)}]`
+            `${colors.lightGreen('\u25B6')} copy [${colors.lightGreen(`${Date.now() - this.startTime} ms`)}]`
         );
     }
 
