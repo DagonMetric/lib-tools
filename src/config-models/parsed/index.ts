@@ -7,7 +7,6 @@ export interface ParsedCommandOptions extends CommandOptions {
     readonly _projects: string[];
     readonly _workspaceRoot: string;
     readonly _configPath: string | null;
-    readonly _env: string[];
 
     // For build
     readonly _outDir: string | null;
