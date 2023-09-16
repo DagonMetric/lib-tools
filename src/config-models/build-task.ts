@@ -80,9 +80,13 @@ export interface StyleBundle {
  */
 export interface StyleMinifyOptions {
     /**
-     * If true, both unminified and minified files will be generated.
+     * If true, both minified and unminified files will be generated. Default is `true`.
      */
     separateMinifyFile?: boolean;
+    /**
+     * If true, source file will be generated for separate minified .min.css file.
+     */
+    sourceMapInMinifyFile?: boolean;
 }
 
 export interface StyleOptions {

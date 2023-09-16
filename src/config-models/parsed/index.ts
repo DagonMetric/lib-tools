@@ -26,11 +26,12 @@ export interface PackageJsonInfo {
     readonly packageName: string;
     readonly packageNameWithoutScope: string;
     readonly packageScope: string | null;
-    readonly isNestedPackage: boolean;
     readonly rootPackageJson: {
         [key: string]: unknown;
+        name?: string;
         version?: string;
     } | null;
+    readonly rootPackageJsonPath: string | null;
     readonly newPackageVersion: string | null;
 }
 
