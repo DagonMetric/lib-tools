@@ -412,7 +412,9 @@ export async function getTasks(
                     continue;
                 }
 
-                applyEnvOverrides(task, parsedCmdOptions._env);
+                if (parsedCmdOptions.env != null) {
+                    applyEnvOverrides(task, [parsedCmdOptions.env]);
+                }
 
                 if (task.skip) {
                     continue;

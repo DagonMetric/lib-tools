@@ -142,13 +142,6 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
             .map((projectName) => projectName.trim())
             .filter((value, index, array) => array.indexOf(value) === index) ?? [];
 
-    const env =
-        cmdOptions.env
-            ?.split(',')
-            .filter((envName) => envName?.trim().length > 0)
-            .map((envName) => envName.trim())
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
     // For build task
     //
     const outDir = cmdOptions.outDir?.trim().length ? resolvePath(workspaceRoot, cmdOptions.outDir) : null;
@@ -179,7 +172,7 @@ export async function getParsedCommandOptions(cmdOptions: CommandOptions): Promi
         _projects: projects,
         _workspaceRoot: workspaceRoot,
         _configPath: configPath,
-        _env: env,
+
         _outDir: outDir,
         _copyEntries: copyEntries,
         _scriptEntries: scriptEntries,
