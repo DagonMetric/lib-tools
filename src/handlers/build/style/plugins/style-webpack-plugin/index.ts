@@ -188,25 +188,32 @@ export class StyleWebpackPlugin {
                     const locRegExp = /^\(([1-9][0-9]*:[1-9][0-9]*)\)\s?/;
 
                     for (const err of errors) {
-                        if (!err.moduleName) {
-                            continue;
-                        }
-
-                        const moduleIdentifiers = err.moduleName.split('!');
-                        if (!moduleIdentifiers.length) {
-                            continue;
-                        }
-
                         let formattedLine = '';
+                        let errorFilePath: string | null = null;
 
-                        const errorFilePath = moduleIdentifiers[moduleIdentifiers.length - 1];
-                        formattedLine += colors.lightCyan(normalizePathToPOSIXStyle(errorFilePath));
+                        if (err.moduleName) {
+                            const moduleIdentifiers = err.moduleName.split('!');
+                            if (moduleIdentifiers.length) {
+                                errorFilePath = moduleIdentifiers[moduleIdentifiers.length - 1];
+                                formattedLine += colors.lightCyan(normalizePathToPOSIXStyle(errorFilePath));
+                            }
+                        }
 
                         const formatedSubLines: string[] = [];
                         let detectedLoc: string | null = null;
-                        for (let subLine of err.message.split(/[\r\n]/)) {
-                            subLine = subLine.trim();
+                        const subLines = err.message.split(/[\r\n]/);
+                        for (let i = 0; i < subLines.length; i++) {
+                            let subLine = subLines[i].trim();
                             if (!subLine) {
+                                continue;
+                            }
+
+                            if (
+                                i === 0 &&
+                                subLines.length > 1 &&
+                                errPrefixRegExp.test(subLines[i + 1].trim()) &&
+                                subLine.endsWith(' from Css Minimizer plugin')
+                            ) {
                                 continue;
                             }
 
@@ -214,7 +221,7 @@ export class StyleWebpackPlugin {
                                 continue;
                             }
 
-                            if (!err.loc && !detectedLoc && formatedSubLines.length < 2) {
+                            if (errorFilePath && !err.loc && !detectedLoc && formatedSubLines.length < 2) {
                                 const locMatch = subLine.match(locRegExp);
                                 if (locMatch?.length === 2 && locMatch[1]) {
                                     detectedLoc = locMatch[1];
@@ -245,9 +252,11 @@ export class StyleWebpackPlugin {
                             }
                         }
 
-                        const loc = err.loc ?? detectedLoc;
-                        if (loc) {
-                            formattedLine += colors.lightYellow(':' + loc);
+                        if (errorFilePath) {
+                            const loc = err.loc ?? detectedLoc;
+                            if (loc) {
+                                formattedLine += colors.lightYellow(':' + loc);
+                            }
                         }
 
                         formattedLine += ' ';
@@ -258,7 +267,11 @@ export class StyleWebpackPlugin {
                         }
                     }
 
-                    errorMessage += errorLines.join('\n');
+                    if (errorLines.length) {
+                        errorMessage += errorLines.join('\n');
+                    } else {
+                        errorMessage += stats.toString('errors-only');
+                    }
                 }
 
                 throw new WebpackCompilationError(errorMessage);

@@ -520,15 +520,15 @@ export class StyleTaskRunner {
         }
 
         const testConfigPaths = [
+            'postcss.config.json',
+            '.postcssrc.json',
+            '.postcssrc',
             'postcss.config.mjs',
             '.postcssrc.mjs',
             'postcss.config.cjs',
             '.postcssrc.cjs',
             'postcss.config.js',
-            '.postcssrc.js',
-            'postcss.config.json',
-            '.postcssrc.json',
-            '.postcssrc'
+            '.postcssrc.js'
         ];
 
         const pluginOptions = await this.tryLoadOptions('postcss', testConfigPaths);
@@ -552,15 +552,15 @@ export class StyleTaskRunner {
 
     private loadCssnanoOptions(): Promise<Record<string, unknown> | null> {
         const testConfigPaths = [
+            'cssnano.config.json',
+            '.cssnanorc.config.json',
+            '.cssnanorc',
             'cssnano.config.mjs',
             '.cssnanorc.mjs',
             'cssnano.config.cjs',
             '.cssnanorc.cjs',
             'cssnano.config.js',
-            '.cssnanorc.js',
-            'cssnano.config.json',
-            '.cssnanorc.config.json',
-            '.cssnanorc'
+            '.cssnanorc.js'
         ];
 
         return this.tryLoadOptions('cssnano', testConfigPaths);
