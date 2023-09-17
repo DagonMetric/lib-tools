@@ -1,4 +1,5 @@
 /* print styles */
+/* ------------------------------ */
 
 @font-face {
     font-family: "Trickster";
@@ -9,9 +10,4 @@
         url("../fonts/trickster-outline.woff") format("woff");
 }
 
-
-body {
-    margin: 0;
-    color: #000;
-    background-color: #fff;
-}
+/* ------------------------------ */

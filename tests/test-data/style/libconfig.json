@@ -17,6 +17,9 @@
             ],
             "minify": {
               "separateMinifyFile": true
+            },
+            "cssTarget": {
+              "stage": 3
             }
           }
         }

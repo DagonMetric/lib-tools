@@ -1,3 +1,6 @@
+/* sidebar styles */
+/* ------------------------------ */
+
 /* establish the layer order, so the "override" layer takes precedence */
 @layer framework, override;
 
@@ -16,3 +19,5 @@
 }
 
 .sidebar { animation: slide-left 300ms; }
+
+/* ------------------------------ */
