@@ -3,6 +3,7 @@ import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { pluginOptions as PostcssPresetEnvOptions } from 'postcss-preset-env';
 import type { FileImporter } from 'sass';
 import webpackDefault, {
     Configuration,
@@ -199,6 +200,7 @@ export interface StyleTaskRunnerOptions {
     readonly logLevel: LogLevelString;
     readonly packageJsonInfo: PackageJsonInfo | null;
     readonly bannerText: string | null;
+    readonly env: string | undefined;
 }
 
 export interface StyleBundleResult {
@@ -217,7 +219,6 @@ export class StyleTaskRunner {
         const workspaceInfo = this.options.workspaceInfo;
         const workspaceRoot = workspaceInfo.workspaceRoot;
         const projectRoot = workspaceInfo.projectRoot;
-        const packageJsonInfo = this.options.packageJsonInfo;
         const logLevel = this.options.logLevel;
         const styleOptions = this.options.styleOptions;
 
@@ -226,33 +227,21 @@ export class StyleTaskRunner {
         // entryPoints
         const entryPoints = await this.getEntryPoints();
 
-        // minify
+        // posscss options
+        const postcssOptions = await this.loadPostcssOptions();
+
+        // minify options
         const minify = styleOptions.minify !== false ? true : false;
-        const minifyOptions: StyleMinifyOptions = typeof styleOptions.minify === 'object' ? styleOptions.minify : {};
-        const separateMinifyFile = minify && minifyOptions.separateMinifyFile !== false ? true : false;
-        const sourceMapInMinifyFile = separateMinifyFile && minifyOptions.sourceMapInMinifyFile ? true : false;
-        let cssnanoOptions: Record<string, unknown> | null = null;
+        let separateMinifyFile = minify;
+        let sourceMapInMinifyFile = false;
+        let minimizerOptions: Record<string, unknown> | null = null;
         if (minify) {
-            const cssnanoConfigFilePath = path.resolve(workspaceRoot, '.cssnanorc.config.json');
-            if (await pathExists(cssnanoConfigFilePath)) {
-                this.logger.debug(
-                    `Reading cssnano options from configuration file: ${normalizePathToPOSIXStyle(
-                        path.relative(process.cwd(), cssnanoConfigFilePath)
-                    )}.`
-                );
-                cssnanoOptions = (await readJsonWithComments(cssnanoConfigFilePath)) as Record<string, unknown>;
-            } else if (
-                packageJsonInfo?.rootPackageJsonPath &&
-                packageJsonInfo.rootPackageJson?.cssnano &&
-                typeof packageJsonInfo.rootPackageJson.cssnano === 'object'
-            ) {
-                this.logger.debug(
-                    `Reading cssnano options from package.json file: ${normalizePathToPOSIXStyle(
-                        path.relative(process.cwd(), packageJsonInfo.rootPackageJsonPath)
-                    )}.`
-                );
-                cssnanoOptions = { ...packageJsonInfo.rootPackageJson.cssnano };
-            }
+            const styleMinifyOptions: StyleMinifyOptions =
+                typeof styleOptions.minify === 'object' ? styleOptions.minify : {};
+
+            separateMinifyFile = styleMinifyOptions.separateMinifyFile !== false ? true : false;
+            sourceMapInMinifyFile = separateMinifyFile && styleMinifyOptions.sourceMapInMinifyFile ? true : false;
+            minimizerOptions = await this.loadCssnanoOptions();
         }
 
         // sourceMap
@@ -284,11 +273,7 @@ export class StyleTaskRunner {
                     options: {
                         implementation: require.resolve('postcss'),
                         sourceMap,
-                        postcssOptions: {
-                            // Enables/Disables autoloading config.
-                            // config: false,
-                            plugins: [require.resolve('postcss-preset-env')]
-                        }
+                        postcssOptions
                     }
                 }
             ];
@@ -402,11 +387,7 @@ export class StyleTaskRunner {
                               warningsFilter: () => {
                                   return logLevel === 'error' ? false : true;
                               },
-                              minimizerOptions: cssnanoOptions
-                                  ? { ...cssnanoOptions }
-                                  : {
-                                        preset: 'default'
-                                    }
+                              minimizerOptions: minimizerOptions ?? { preset: 'default' }
                           })
                       ]
                     : []
@@ -499,6 +480,177 @@ export class StyleTaskRunner {
 
         return entryPoints;
     }
+
+    private async loadPostcssOptions(): Promise<Record<string, unknown>> {
+        const defaultStage = 3;
+
+        if (this.options.styleOptions.cssTarget) {
+            const cssTargetOptions = this.options.styleOptions.cssTarget;
+            const presetEnvOptions: PostcssPresetEnvOptions = {
+                ...cssTargetOptions,
+                debug: this.options.logLevel === 'debug' ? true : false
+            };
+
+            if (cssTargetOptions.stage == null) {
+                presetEnvOptions.stage = defaultStage;
+            }
+
+            if (this.options.env) {
+                presetEnvOptions.env = this.options.env;
+                presetEnvOptions.autoprefixer = presetEnvOptions.autoprefixer ?? {};
+                presetEnvOptions.autoprefixer.env = this.options.env;
+            }
+
+            if (cssTargetOptions.browers != null) {
+                presetEnvOptions.autoprefixer = presetEnvOptions.autoprefixer ?? {};
+                presetEnvOptions.autoprefixer = {
+                    overrideBrowserslist: cssTargetOptions.browers
+                };
+            }
+
+            return {
+                plugins: [
+                    [
+                        require.resolve('postcss-preset-env'),
+                        // options
+                        presetEnvOptions
+                    ]
+                ]
+            };
+        }
+
+        const testConfigPaths = [
+            'postcss.config.mjs',
+            '.postcssrc.mjs',
+            'postcss.config.cjs',
+            '.postcssrc.cjs',
+            'postcss.config.js',
+            '.postcssrc.js',
+            'postcss.config.json',
+            '.postcssrc.json',
+            '.postcssrc'
+        ];
+
+        const pluginOptions = await this.tryLoadOptions('postcss', testConfigPaths);
+        if (pluginOptions) {
+            return pluginOptions;
+        }
+
+        return {
+            plugins: [
+                [
+                    require.resolve('postcss-preset-env'),
+                    {
+                        stage: defaultStage,
+                        env: this.options.env,
+                        debug: this.options.logLevel === 'debug' ? true : false
+                    } as PostcssPresetEnvOptions
+                ]
+            ]
+        };
+    }
+
+    private loadCssnanoOptions(): Promise<Record<string, unknown> | null> {
+        const testConfigPaths = [
+            'cssnano.config.mjs',
+            '.cssnanorc.mjs',
+            'cssnano.config.cjs',
+            '.cssnanorc.cjs',
+            'cssnano.config.js',
+            '.cssnanorc.js',
+            'cssnano.config.json',
+            '.cssnanorc.config.json',
+            '.cssnanorc'
+        ];
+
+        return this.tryLoadOptions('cssnano', testConfigPaths);
+    }
+
+    private async tryLoadOptions(
+        optionName: string,
+        testConfigPaths: string[]
+    ): Promise<Record<string, unknown> | null> {
+        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+
+        let foundPath: string | null = null;
+        for (const p of testConfigPaths) {
+            const pAbs = path.resolve(workspaceRoot, p);
+            if (await pathExists(pAbs)) {
+                foundPath = pAbs;
+                break;
+            }
+        }
+
+        if (foundPath) {
+            this.logger.debug(
+                `Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
+                    path.relative(process.cwd(), foundPath)
+                )}.`
+            );
+
+            try {
+                if (/\.json|rc$/i.test(foundPath)) {
+                    const options = await readJsonWithComments(foundPath);
+
+                    return options as Record<string, unknown>;
+                } else {
+                    const optionsModule = (await import(pathToFileURL(foundPath).toString())) as {
+                        default?: (ctx: unknown) => Record<string, unknown>;
+                    };
+
+                    if (optionsModule.default) {
+                        if (typeof optionsModule.default === 'function') {
+                            const options = optionsModule.default({
+                                env: this.options.env,
+                                logLevel: this.options.logLevel,
+                                logger: this.logger
+                            });
+
+                            return options;
+                        } else {
+                            return optionsModule.default;
+                        }
+                    } else {
+                        this.logger.debug(
+                            `${colors.lightYellow(
+                                'Failed:'
+                            )} Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
+                                path.relative(process.cwd(), foundPath)
+                            )} failed because no default export.`
+                        );
+
+                        return null;
+                    }
+                }
+            } catch (err) {
+                this.logger.debug(
+                    `${colors.lightYellow(
+                        'Failed:'
+                    )} Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
+                        path.relative(process.cwd(), foundPath)
+                    )} failed.`
+                );
+
+                return null;
+            }
+        }
+
+        if (
+            this.options.packageJsonInfo?.rootPackageJsonPath &&
+            this.options.packageJsonInfo.rootPackageJson?.[optionName] &&
+            typeof this.options.packageJsonInfo.rootPackageJson[optionName] === 'object'
+        ) {
+            this.logger.debug(
+                `Reading ${optionName} options from package.json file ${normalizePathToPOSIXStyle(
+                    path.relative(process.cwd(), this.options.packageJsonInfo.rootPackageJsonPath)
+                )}.`
+            );
+
+            return this.options.packageJsonInfo.rootPackageJson[optionName] as Record<string, unknown>;
+        }
+
+        return null;
+    }
 }
 
 export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRunner | null {
@@ -533,6 +685,7 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         dryRun: context.dryRun,
         logger: context.logger,
         logLevel: context.logLevel,
+        env: context.env,
         packageJsonInfo: buildTask._packageJsonInfo,
         bannerText: buildTask._bannerText
     });
