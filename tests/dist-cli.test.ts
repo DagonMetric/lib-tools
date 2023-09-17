@@ -60,22 +60,6 @@ void describe('dist/cli', () => {
     });
 
     void describe('lib run <task>', () => {
-        void describe('custom handlers', () => {
-            const workspace = './tests/test-data/custom-task/libconfig.json';
-
-            void it(`should show 'Hello!' message when run hello task`, async () => {
-                const result = await runCli(`run hello --workspace=${workspace}`);
-
-                assert.match(result, /Hello!/);
-            });
-
-            void it(`should show 'Hello exec!' message when run echo task`, async () => {
-                const result = await runCli(`run echo --workspace=${workspace}`);
-
-                assert.match(result, /Hello exec!/);
-            });
-        });
-
         void describe('invalid config schema', () => {
             const workspace = './tests/test-data/invalid/libconfig-invalid.json';
 
@@ -99,6 +83,54 @@ void describe('dist/cli', () => {
                 assert.strictEqual(actualLines[0], expectedLine1);
                 assert.strictEqual(actualLines[1], expectedLine2);
                 assert.strictEqual(actualLines[2], expectedLine3);
+            });
+        });
+
+        void describe('custom handlers', () => {
+            const workspace = './tests/test-data/custom-task/libconfig.json';
+
+            void it(`should show 'Hello!' message when run hello task`, async () => {
+                const result = await runCli(`run hello --workspace=${workspace}`);
+
+                assert.match(result, /Hello!/);
+            });
+
+            void it(`should show 'Hello exec!' message when run echo task`, async () => {
+                const result = await runCli(`run echo --workspace=${workspace}`);
+
+                assert.match(result, /Hello exec!/);
+            });
+        });
+
+        void describe('build', () => {
+            void describe('style', () => {
+                const workspace = './tests/test-data/style';
+
+                void it(`should bundle css files [dryRun]`, async () => {
+                    const result = await runCli(`run build --workspace=${workspace} --project=css --dryRun`);
+
+                    assert.match(result, /path-1\/bundle\.css/, `should contains 'path-1/bundle.css'`);
+                    assert.match(result, /path-1\/bundle\.min\.css/, `should contains 'path-1/bundle.min.css'`);
+                    assert.match(result, /path-1\/bundle\.css\.map/, `should contains 'path-1/bundle.css.map'`);
+                    assert.match(result, /Total\s3\sfiles\sare\sbuilt/, `Should contains ''Total 3 files are built'`);
+                    assert.match(result, /style\s+\[\d+\sms\]/, `Should contains 'style [.... ms]'`);
+                    assert.match(result, /css\/build\s+completed/, `Should contains 'css/build completed'`);
+                });
+
+                void it(`should bundle css files [Actual Emit]`, async () => {
+                    const result = await runCli(`run build --workspace=${workspace} --project=css`);
+
+                    assert.match(result, /path-1\/bundle\.css/, `should contains 'path-1/bundle.css'`);
+                    assert.match(result, /path-1\/bundle\.min\.css/, `should contains 'path-1/bundle.min.css'`);
+                    assert.match(result, /path-1\/bundle\.css\.map/, `should contains 'path-1/bundle.css.map'`);
+                    assert.match(
+                        result,
+                        /Total\s3\sfiles\sare\semitted/,
+                        `Should contains ''Total 3 files are emitted'`
+                    );
+                    assert.match(result, /style\s+\[\d+\sms\]/, `Should contains 'style [.... ms]'`);
+                    assert.match(result, /css\/build\s+completed/, `Should contains 'css/build completed'`);
+                });
             });
         });
     });

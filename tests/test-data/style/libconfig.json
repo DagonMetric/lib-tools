@@ -1,12 +1,11 @@
 {
   "$schema": "../../../dist/schemas/schema.json",
   "projects": {
-    "style-project": {
-      "root": "./",
+    "css": {
+      "root": "./css",
       "tasks": {
         "build": {
           "outDir": "dist",
-          "clean": true,
           "banner": true,
           "style": {
             "bundles": [
@@ -15,11 +14,15 @@
                 "out": "path-1/bundle.css"
               }
             ],
+            "sourceMap": true,
             "minify": {
-              "separateMinifyFile": true
+              "separateMinifyFile": true,
+              "sourceMapInMinifyFile": false
             },
             "cssTarget": {
-              "stage": 3
+              "browers": ["defaults and supports es6-module", "maintained node versions"],
+              "stage": 3,
+              "minimumVendorImplementations": 0
             }
           }
         }
