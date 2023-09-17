@@ -89,6 +89,26 @@ export interface StyleMinifyOptions {
     sourceMapInMinifyFile?: boolean;
 }
 
+/**
+ * Css bundle target options.
+ */
+export interface CssTargetOptions {
+    /**
+     *  List of queries for target browsers.
+     */
+    browers?: string[] | null;
+    /**
+     * Determine which CSS features to polyfill, based upon their process of becoming implemented web standards.
+     * @default 3
+     */
+    stage?: 0 | 1 | 2 | 3 | 4 | false;
+    /**
+     * Determine which CSS features to polyfill, based their implementation status.
+     * @default: 0
+     */
+    minimumVendorImplementations?: 0 | 1 | 2 | 3;
+}
+
 export interface StyleOptions {
     /**
      * List of style compilation / bundle entries.
@@ -106,6 +126,10 @@ export interface StyleOptions {
      * Boolean value or css minify options to generate minify file. Default is `true`.
      */
     minify?: boolean | StyleMinifyOptions;
+    /**
+     * Css bundle target options.
+     */
+    cssTarget?: CssTargetOptions;
 }
 
 export interface ScriptBundleEntry {
