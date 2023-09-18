@@ -40,7 +40,7 @@
                 "entry": "./src/style.scss"
               }
             ],
-            "loadPaths": ["./src/variables/"]
+            "includePaths": ["./src/variables/"]
           }
         }
       }
