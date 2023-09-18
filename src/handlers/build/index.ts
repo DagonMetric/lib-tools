@@ -4,7 +4,7 @@ import { getCleanTaskRunner } from './clean/index.js';
 import { getCopyTaskRunner } from './copy/index.js';
 import { getStyleTaskRunner } from './style/index.js';
 
-export async function runBuildTask(context: BuildTaskHandleContext): Promise<void> {
+async function runBuildTask(context: BuildTaskHandleContext): Promise<void> {
     // Copy
     const copyTaskRunner = getCopyTaskRunner(context);
     if (copyTaskRunner) {
