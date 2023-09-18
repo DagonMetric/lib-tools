@@ -248,9 +248,9 @@ export class StyleTaskRunner {
         // sourceMap
         const sourceMap = styleOptions.sourceMap ?? true;
 
-        // loadPaths
+        // includePaths
         // TODO:
-        const absoluteLoadPaths = styleOptions.loadPaths?.map((loadPath) => resolvePath(projectRoot, loadPath));
+        const absoluteIncludePaths = styleOptions.includePaths?.map((loadPath) => resolvePath(projectRoot, loadPath));
 
         const getSharedCssRuleUseItems = (importLoaders = 0): RuleSetUseItem[] => {
             return [
@@ -348,7 +348,7 @@ export class StyleTaskRunner {
 
                                     sassOptions: (loaderContext: LoaderContext<{}>) => ({
                                         importers: [getSassResolutionImporter(loaderContext, workspaceRoot)],
-                                        loadPaths: absoluteLoadPaths,
+                                        loadPaths: absoluteIncludePaths,
                                         // Use expanded as otherwise sass will remove comments that are needed for autoprefixer
                                         // Ex: /* autoprefixer grid: autoplace */
                                         // See: https://github.com/webpack-contrib/sass-loader/blob/45ad0be17264ceada5f0b4fb87e9357abe85c4ff/src/getSassOptions.js#L68-L70
@@ -371,7 +371,7 @@ export class StyleTaskRunner {
                                 options: {
                                     sourceMap,
                                     lessOptions: {
-                                        paths: absoluteLoadPaths
+                                        paths: absoluteIncludePaths
                                     }
                                 }
                             }
