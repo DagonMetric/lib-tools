@@ -1,11 +1,11 @@
 import { ParsedBuildTaskConfig, ParsedCustomTaskConfig, ParsedTaskConfig } from '../../config-models/parsed/index.js';
-import { LogLevelString, Logger } from '../../utils/index.js';
+import { LogLevelStrings, LoggerBase } from '../../utils/index.js';
 
 export interface TaskHandleContext {
     readonly taskOptions: ParsedTaskConfig;
-    readonly logger: Logger;
-    readonly logLevel: LogLevelString;
-    readonly dryRun: boolean;
+    readonly logger: LoggerBase | undefined;
+    readonly logLevel: LogLevelStrings | undefined;
+    readonly dryRun: boolean | undefined;
     readonly env: string | undefined;
 }
 

@@ -7,6 +7,7 @@ import { InvalidConfigError } from '../../../exceptions/index.js';
 import {
     AbsolutePathInfo,
     Logger,
+    LoggerBase,
     colors,
     getAbsolutePathInfoes,
     isInFolder,
@@ -22,8 +23,8 @@ export interface CleanTaskRunnerOptions {
     readonly beforeOrAfterCleanOptions: BeforeBuildCleanOptions | AfterBuildCleanOptions;
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
-    readonly dryRun: boolean;
-    readonly logger: Logger;
+    readonly dryRun: boolean | undefined;
+    readonly logger: LoggerBase;
 }
 
 export interface CleanTaskResult {
@@ -32,7 +33,7 @@ export interface CleanTaskResult {
 }
 
 export class CleanTaskRunner {
-    private readonly logger: Logger;
+    private readonly logger: LoggerBase;
     private readonly cleanOutDir: boolean;
     private readonly configLocationPrefix: string;
     private readonly configPath: string | null;
@@ -333,7 +334,13 @@ export function getCleanTaskRunner(
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
             dryRun: context.dryRun,
-            logger: context.logger
+            logger:
+                context.logger ??
+                new Logger({
+                    logLevel: context.logLevel ?? 'info',
+                    warnPrefix: colors.lightYellow('Warning:'),
+                    groupIndentation: 4
+                })
         });
 
         return cleanTaskRunner;
@@ -350,7 +357,13 @@ export function getCleanTaskRunner(
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
             dryRun: context.dryRun,
-            logger: context.logger
+            logger:
+                context.logger ??
+                new Logger({
+                    logLevel: context.logLevel ?? 'info',
+                    warnPrefix: colors.lightYellow('Warning:'),
+                    groupIndentation: 4
+                })
         });
 
         return cleanTaskRunner;

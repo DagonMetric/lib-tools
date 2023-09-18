@@ -1,7 +1,7 @@
 import { Compiler, sources } from 'webpack';
 
 import { WebpackCompilationError } from '../../../../../exceptions/index.js';
-import { LogLevelString, Logger, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
+import { LogLevelStrings, LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
 function formatSize(size: number): string {
     if (size < 1024) {
@@ -15,9 +15,9 @@ function formatSize(size: number): string {
 
 export interface StyleWebpackPluginOptions {
     readonly outDir: string;
-    readonly logger: Logger;
-    readonly logLevel: LogLevelString;
-    readonly dryRun: boolean;
+    readonly logger: LoggerBase;
+    readonly logLevel: LogLevelStrings;
+    readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
     readonly bannerText: string | null;
@@ -26,7 +26,7 @@ export interface StyleWebpackPluginOptions {
 export class StyleWebpackPlugin {
     readonly name = 'style-webpack-plugin';
 
-    private readonly logger: Logger;
+    private readonly logger: LoggerBase;
     private readonly banner: () => string;
 
     constructor(private readonly options: StyleWebpackPluginOptions) {

@@ -17,8 +17,9 @@ import { StyleMinifyOptions, StyleOptions } from '../../../config-models/index.j
 import { PackageJsonInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
-    LogLevelString,
+    LogLevelStrings,
     Logger,
+    LoggerBase,
     colors,
     normalizePathToPOSIXStyle,
     pathExists,
@@ -195,9 +196,9 @@ export interface StyleTaskRunnerOptions {
     readonly styleOptions: StyleOptions;
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
-    readonly dryRun: boolean;
-    readonly logger: Logger;
-    readonly logLevel: LogLevelString;
+    readonly dryRun: boolean | undefined;
+    readonly logger: LoggerBase;
+    readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: PackageJsonInfo | null;
     readonly bannerText: string | null;
     readonly env: string | undefined;
@@ -209,7 +210,7 @@ export interface StyleBundleResult {
 }
 
 export class StyleTaskRunner {
-    private readonly logger: Logger;
+    private readonly logger: LoggerBase;
 
     constructor(readonly options: StyleTaskRunnerOptions) {
         this.logger = this.options.logger;
@@ -428,7 +429,7 @@ export class StyleTaskRunner {
                         `projects/${projectName}/tasks/build/style/bundles/[${i}]/entry`
                     );
                 } else {
-                    throw new InvalidCommandOptionError(errMsg, 'style');
+                    throw new InvalidCommandOptionError('style', bundle.entry, errMsg);
                 }
             }
 
@@ -441,7 +442,7 @@ export class StyleTaskRunner {
                         `projects/${projectName}/tasks/build/style/bundles/[${i}]/entry`
                     );
                 } else {
-                    throw new InvalidCommandOptionError(errMsg, 'style');
+                    throw new InvalidCommandOptionError('style', bundle.entry, errMsg);
                 }
             }
 
@@ -484,8 +485,8 @@ export class StyleTaskRunner {
     private async loadPostcssOptions(): Promise<Record<string, unknown>> {
         const defaultStage = 3;
 
-        if (this.options.styleOptions.cssTarget) {
-            const cssTargetOptions = this.options.styleOptions.cssTarget;
+        if (this.options.styleOptions.target) {
+            const cssTargetOptions = this.options.styleOptions.target;
             const presetEnvOptions: PostcssPresetEnvOptions = {
                 ...cssTargetOptions,
                 debug: this.options.logLevel === 'debug' ? true : false
@@ -683,8 +684,14 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         workspaceInfo: buildTask._workspaceInfo,
         outDir: buildTask._outDir,
         dryRun: context.dryRun,
-        logger: context.logger,
-        logLevel: context.logLevel,
+        logLevel: context.logLevel ?? 'info',
+        logger:
+            context.logger ??
+            new Logger({
+                logLevel: context.logLevel ?? 'info',
+                warnPrefix: colors.lightYellow('Warning:'),
+                groupIndentation: 4
+            }),
         env: context.env,
         packageJsonInfo: buildTask._packageJsonInfo,
         bannerText: buildTask._bannerText
