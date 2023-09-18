@@ -132,7 +132,7 @@ export async function pathExists(path: string): Promise<boolean> {
 }
 
 export async function findUp(
-    fileName: string,
+    pathToFind: string,
     startDir: string | string[] | null,
     endDir: string
 ): Promise<string | null> {
@@ -149,7 +149,7 @@ export async function findUp(
 
     for (let currentDir of startDirs) {
         do {
-            const filePath = path.resolve(currentDir, fileName);
+            const filePath = resolvePath(currentDir, pathToFind);
             if (await pathExists(filePath)) {
                 return filePath;
             }
