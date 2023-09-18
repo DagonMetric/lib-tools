@@ -98,7 +98,7 @@ void describe('config-helpers/apply-project-extends', () => {
             const projectC = projects.c;
 
             const expectedError = new InvalidConfigError(
-                'Cross referencing extend founds.',
+                'Cross referencing extend occours.',
                 null,
                 'projects/c/extends'
             );

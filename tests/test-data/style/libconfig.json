@@ -19,11 +19,28 @@
               "separateMinifyFile": true,
               "sourceMapInMinifyFile": false
             },
-            "cssTarget": {
+            "target": {
               "browers": ["defaults and supports es6-module", "maintained node versions"],
               "stage": 3,
               "minimumVendorImplementations": 0
             }
+          }
+        }
+      }
+    },
+    "scss": {
+      "root": "./scss",
+      "tasks": {
+        "build": {
+          "outDir": "dist",
+          "banner": true,
+          "style": {
+            "bundles": [
+              {
+                "entry": "./src/style.scss"
+              }
+            ],
+            "loadPaths": ["./src/variables/"]
           }
         }
       }

@@ -103,8 +103,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                `The workspace config file doesn't exist.`,
-                `workspace=${cmdOptions.workspace}`
+                'workspace',
+                cmdOptions.workspace,
+                `The workspace config file doesn't exist.`
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -116,8 +117,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                `The workspace directory doesn't exist.`,
-                `workspace=${cmdOptions.workspace}`
+                'workspace',
+                cmdOptions.workspace,
+                `The workspace directory doesn't exist.`
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -132,8 +134,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
                 };
 
                 const expectedError = new InvalidCommandOptionError(
-                    `The outDir must not be system root directory.`,
-                    `outDir=${cmdOptions.outDir}`
+                    'outDir',
+                    cmdOptions.outDir,
+                    `The outDir must not be system root directory.`
                 );
 
                 await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -146,8 +149,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                `The outDir must not be parent directory of current working directory.`,
-                `outDir=${cmdOptions.outDir}`
+                'outDir',
+                cmdOptions.outDir,
+                `The outDir must not be parent directory of current working directory.`
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -159,8 +163,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                'Could not find the file(s) to copy.',
-                `copy=${cmdOptions.copy}`
+                'copy',
+                cmdOptions.copy,
+                'Could not find the file(s) to copy.'
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -172,8 +177,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                'Could not find some style file(s) to bundle.',
-                `style=${cmdOptions.style}`
+                'style',
+                cmdOptions.style,
+                'Could not find some style file(s) to bundle.'
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -185,8 +191,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                'Could not find some style file(s) to bundle.',
-                `style=${cmdOptions.style}`
+                'style',
+                cmdOptions.style,
+                'Could not find some style file(s) to bundle.'
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -198,8 +205,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                'Could not find some script file(s) to bundle.',
-                `script=${cmdOptions.script}`
+                'script',
+                cmdOptions.script,
+                'Could not find some script file(s) to bundle.'
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);
@@ -211,8 +219,9 @@ void describe('config-helpers/get-parsed-command-options', () => {
             };
 
             const expectedError = new InvalidCommandOptionError(
-                'Could not find some script file(s) to bundle.',
-                `script=${cmdOptions.script}`
+                'script',
+                cmdOptions.script,
+                'Could not find some script file(s) to bundle.'
             );
 
             await assert.rejects(async () => await getParsedCommandOptions(cmdOptions), expectedError);

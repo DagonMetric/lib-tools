@@ -1,0 +1,26 @@
+@use 'sass:color';
+@use 'colors';
+@use 'components/button';
+@use 'components/code';
+
+// main styles
+
+:root {
+    --bgColor: #12345678;
+}
+
+body {
+    color: color.adjust(colors.$blue, $lightness: -30%, $alpha: -0.4);;
+    background-color: var(--bgColor);
+}
+
+.image {
+    background-image: url(image@1x.png);
+
+    @media (min-resolution: 2dppx) {
+        background-image: url(image@2x.png);
+    }
+}
+
+
+@import url("components/_print.css") print;
