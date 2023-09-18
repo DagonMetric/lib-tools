@@ -49,7 +49,7 @@ export default async function (): Promise<void> {
             'deprecated: %s': colors.lightYellow('deprecated:') + ' %s',
             'Did you mean %s?': 'Unknown command. Did you mean %s?'
         })
-        .command([runCommand.command, '$0'], runCommand.describe, runCommand.builder, runCommand.run)
+        .command([runCommand.command, '$0'], runCommand.describe, runCommand.builder, runCommand.handler)
         .version(packageVersion)
         .help('help')
         .showHelpOnFail(false)

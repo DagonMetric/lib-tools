@@ -1,13 +1,21 @@
-import { pathToFileURL } from 'node:url';
-
-import { Argv } from 'yargs';
+import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { getTasks } from '../../config-helpers/index.js';
 
-import { CommandOptions } from '../../config-models/index.js';
-import { ParsedBuildTaskConfig, ParsedCustomTaskConfig } from '../../config-models/parsed/index.js';
-import { CustomTaskHandlerFn } from '../../handlers/interfaces/index.js';
-import { ExitCodeError, Logger, colors, dashCaseToCamelCase, exec, resolvePath } from '../../utils/index.js';
+import { BuildCommandOptions, CommandOptions } from '../../config-models/index.js';
+import { InvalidCommandOptionError } from '../../exceptions/index.js';
+import { handleTask } from '../../handlers/index.js';
+import { ExitCodeError, Logger, colors } from '../../utils/index.js';
+
+function validateNonBuildCommandOptions(argv: CommandOptions): void {
+    const buildOnlyArgNames: (keyof BuildCommandOptions)[] = ['outDir', 'copy', 'style', 'script', 'packageVersion'];
+
+    for (const argvName of Object.keys(argv)) {
+        if (buildOnlyArgNames.includes(argvName as keyof BuildCommandOptions)) {
+            throw new InvalidCommandOptionError(argvName as keyof BuildCommandOptions, null, null);
+        }
+    }
+}
 
 export const command = 'run <task> [options..]';
 
@@ -17,31 +25,30 @@ export function builder(argv: Argv): Argv<CommandOptions> {
     return (
         argv
             .positional('task', {
-                describe: 'Task name to run',
-                type: 'string',
-                default: 'build'
+                describe: 'Task to run',
+                type: 'string'
             })
 
             // Shared task options
             .group(['logLevel', 'workspace', 'project', 'env', 'dryRun'], colors.lightCyan('Common task options:'))
             .option('logLevel', {
-                describe: 'Set logging level for output information',
-                choices: ['debug', 'info', 'warn', 'error', 'none'] as const
+                describe: 'Set logging level for console output information',
+                choices: ['debug', 'info', 'warn', 'error'] as const
             })
             .option('workspace', {
                 describe: 'Set workspace root directory or libconfig.json file location',
                 type: 'string'
             })
             .option('project', {
-                describe: 'Set project name to Filter project(s)',
+                describe: 'Set project name to Filter project(s), use comma `,` separator for multiple names',
                 type: 'string'
             })
             .option('env', {
-                describe: 'Set env name to override the task configuration with `envOverrides[name]` options.',
+                describe: 'Set env name to override the task configuration with `envOverrides[name]` options',
                 type: 'string'
             })
             .option('dryRun', {
-                describe: 'Set true to run without cleaning or emitting files on physical file system.',
+                describe: 'Set true to run without cleaning or emitting files on physical file system',
                 type: 'boolean'
             })
 
@@ -50,29 +57,28 @@ export function builder(argv: Argv): Argv<CommandOptions> {
                 ['outDir', 'clean', 'copy', 'style', 'script', 'packageVersion'],
                 colors.lightCyan('Build task options:')
             )
-
             .option('outDir', {
                 describe: 'Set output directory for build results',
                 type: 'string'
             })
             .option('clean', {
-                describe: 'Set true to clean build output directory before emitting build results',
+                describe: 'Set true to clean build output directory before emitting built assets',
                 type: 'boolean'
             })
             .option('copy', {
-                describe: 'Set path to copy assets to output directory',
+                describe: 'Set path(s) to copy assets to output directory, use comma `,` separator for multiple paths',
                 type: 'string'
             })
             .option('style', {
-                describe: 'Set SCSS or CSS file entry to compile or bundle',
+                describe: 'Set style file(s) to bundle, use comma `,` separator for multiple files',
                 type: 'string'
             })
             .option('script', {
-                describe: 'Set TypeScript or JavaScript file entry to compile or bundle',
+                describe: 'Set files(s) to bundle, use comma `,` separator for multiple files',
                 type: 'string'
             })
             .option('packageVersion', {
-                describe: 'Set version to override the version field of the package.json file',
+                describe: 'Set version to override the version field of the generated package.json file',
                 type: 'string'
             })
 
@@ -84,8 +90,11 @@ export function builder(argv: Argv): Argv<CommandOptions> {
     );
 }
 
-export async function run(argv: CommandOptions): Promise<void> {
-    const taskName = argv.task;
+export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: string }>): Promise<void> {
+    return run(argv.task, argv);
+}
+
+export async function run(taskName: string, argv: CommandOptions): Promise<void> {
     const logLevel = argv.logLevel ?? 'info';
     const logger = new Logger({
         logLevel,
@@ -93,134 +102,34 @@ export async function run(argv: CommandOptions): Promise<void> {
         groupIndentation: 4
     });
 
-    try {
-        if (!taskName) {
-            logger.warn('No task is provided.');
-            process.exitCode = 1;
+    if (!taskName) {
+        logger.error(`${colors.lightRed('Error:')} No task is provided.`);
+        process.exitCode = 1;
 
-            return;
+        return;
+    }
+
+    try {
+        if (taskName !== 'build') {
+            validateNonBuildCommandOptions(argv);
         }
 
         const tasks = await getTasks(argv, taskName);
 
-        const env = argv.env;
-        const dryRun = argv.dryRun ? true : false;
-
         if (!tasks.length) {
-            logger.warn(`No active task found for '${taskName}'.`);
+            logger.error(`${colors.lightRed('Error:')} No active task found for '${taskName}'.`);
             process.exitCode = 1;
 
             return;
         }
 
         for (const task of tasks) {
-            const taskPath = `${task._workspaceInfo.projectName ?? '0'}/${task._taskName}`;
-
-            if (task._taskName === 'build') {
-                const buildHandlerModule = await import('../../handlers/build/index.js');
-
-                logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
-                const start = Date.now();
-
-                await buildHandlerModule.default({
-                    taskOptions: task as ParsedBuildTaskConfig,
-                    logger,
-                    logLevel,
-                    dryRun,
-                    env
-                });
-
-                logger.groupEnd();
-                logger.info(
-                    `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
-                        ` completed in ${Date.now() - start} ms.`
-                    )}`
-                );
-            } else {
-                const customTask = task as ParsedCustomTaskConfig;
-                const handlerStr = customTask.handler?.trim();
-                if (!handlerStr) {
-                    logger.warn(`No handler is defined for ${colors.lightBlue(taskPath)} task, skipping...`);
-                    continue;
-                }
-
-                if (handlerStr.toLocaleLowerCase().startsWith('exec:')) {
-                    const index = handlerStr.indexOf(':') + 1;
-                    if (handlerStr.length > index) {
-                        const execCmd = handlerStr.substring(index).trim();
-
-                        logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
-                        const start = Date.now();
-
-                        const envObj: Record<string, string | undefined> = { ...process.env };
-                        envObj.logLevel = logLevel;
-                        if (env) {
-                            envObj[env] = 'true';
-                        }
-                        if (dryRun) {
-                            envObj.dryRun = 'true';
-                        }
-
-                        await exec(execCmd, logger, envObj);
-
-                        logger.groupEnd();
-                        logger.info(
-                            `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
-                                ` completed in ${Date.now() - start}ms.`
-                            )}`
-                        );
-                    } else {
-                        logger.warn(`No exec command found for ${colors.lightBlue(taskPath)} task, skipping...`);
-                        continue;
-                    }
-                } else {
-                    const projectRoot = task._workspaceInfo.projectRoot;
-                    const handlerPath = resolvePath(projectRoot, handlerStr);
-
-                    const handlerModule = (await import(pathToFileURL(handlerPath).toString())) as {};
-
-                    const taskNameCamelCase = dashCaseToCamelCase(task._taskName);
-                    let defaultTaskHander: CustomTaskHandlerFn | null = null;
-                    let nameTaskHander: CustomTaskHandlerFn | null = null;
-
-                    for (const [key, value] of Object.entries(handlerModule)) {
-                        if (key === 'default' && typeof value === 'function') {
-                            defaultTaskHander = value as CustomTaskHandlerFn;
-                        } else if (key === taskNameCamelCase && typeof value === 'function') {
-                            nameTaskHander = value as CustomTaskHandlerFn;
-                            break;
-                        }
-                    }
-
-                    const taskHandlerFn = nameTaskHander ?? defaultTaskHander;
-                    if (!taskHandlerFn) {
-                        logger.warn(`No handler found for ${colors.lightBlue(taskPath)} task, skipping...`);
-                        continue;
-                    }
-
-                    logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
-                    const start = Date.now();
-
-                    const result = taskHandlerFn({
-                        taskOptions: customTask,
-                        logger,
-                        logLevel,
-                        dryRun,
-                        env
-                    });
-
-                    if (result && result instanceof Promise) {
-                        await result;
-                    }
-
-                    logger.groupEnd();
-                    logger.info(
-                        `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
-                            ` completed in ${Date.now() - start} ms.`
-                        )}`
-                    );
-                }
-            }
+            await handleTask(task, {
+                logger,
+                logLevel,
+                dryRun: argv.dryRun,
+                env: argv.env
+            });
         }
     } catch (err) {
         if (!err) {
