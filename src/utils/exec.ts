@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 
-import { Logger } from './logger.js';
+import { LoggerBase } from './logger.js';
 
 export class ExitCodeError extends Error {
     constructor(readonly exitCode: number) {
@@ -8,18 +8,20 @@ export class ExitCodeError extends Error {
     }
 }
 
-export async function exec(cmd: string, logger: Logger, env?: Record<string, string | undefined>): Promise<void> {
+export async function exec(cmd: string, logger?: LoggerBase, env?: Record<string, string | undefined>): Promise<void> {
     return new Promise((resolve, reject) => {
         // const proc = spawn(cmd, { stdio: 'inherit', shell: true });
         const proc = spawn(cmd, { shell: true, env });
 
-        proc.stdout?.on('data', (data) => {
-            logger.info(`${(data as string)?.toString().trimEnd()}`);
-        });
+        if (logger) {
+            proc.stdout?.on('data', (data) => {
+                logger.info(`${(data as string)?.toString().trimEnd()}`);
+            });
 
-        proc.stderr?.on('data', (data) => {
-            logger.error(`${(data as string)?.toString().trimEnd()}`);
-        });
+            proc.stderr?.on('data', (data) => {
+                logger.error(`${(data as string)?.toString().trimEnd()}`);
+            });
+        }
 
         proc.on('exit', (exitCode) => {
             if (!exitCode || exitCode === 0) {
