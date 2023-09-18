@@ -1,8 +1,4 @@
 import { Console } from 'node:console';
-// import { inspect } from 'node:util';
-
-// inspect.styles.string = 'blueBright'; // Default: 'green'
-// inspect.styles.symbol = 'blueBright'; // Default: 'green'
 
 export enum LogLevel {
     None = 0,
@@ -12,10 +8,10 @@ export enum LogLevel {
     Debug = 16
 }
 
-export type LogLevelString = 'debug' | 'info' | 'warn' | 'error' | 'none';
+export type LogLevelStrings = Uncapitalize<keyof typeof LogLevel>;
 
 export interface LoggerOptions {
-    readonly logLevel?: LogLevel | LogLevelString;
+    readonly logLevel?: LogLevel | LogLevelStrings;
     readonly name?: string;
     readonly debugPrefix?: string;
     readonly infoPrefix?: string;
@@ -25,7 +21,7 @@ export interface LoggerOptions {
 }
 
 export interface LoggerBase {
-    log(level: LogLevel | LogLevelString, message: string, optionalParams?: unknown): void;
+    log(level: LogLevel | LogLevelStrings, message: string, optionalParams?: unknown): void;
     debug(message: string, optionalParams?: unknown): void;
     info(message: string, optionalParams?: unknown): void;
     warn(message: string, optionalParams?: unknown): void;
@@ -53,11 +49,11 @@ export class Logger implements LoggerBase {
         });
     }
 
-    set minLogLevel(minLogLevel: LogLevel | LogLevelString) {
+    set minLogLevel(minLogLevel: LogLevel | LogLevelStrings) {
         this._minLogLevel = typeof minLogLevel === 'string' ? this.toLogLevel(minLogLevel) : minLogLevel;
     }
 
-    log(level: LogLevel | LogLevelString, message: string, optionalParams?: unknown): void {
+    log(level: LogLevel | LogLevelStrings, message: string, optionalParams?: unknown): void {
         const logLevel = typeof level === 'string' ? this.toLogLevel(level) : level;
 
         if (this._minLogLevel < logLevel || !message) {
@@ -107,7 +103,7 @@ export class Logger implements LoggerBase {
         this._console.groupEnd();
     }
 
-    private toLogLevel(logLevelString: LogLevelString): LogLevel {
+    private toLogLevel(logLevelString: LogLevelStrings): LogLevel {
         switch (logLevelString) {
             case 'debug':
                 return LogLevel.Debug;
