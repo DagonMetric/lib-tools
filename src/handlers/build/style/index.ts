@@ -21,6 +21,7 @@ import {
     Logger,
     LoggerBase,
     colors,
+    findUp,
     normalizePathToPOSIXStyle,
     pathExists,
     readJsonWithComments,
@@ -219,7 +220,6 @@ export class StyleTaskRunner {
     async run(): Promise<StyleBundleResult> {
         const workspaceInfo = this.options.workspaceInfo;
         const workspaceRoot = workspaceInfo.workspaceRoot;
-        const projectRoot = workspaceInfo.projectRoot;
         const logLevel = this.options.logLevel;
         const styleOptions = this.options.styleOptions;
 
@@ -249,8 +249,7 @@ export class StyleTaskRunner {
         const sourceMap = styleOptions.sourceMap ?? true;
 
         // includePaths
-        // TODO:
-        const absoluteIncludePaths = styleOptions.includePaths?.map((loadPath) => resolvePath(projectRoot, loadPath));
+        const absoluteIncludePaths = await this.getIncludePaths();
 
         const getSharedCssRuleUseItems = (importLoaders = 0): RuleSetUseItem[] => {
             return [
@@ -480,6 +479,49 @@ export class StyleTaskRunner {
         }
 
         return entryPoints;
+    }
+
+    private async getIncludePaths(): Promise<string[] | undefined> {
+        if (!this.options.styleOptions.includePaths) {
+            return undefined;
+        }
+
+        const includePaths: string[] = [];
+        const node_modules = 'node_modules';
+
+        for (const p of this.options.styleOptions.includePaths) {
+            const normalizedPath = normalizePathToPOSIXStyle(p);
+
+            let foundPath: string | null = null;
+
+            foundPath = await findUp(normalizedPath, null, this.options.workspaceInfo.projectRoot);
+
+            if (!foundPath && this.options.workspaceInfo.nodeModulePath && normalizedPath.startsWith(node_modules)) {
+                foundPath = await findUp(
+                    normalizedPath.substring(node_modules.length),
+                    null,
+                    this.options.workspaceInfo.nodeModulePath
+                );
+            }
+
+            if (!foundPath && this.options.workspaceInfo.nodeModulePath && p.startsWith('~')) {
+                foundPath = await findUp(p.substring(1), null, this.options.workspaceInfo.nodeModulePath);
+            }
+
+            if (!foundPath) {
+                throw new InvalidConfigError(
+                    `IncludePath '${p}' doesn't exist.`,
+                    this.options.workspaceInfo.configPath,
+                    `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build/style/includePaths`
+                );
+            }
+
+            if (!includePaths.includes(foundPath)) {
+                includePaths.push(foundPath);
+            }
+        }
+
+        return includePaths;
     }
 
     private async loadPostcssOptions(): Promise<Record<string, unknown>> {
