@@ -132,7 +132,7 @@ export interface StyleOptions {
     /**
      * Paths in which to look for stylesheets loaded by rules like @use and @import.
      */
-    loadPaths?: string[];
+    includePaths?: string[];
     /**
      * Boolean value or minify object options to generate minify file. Default is `true`.
      * @default true
