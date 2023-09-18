@@ -9,7 +9,7 @@ export interface LibConfig {
      */
     $schema?: string;
     /**
-     * Project configurations.
+     * Project configuration collection.
      */
     projects: Record<string, Project>;
 }

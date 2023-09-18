@@ -9,11 +9,11 @@ export interface BeforeBuildCleanOptions {
      */
     cleanOutDir?: boolean;
     /**
-     * Extra list of files or directories or glob patterns to delete before build task run.
+     * Extra list of files or directories or glob magic paths to delete before build task run.
      */
     paths?: string[];
     /**
-     * List of files or directories or glob patterns to exclude from clean.
+     * List of files or directories or glob magic paths to exclude from clean.
      */
     exclude?: string[];
 }
@@ -23,11 +23,11 @@ export interface BeforeBuildCleanOptions {
  */
 export interface AfterBuildCleanOptions {
     /**
-     * List of files or directories or glob patterns to delete after build task run.
+     * List of files or directories or glob magic paths to delete after build task run.
      */
     paths: string[];
     /**
-     * List of files or directories or glob patterns to exclude from clean.
+     * List of files or directories or glob magic paths to exclude from clean.
      */
     exclude?: string[];
 }
@@ -51,7 +51,7 @@ export interface CleanOptions {
  */
 export interface CopyEntry {
     /**
-     * Source file, directory or glob pattern to copy from.
+     * Source file, directory or glob magic path to copy from.
      */
     from: string;
     /**
@@ -59,14 +59,17 @@ export interface CopyEntry {
      */
     to?: string;
     /**
-     * List of files or directories or glob patterns to exclude from copy.
+     * List of files or directories or glob magic paths to exclude from copy.
      */
     exclude?: string[];
 }
 
+/**
+ * Style bundle entry options.
+ */
 export interface StyleBundle {
     /**
-     * The entry style file. Supported formats are .scss, .sass or .css.
+     * The entry style file. Supported formats are .scss, .sass, .less or .css.
      */
     entry: string;
     /**
@@ -81,10 +84,12 @@ export interface StyleBundle {
 export interface StyleMinifyOptions {
     /**
      * If true, both minified and unminified files will be generated. Default is `true`.
+     * @default true
      */
     separateMinifyFile?: boolean;
     /**
-     * If true, source file will be generated for separate minified .min.css file.
+     * If true, source file will be generated for separate minified .min.css file. Default is `false`.
+     * @default false
      */
     sourceMapInMinifyFile?: boolean;
 }
@@ -99,23 +104,29 @@ export interface CssTargetOptions {
     browers?: string[] | null;
     /**
      * Determine which CSS features to polyfill, based upon their process of becoming implemented web standards.
+     * Default value is `3`.
      * @default 3
      */
     stage?: 0 | 1 | 2 | 3 | 4 | false;
     /**
      * Determine which CSS features to polyfill, based their implementation status.
+     * Default value is `0`.
      * @default: 0
      */
     minimumVendorImplementations?: 0 | 1 | 2 | 3;
 }
 
+/**
+ * Style compilation / bundle options.
+ */
 export interface StyleOptions {
     /**
-     * List of style compilation / bundle entries.
+     * List of style bundle entries.
      */
     bundles: StyleBundle[];
     /**
      * If true, enable the outputing of sourcemap. Default is `true`.
+     * @default true
      */
     sourceMap?: boolean;
     /**
@@ -123,15 +134,19 @@ export interface StyleOptions {
      */
     loadPaths?: string[];
     /**
-     * Boolean value or css minify options to generate minify file. Default is `true`.
+     * Boolean value or minify object options to generate minify file. Default is `true`.
+     * @default true
      */
     minify?: boolean | StyleMinifyOptions;
     /**
      * Css bundle target options.
      */
-    cssTarget?: CssTargetOptions;
+    target?: CssTargetOptions;
 }
 
+/**
+ * Script bundle entry options.
+ */
 export interface ScriptBundleEntry {
     /**
      * Specify the format of the generated bundle.
@@ -168,7 +183,7 @@ export interface ScriptBundleEntry {
 }
 
 /**
- * Script options.
+ * Script compilation / bundle options.
  */
 export interface ScriptOptions {
     /**
@@ -206,15 +221,15 @@ export interface ScriptOptions {
 }
 
 /**
- * Options for package.json file.
+ * Options for package.json file updating.
  */
 export interface PackageJsonOptions {
     /**
-     * Set version to override the version field of the package.json file/
+     * Set version to override the version field of the package.json file.
      */
     packageVersion?: string;
     /**
-     * Boolean value whether to update package.json file fields with generated build assets.
+     * Boolean value whether to update package.json file fields with generated build result paths.
      */
     updateFields?: boolean;
     /**
@@ -223,6 +238,9 @@ export interface PackageJsonOptions {
     removeFields?: string[];
 }
 
+/**
+ * Build task options.
+ */
 export interface BuildTaskOptions extends Task {
     /**
      * The output directory for build results.
@@ -249,7 +267,7 @@ export interface BuildTaskOptions extends Task {
      */
     banner?: boolean | string;
     /**
-     * Options for updating package.json file.
+     * Options for package.json file updating.
      */
     packageJson?: PackageJsonOptions | boolean;
 }

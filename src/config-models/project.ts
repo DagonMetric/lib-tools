@@ -3,7 +3,6 @@ import { CustomTask } from './custom-task.js';
 
 /**
  * Project configuration options.
- * @additionalProperties false
  */
 export interface Project {
     /**
@@ -15,13 +14,11 @@ export interface Project {
      */
     root?: string;
     /**
-     * Task configurations.
+     * Task configuration collection.
      */
-    tasks?: {
-        [Property in keyof Record<string, CustomTask> as Exclude<Property, 'build'>]: CustomTask;
-    } & {
+    tasks?: Record<string, CustomTask> & {
         /**
-         * Build task configuration.
+         * Build task options.
          */
         build?: BuildTask;
     };

@@ -1,5 +1,8 @@
 import { OverridableTaskOptions, Task } from './task.js';
 
+/**
+ * Custom task options.
+ */
 export interface CustomTaskOptions extends Task {
     /**
      * Handler script or module to run this task.
@@ -12,6 +15,6 @@ export interface CustomTaskOptions extends Task {
 }
 
 /**
- * Build task options.
+ * Custom task options.
  */
 export interface CustomTask extends CustomTaskOptions, OverridableTaskOptions<CustomTaskOptions> {}
