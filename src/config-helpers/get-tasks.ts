@@ -85,7 +85,7 @@ async function getPackageJsonInfo(
             if (rootPackageJson?.version == null || !semverionPrefixRegExp.test(rootPackageJson.version)) {
                 const errMsg = 'Could not find valid root package.json version.';
                 if (!workspaceInfo.projectName) {
-                    throw new InvalidCommandOptionError(errMsg, 'packageVersion');
+                    throw new InvalidCommandOptionError('packageVersion', packageVersionToSet, errMsg);
                 } else {
                     throw new InvalidConfigError(
                         errMsg,
@@ -103,7 +103,7 @@ async function getPackageJsonInfo(
             ) {
                 const errMsg = 'The packageVersion is not valid semver.';
                 if (!workspaceInfo.projectName) {
-                    throw new InvalidCommandOptionError(errMsg, 'packageVersion');
+                    throw new InvalidCommandOptionError('packageVersion', packageVersionToSet, errMsg);
                 } else {
                     throw new InvalidConfigError(
                         errMsg,

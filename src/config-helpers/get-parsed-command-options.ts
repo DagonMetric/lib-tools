@@ -49,15 +49,17 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
     if (cmdOptions._configPath) {
         if (!(await pathExists(cmdOptions._configPath))) {
             throw new InvalidCommandOptionError(
-                `The workspace config file doesn't exist.`,
-                `workspace=${cmdOptions.workspace}`
+                'workspace',
+                cmdOptions.workspace,
+                `The workspace config file doesn't exist.`
             );
         } else {
             const configFileStats = await fs.stat(cmdOptions._configPath);
             if (!configFileStats.isFile()) {
                 throw new InvalidCommandOptionError(
-                    `Config path ${cmdOptions._configPath} must be a file.`,
-                    `workspace=${cmdOptions.workspace}`
+                    'workspace',
+                    cmdOptions.workspace,
+                    `Config path ${cmdOptions._configPath} must be a file.`
                 );
             }
         }
@@ -66,8 +68,9 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
     if (cmdOptions.workspace) {
         if (!(await pathExists(cmdOptions._workspaceRoot))) {
             throw new InvalidCommandOptionError(
-                `The workspace directory doesn't exist.`,
-                `workspace=${cmdOptions.workspace}`
+                'workspace',
+                cmdOptions.workspace,
+                `The workspace directory doesn't exist.`
             );
         }
     }
@@ -76,37 +79,41 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
         const outDir = cmdOptions._outDir;
         if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
             throw new InvalidCommandOptionError(
-                `The outDir must not be system root directory.`,
-                `outDir=${cmdOptions.outDir}`
+                'outDir',
+                cmdOptions.outDir,
+                `The outDir must not be system root directory.`
             );
         }
 
         if (isInFolder(outDir, process.cwd())) {
             throw new InvalidCommandOptionError(
-                `The outDir must not be parent directory of current working directory.`,
-                `outDir=${cmdOptions.outDir}`
+                'outDir',
+                cmdOptions.outDir,
+                `The outDir must not be parent directory of current working directory.`
             );
         }
 
         if (cmdOptions.workspace && isInFolder(outDir, cmdOptions._workspaceRoot)) {
             throw new InvalidCommandOptionError(
-                `The outDir must not be parent directory of workspace directory.`,
-                `outDir=${cmdOptions.outDir}`
+                'outDir',
+                cmdOptions.outDir,
+                `The outDir must not be parent directory of workspace directory.`
             );
         }
     }
 
     if (cmdOptions._copyEntries.length) {
         if (!(await checkPaths(cmdOptions._copyEntries, cmdOptions._workspaceRoot, true))) {
-            throw new InvalidCommandOptionError('Could not find the file(s) to copy.', `copy=${cmdOptions.copy}`);
+            throw new InvalidCommandOptionError('copy', cmdOptions.copy, 'Could not find the file(s) to copy.');
         }
     }
 
     if (cmdOptions._styleEntries.length) {
         if (!(await checkPaths(cmdOptions._styleEntries, cmdOptions._workspaceRoot, false))) {
             throw new InvalidCommandOptionError(
-                'Could not find some style file(s) to bundle.',
-                `style=${cmdOptions.style}`
+                'style',
+                cmdOptions.style,
+                'Could not find some style file(s) to bundle.'
             );
         }
     }
@@ -114,8 +121,9 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
     if (cmdOptions._scriptEntries.length) {
         if (!(await checkPaths(cmdOptions._scriptEntries, cmdOptions._workspaceRoot, false))) {
             throw new InvalidCommandOptionError(
-                'Could not find some script file(s) to bundle.',
-                `script=${cmdOptions.script}`
+                'script',
+                cmdOptions.script,
+                'Could not find some script file(s) to bundle.'
             );
         }
     }
