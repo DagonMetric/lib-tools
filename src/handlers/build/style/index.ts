@@ -117,13 +117,13 @@ interface FileImporterWithRequestContextOptions extends FileImporterOptions {
     resolveDir?: string;
 }
 
-async function tryResolve(
+async function tryUnderscoreResolve(
     resolve: ReturnType<LoaderContext<{}>['getResolve']>,
-    root: string,
-    url: string
+    url: string,
+    workspaceRoot: string
 ): Promise<string | undefined> {
     try {
-        return await resolve(root, url);
+        return await resolve(workspaceRoot, url);
     } catch {
         // Try to resolve a partial file
         // @use '@material/button/button' as mdc-button;
@@ -133,14 +133,14 @@ async function tryResolve(
         if (underscoreIndex > 0 && url.charAt(underscoreIndex) !== '_') {
             const partialFileUrl = `${url.slice(0, underscoreIndex)}_${url.slice(underscoreIndex)}`;
 
-            return resolve(root, partialFileUrl).catch(() => undefined);
+            return resolve(workspaceRoot, partialFileUrl).catch(() => undefined);
         }
     }
 
     return undefined;
 }
 
-function getSassResolutionImporter(loaderContext: LoaderContext<{}>, workspaceRoot: string): FileImporter<'async'> {
+function getSassUnderscoreImporter(loaderContext: LoaderContext<{}>, workspaceRoot: string): FileImporter<'async'> {
     const commonResolverOptions: Parameters<(typeof loaderContext)['getResolve']>[0] = {
         conditionNames: ['sass', 'style'],
         mainFields: ['sass', 'style', 'main', '...'],
@@ -175,13 +175,12 @@ function getSassResolutionImporter(loaderContext: LoaderContext<{}>, workspaceRo
             }
 
             const resolve = fromImport ? resolveImport : resolveModule;
-            // Try to resolve from root of workspace
-            let result = await tryResolve(resolve, workspaceRoot, url);
 
-            // Try to resolve from previously resolved modules.
+            let result = await tryUnderscoreResolve(resolve, url, workspaceRoot);
+
             if (!result && previousResolvedModules) {
                 for (const path of previousResolvedModules) {
-                    result = await tryResolve(resolve, path, url);
+                    result = await tryUnderscoreResolve(resolve, url, path);
                     if (result) {
                         break;
                     }
@@ -219,7 +218,7 @@ export class StyleTaskRunner {
 
     async run(): Promise<StyleBundleResult> {
         const workspaceInfo = this.options.workspaceInfo;
-        const workspaceRoot = workspaceInfo.workspaceRoot;
+
         const logLevel = this.options.logLevel;
         const styleOptions = this.options.styleOptions;
 
@@ -346,7 +345,9 @@ export class StyleTaskRunner {
                                     api: 'modern',
 
                                     sassOptions: (loaderContext: LoaderContext<{}>) => ({
-                                        importers: [getSassResolutionImporter(loaderContext, workspaceRoot)],
+                                        importers: [
+                                            getSassUnderscoreImporter(loaderContext, workspaceInfo.workspaceRoot)
+                                        ],
                                         loadPaths: absoluteIncludePaths,
                                         // Use expanded as otherwise sass will remove comments that are needed for autoprefixer
                                         // Ex: /* autoprefixer grid: autoplace */
