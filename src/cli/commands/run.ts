@@ -142,7 +142,7 @@ export async function run(taskName: string, argv: CommandOptions): Promise<void>
 
         if (err instanceof ExitCodeError) {
             process.exitCode = err.exitCode;
-            // TODO: should show message?
+            // TODO: message duplicated?
             if (err.message) {
                 logger.error(err.message);
             }
