@@ -279,7 +279,8 @@ export class StyleWebpackPlugin {
 
             const builtAssetsCount = Object.keys(stats.compilation.assets).length;
             const msgSuffix = this.options.dryRun ? 'built' : 'emitted';
-            this.logger.info(`Total ${builtAssetsCount} files are ${msgSuffix}.`);
+            const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
+            this.logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
 
             if (this.options.logLevel === 'debug') {
                 const msg = stats.toString();
