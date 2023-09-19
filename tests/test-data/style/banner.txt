@@ -1,7 +1,7 @@
 /*!
  * Cssnano Note - any special comments marked with ! are kept by default.
  * @license
- * Copyright [author] All Rights Reserved.
+ * Copyright [current_year] [author] All Rights Reserved.
  *
  * Use of this source code is governed by an [license]-style license that can be
  * found in the LICENSE file at [homepage].

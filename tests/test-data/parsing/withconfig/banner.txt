@@ -1,1 +1,1 @@
-// [author], [license], [homepage], [packagename], [packageversion], [package_description]
+// [author], [license], [current_year], [homepage], [projectname], [packagename], [packageversion], [package_description]

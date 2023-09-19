@@ -29,7 +29,7 @@ void describe('config-helpers/get-tasks', () => {
 
             const task1: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspace1,
+                _workspaceInfo: { ...workspace1 },
                 _packageJsonInfo: {
                     packageJson: {
                         name: '@scope/package-1',
@@ -51,7 +51,9 @@ void describe('config-helpers/get-tasks', () => {
                     newPackageVersion: '1.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
-                _bannerText: `// DagonMetric, MIT, https://github.com/dagonmetric/lib-tools, @scope/package-1, 1.0.0, This is a test project.`,
+                _bannerText: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 1.0.0, This is a test project.`,
                 clean: false,
                 banner: true,
                 packageJson: {
@@ -64,7 +66,10 @@ void describe('config-helpers/get-tasks', () => {
                 _workspaceInfo: {
                     ...workspace1,
                     projectName: 'project-2'
-                }
+                },
+                _bannerText: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-2, @scope/package-1, 1.0.0, This is a test project.`
             };
 
             const expectedTasks = [task1, task2];
@@ -100,7 +105,7 @@ void describe('config-helpers/get-tasks', () => {
 
             const task1: ParsedBuildTaskConfig = {
                 _taskName: 'build',
-                _workspaceInfo: workspace1,
+                _workspaceInfo: { ...workspace1 },
                 _packageJsonInfo: {
                     packageJson: {
                         name: '@scope/package-1',
@@ -122,7 +127,9 @@ void describe('config-helpers/get-tasks', () => {
                     newPackageVersion: '2.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
-                _bannerText: `// DagonMetric, MIT, https://github.com/dagonmetric/lib-tools, @scope/package-1, 2.0.0, This is a test project.`,
+                _bannerText: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 2.0.0, This is a test project.`,
                 outDir: 'dist',
                 clean: true,
                 banner: true,
@@ -139,7 +146,10 @@ void describe('config-helpers/get-tasks', () => {
                 _workspaceInfo: {
                     ...workspace1,
                     projectName: 'project-2'
-                }
+                },
+                _bannerText: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-2, @scope/package-1, 2.0.0, This is a test project.`
             };
 
             const expectedTasks = [task1, task2];
