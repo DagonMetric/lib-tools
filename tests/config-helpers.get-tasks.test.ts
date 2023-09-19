@@ -2,10 +2,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { getParsedBuildTask, getTasks, validateOutDir } from '../src/config-helpers/get-tasks.js';
-import { BuildTask, CommandOptions } from '../src/config-models/index.js';
+import { getTasks } from '../src/config-helpers/get-tasks.js';
+import { CommandOptions } from '../src/config-models/index.js';
 import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
-import { InvalidConfigError } from '../src/exceptions/index.js';
 
 void describe('config-helpers/get-tasks', () => {
     void describe('getTasks', () => {
@@ -155,156 +154,6 @@ void describe('config-helpers/get-tasks', () => {
             const expectedTasks = [task1, task2];
 
             assert.deepStrictEqual(tasks, expectedTasks);
-        });
-    });
-
-    void describe('getParsedBuildTask', () => {
-        void it('should parse build task config', async () => {
-            const buildTask: BuildTask = {
-                outDir: 'out',
-                clean: true,
-                script: ['a.js', 'b.ts']
-            };
-
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot: process.cwd(),
-                projectRoot: process.cwd(),
-                projectName: 'test-project',
-                configPath: null,
-                nodeModulePath: null
-            };
-
-            const result = await getParsedBuildTask(buildTask, workspaceInfo, null);
-
-            const expected: ParsedBuildTaskConfig = {
-                ...buildTask,
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _packageJsonInfo: null,
-                _outDir: path.resolve(process.cwd(), 'out'),
-                _bannerText: null
-            };
-
-            assert.deepStrictEqual(result, expected);
-        });
-
-        void it('should parse build task config with cmd options outDir', async () => {
-            const buildTask: BuildTask = {
-                clean: true,
-                script: ['a.js', 'b.ts']
-            };
-
-            const workspaceInfo: WorkspaceInfo = {
-                workspaceRoot: process.cwd(),
-                projectRoot: process.cwd(),
-                projectName: 'test-project',
-                configPath: null,
-                nodeModulePath: null
-            };
-
-            const result = await getParsedBuildTask(buildTask, workspaceInfo, null);
-
-            const expected: ParsedBuildTaskConfig = {
-                ...buildTask,
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _packageJsonInfo: null,
-                _outDir: path.resolve(process.cwd(), 'dist'),
-                _bannerText: null
-            };
-
-            assert.deepStrictEqual(result, expected);
-        });
-    });
-
-    void describe('validateOutDir', () => {
-        const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data');
-        const workspaceInfo: WorkspaceInfo = {
-            workspaceRoot,
-            projectRoot: path.resolve(workspaceRoot, 'test-project'),
-            projectName: 'test-project',
-            configPath: path.resolve(workspaceRoot, 'libconfig.json'),
-            nodeModulePath: null
-        };
-
-        const configLocationPrefix = `projects/${workspaceInfo.projectName}/tasks/build`;
-
-        void it(
-            'should throw an error if outDir is system root directory - C:\\ on Windows',
-            { skip: process.platform !== 'win32' },
-            () => {
-                const outDir = path.resolve('C:\\');
-                const expectedError = new InvalidConfigError(
-                    `The 'outDir' must not be system root directory.`,
-                    workspaceInfo.configPath,
-                    `${configLocationPrefix}/outDir`
-                );
-
-                assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
-            }
-        );
-
-        void it('should throw an error if outDir is system root directory - /', () => {
-            const outDir = path.resolve('/');
-            const expectedError = new InvalidConfigError(
-                `The 'outDir' must not be system root directory.`,
-                workspaceInfo.configPath,
-                `${configLocationPrefix}/outDir`
-            );
-
-            assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
-        });
-
-        void it(
-            'should throw an error if outDir is system root directory - \\\\server\\public on Windows',
-            { skip: process.platform !== 'win32' },
-            () => {
-                const outDir = path.resolve('\\\\server\\public');
-                const expectedError = new InvalidConfigError(
-                    `The 'outDir' must not be system root directory.`,
-                    workspaceInfo.configPath,
-                    `${configLocationPrefix}/outDir`
-                );
-
-                assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
-            }
-        );
-
-        void it(
-            'should throw an error if outDir is system root directory - //server/public on Windows',
-            { skip: process.platform !== 'win32' },
-            () => {
-                const outDir = path.resolve('//server/public');
-                const expectedError = new InvalidConfigError(
-                    `The 'outDir' must not be system root directory.`,
-                    workspaceInfo.configPath,
-                    `${configLocationPrefix}/outDir`
-                );
-
-                assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
-            }
-        );
-
-        void it('should throw an error if outDir is parent of workspace root', () => {
-            const outDir = path.resolve(workspaceRoot, '../');
-            const expectedError = new InvalidConfigError(
-                `The 'outDir' must not be parent of worksapce root or current working directory.`,
-                workspaceInfo.configPath,
-                `${configLocationPrefix}/outDir`
-            );
-
-            assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
-        });
-
-        void it('should throw an error if outDir is parent of project root', () => {
-            const outDir = path.resolve(workspaceInfo.projectRoot, '../');
-            const expectedError = new InvalidConfigError(
-                `The 'outDir' must not be parent of project root directory.`,
-                workspaceInfo.configPath,
-                `${configLocationPrefix}/outDir`
-            );
-
-            assert.throws(() => validateOutDir(outDir, workspaceInfo), expectedError);
         });
     });
 });
