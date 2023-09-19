@@ -451,20 +451,13 @@ export class StyleTaskRunner {
             if (trimedOut?.length) {
                 if (trimedOut.endsWith('/')) {
                     const outFileName = path.basename(entryFilePath).replace(supportdStyleExtRegExp, '.css');
-                    const outFilePath = path.resolve(
-                        this.options.outDir,
-                        normalizePathToPOSIXStyle(trimedOut),
-                        outFileName
-                    );
+                    const outFilePath = resolvePath(this.options.outDir, path.join(trimedOut, outFileName));
                     outFileRelToOutDir = normalizePathToPOSIXStyle(path.relative(this.options.outDir, outFilePath));
                 } else if (/\.css$/i.test(trimedOut) && normalizePathToPOSIXStyle(trimedOut).length > 4) {
-                    const outFilePath = path.resolve(this.options.outDir, normalizePathToPOSIXStyle(trimedOut));
+                    const outFilePath = resolvePath(this.options.outDir, trimedOut);
                     outFileRelToOutDir = normalizePathToPOSIXStyle(path.relative(this.options.outDir, outFilePath));
                 } else {
-                    const outFilePath = path.resolve(
-                        this.options.outDir,
-                        normalizePathToPOSIXStyle(trimedOut + '.css')
-                    );
+                    const outFilePath = resolvePath(this.options.outDir, trimedOut + '.css');
                     outFileRelToOutDir = normalizePathToPOSIXStyle(path.relative(this.options.outDir, outFilePath));
                 }
             } else {
