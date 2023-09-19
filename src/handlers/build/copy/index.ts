@@ -242,8 +242,7 @@ export class CopyTaskRunner {
                             }
                         }
 
-                        const foundFilePathRel = normalizePathToPOSIXStyle(path.relative(fromPath, foundFilePath));
-                        const toFilePath = path.resolve(toBasePath, foundFilePathRel);
+                        const toFilePath = resolvePath(toBasePath, path.relative(fromPath, foundFilePath));
 
                         if (
                             !copyResult.copiedFileInfoes.find(
