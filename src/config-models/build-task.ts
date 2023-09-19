@@ -187,13 +187,9 @@ export interface ScriptBundleEntry {
  */
 export interface ScriptOptions {
     /**
-     * If true, emit typescript tsc outputs.
-     */
-    tsc?: boolean;
-    /**
      * List of bundle options.
      */
-    bundles?: ScriptBundleEntry[];
+    bundles: ScriptBundleEntry[];
     /**
      * Typescript configuration file to be used.
      */
@@ -202,10 +198,6 @@ export interface ScriptOptions {
      * Entry file to bundle or entry point name to add to package.json. By default it will be automatically detected.
      */
     entry?: string;
-    /**
-     * If true, automatically add entry points to package.json file.
-     */
-    updatePackageJson?: boolean;
     /**
      * External id and global variable name mapping for bundling options.
      */
