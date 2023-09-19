@@ -14,13 +14,14 @@ import { findUp, isInFolder, isSamePaths, pathExists, readJsonWithComments, reso
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
+import { getParsedBuildTask } from './get-parsed-build-task.js';
 import { getParsedCommandOptions } from './get-parsed-command-options.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 
 const versionPlaceholderRegExp = /^0\.0\.0|0\.0\.0-PLACEHOLDER|\[VERSION\]|\[PLACEHOLDER\]$/i;
 const semverionPrefixRegExp = /^((0|[1-9]\d{0,9})\.){2,2}(0|[1-9]\d{0,9})/;
-
 const packageJsonCache = new Map<string, Record<string, unknown>>();
+
 async function readPackageJsonFile(packageJsonPath: string): Promise<Record<string, unknown>> {
     const cachedPackageJson = packageJsonCache.get(packageJsonPath);
     if (cachedPackageJson) {
@@ -206,152 +207,6 @@ function mergeBuildTaskWithCmdOptions(buildTask: BuildTask, cmdOptions: ParsedCo
     }
 
     return merged;
-}
-
-async function parseBannerText(
-    buildTask: BuildTask,
-    workspaceInfo: WorkspaceInfo,
-    packageJsonInfo: PackageJsonInfo | null
-): Promise<string | null> {
-    if (!buildTask.banner) {
-        return null;
-    }
-
-    let bannerText: string | null = null;
-    const configLocationPrefix = `projects/${workspaceInfo.projectName ?? '0'}/build`;
-
-    let bannerFilePath: string | null = null;
-    if (buildTask.banner === true) {
-        bannerFilePath = await findUp('banner.txt', workspaceInfo.projectRoot, workspaceInfo.workspaceRoot);
-    } else if (typeof buildTask.banner === 'string') {
-        bannerFilePath = resolvePath(workspaceInfo.projectRoot, buildTask.banner);
-        if (!(await pathExists(bannerFilePath))) {
-            throw new InvalidConfigError(
-                `Banner file path doesn't exists.`,
-                workspaceInfo.configPath,
-                `${configLocationPrefix}/banner`
-            );
-        }
-    }
-
-    if (bannerFilePath) {
-        bannerText = await fs.readFile(bannerFilePath, 'utf-8');
-        bannerText = bannerText.trim();
-
-        bannerText = bannerText.replace(/\[current_?year\]/gim, new Date().getFullYear().toString());
-
-        if (workspaceInfo.projectName) {
-            bannerText = bannerText.replace(/\[project_?name\]/gim, workspaceInfo.projectName);
-        }
-
-        if (packageJsonInfo) {
-            const packageName = packageJsonInfo.packageName;
-            const packageVersion = packageJsonInfo.newPackageVersion ?? packageJsonInfo.packageJson.version;
-            const mergedPackageJson = packageJsonInfo.rootPackageJson
-                ? { ...packageJsonInfo.rootPackageJson, ...packageJsonInfo.packageJson }
-                : packageJsonInfo.packageJson;
-
-            bannerText = bannerText.replace(/\[package_?name\]/gim, packageName);
-
-            if (packageVersion && typeof packageVersion === 'string') {
-                bannerText = bannerText.replace(/\[package_?version\]/gim, packageVersion);
-            }
-
-            if (mergedPackageJson.description && typeof mergedPackageJson.description === 'string') {
-                bannerText = bannerText.replace(/\[package_?description\]/gim, mergedPackageJson.description);
-            }
-
-            if (mergedPackageJson.license && typeof mergedPackageJson.license === 'string') {
-                bannerText = bannerText.replace(/\[(package_?)?license\]/gim, mergedPackageJson.license);
-            }
-
-            if (mergedPackageJson.homepage && typeof mergedPackageJson.homepage === 'string') {
-                bannerText = bannerText.replace(/\[(package_?)?homepage\]/gim, mergedPackageJson.homepage);
-            }
-
-            if (mergedPackageJson.author) {
-                let author: string | null = null;
-                if (typeof mergedPackageJson.author === 'string') {
-                    author = mergedPackageJson.author;
-                } else if (
-                    typeof mergedPackageJson.author === 'object' &&
-                    (mergedPackageJson.author as { name: string }).name
-                ) {
-                    author = (mergedPackageJson.author as { name: string }).name;
-                }
-
-                if (author) {
-                    bannerText = bannerText.replace(/\[(package_?)?author\]/gim, author);
-                }
-            }
-        }
-    }
-
-    return bannerText;
-}
-
-export function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
-    const workspaceRoot = workspaceInfo.workspaceRoot;
-    const projectRoot = workspaceInfo.projectRoot;
-    const projectName = workspaceInfo.projectName ?? '0';
-    const configLocationPrefix = `projects/${projectName}/tasks/build`;
-    const configPath = workspaceInfo.configPath;
-
-    if (!outDir?.trim().length) {
-        throw new InvalidConfigError(`The 'outDir' must not be empty.`, configPath, `${configLocationPrefix}/outDir`);
-    }
-
-    if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
-        throw new InvalidConfigError(
-            `The 'outDir' must not be system root directory.`,
-            configPath,
-            `${configLocationPrefix}/outDir`
-        );
-    }
-
-    if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
-        throw new InvalidConfigError(
-            `The 'outDir' must not be parent of worksapce root or current working directory.`,
-            configPath,
-            `${configLocationPrefix}/outDir`
-        );
-    }
-
-    if (isInFolder(outDir, projectRoot)) {
-        throw new InvalidConfigError(
-            `The 'outDir' must not be parent of project root directory.`,
-            configPath,
-            `${configLocationPrefix}/outDir`
-        );
-    }
-}
-
-export async function getParsedBuildTask(
-    buildTask: BuildTask,
-    workspaceInfo: WorkspaceInfo,
-    packageJsonInfo: PackageJsonInfo | null
-): Promise<ParsedBuildTaskConfig> {
-    const projectRoot = workspaceInfo.projectRoot;
-
-    let outDir = path.resolve(projectRoot, 'dist');
-    if (buildTask.outDir?.trim().length) {
-        outDir = resolvePath(projectRoot, buildTask.outDir);
-    }
-
-    const bannerText = await parseBannerText(buildTask, workspaceInfo, packageJsonInfo);
-
-    const parsedBuildTask: ParsedBuildTaskConfig = {
-        _taskName: 'build',
-        _workspaceInfo: workspaceInfo,
-        _packageJsonInfo: packageJsonInfo,
-        _outDir: outDir,
-        _bannerText: bannerText,
-        ...buildTask
-    };
-
-    validateOutDir(outDir, workspaceInfo);
-
-    return parsedBuildTask;
 }
 
 export async function getTasks(
