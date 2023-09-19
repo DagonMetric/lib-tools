@@ -131,6 +131,24 @@ void describe('dist/cli', () => {
                     assert.match(result, /style\s+\[\d+\sms\]/, `Should contains 'style [.... ms]'`);
                     assert.match(result, /css\/build\s+completed/, `Should contains 'css/build completed'`);
                 });
+
+                void it(`should bundle scss files [dryRun]`, async () => {
+                    const result = await runCli(`run build --workspace=${workspace} --project=scss --dryRun`);
+
+                    assert.match(result, /style\.css/, `should contains 'style.css'`);
+                    assert.match(result, /Total\s1\sfile\sis\sbuilt/, `Should contains ''Total 1 file is built'`);
+                    assert.match(result, /style\s+\[\d+\sms\]/, `Should contains 'style [.... ms]'`);
+                    assert.match(result, /scss\/build\s+completed/, `Should contains 'scss/build completed'`);
+                });
+
+                void it(`should bundle less files [dryRun]`, async () => {
+                    const result = await runCli(`run build --workspace=${workspace} --project=less --dryRun`);
+
+                    assert.match(result, /style\.css/, `should contains 'style.css'`);
+                    assert.match(result, /Total\s1\sfile\sis\sbuilt/, `Should contains ''Total 1 file is built'`);
+                    assert.match(result, /style\s+\[\d+\sms\]/, `Should contains 'style [.... ms]'`);
+                    assert.match(result, /less\/build\s+completed/, `Should contains 'less/build completed'`);
+                });
             });
         });
     });

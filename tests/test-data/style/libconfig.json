@@ -32,15 +32,32 @@
       "root": "./scss",
       "tasks": {
         "build": {
-          "outDir": "dist",
-          "banner": true,
           "style": {
             "bundles": [
               {
                 "entry": "./src/style.scss"
               }
             ],
-            "includePaths": ["./src/variables/"]
+            "includePaths": ["./src/variables/"],
+            "minify": false,
+            "sourceMap": false
+          }
+        }
+      }
+    },
+    "less": {
+      "root": "./less",
+      "tasks": {
+        "build": {
+          "style": {
+            "bundles": [
+              {
+                "entry": "./src/style.less"
+              }
+            ],
+            "includePaths": ["./src/variables/"],
+            "minify": false,
+            "sourceMap": false
           }
         }
       }

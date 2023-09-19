@@ -1,0 +1,23 @@
+@import '_colors';
+@import 'components/_button.less';
+
+/* main styles */
+:root {
+    --bgColor: #12345678;
+}
+
+body {
+    color: @blue;
+    background-color: var(--bgColor);
+}
+
+.image {
+    background-image: url(image@1x.png);
+
+    @media (min-resolution: 2dppx) {
+        background-image: url(image@2x.png);
+    }
+}
+
+
+@import url("components/_print.css") print;
