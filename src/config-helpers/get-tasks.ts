@@ -236,7 +236,7 @@ async function parseBannerText(
 
     if (bannerFilePath) {
         bannerText = await fs.readFile(bannerFilePath, 'utf-8');
-        bannerText = bannerText.trim() + '\n';
+        bannerText = bannerText.trim();
 
         bannerText = bannerText.replace(/\[current_?year\]/gim, new Date().getFullYear().toString());
 
