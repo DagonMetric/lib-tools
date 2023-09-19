@@ -2,6 +2,7 @@ import { BuildTaskHandleContext } from '../interfaces/index.js';
 
 import { getCleanTaskRunner } from './clean/index.js';
 import { getCopyTaskRunner } from './copy/index.js';
+import { getScriptTaskRunner } from './script/index.js';
 import { getStyleTaskRunner } from './style/index.js';
 
 async function runBuildTask(context: BuildTaskHandleContext): Promise<void> {
@@ -15,6 +16,12 @@ async function runBuildTask(context: BuildTaskHandleContext): Promise<void> {
     const styleTaskRunner = getStyleTaskRunner(context);
     if (styleTaskRunner) {
         await styleTaskRunner.run();
+    }
+
+    // script
+    const scriptTaskRunner = getScriptTaskRunner(context);
+    if (scriptTaskRunner) {
+        await scriptTaskRunner.run();
     }
 }
 

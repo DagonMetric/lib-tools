@@ -715,7 +715,7 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         return null;
     }
 
-    const copyTaskRunner = new StyleTaskRunner({
+    const taskRunner = new StyleTaskRunner({
         styleOptions,
         workspaceInfo: buildTask._workspaceInfo,
         outDir: buildTask._outDir,
@@ -733,5 +733,5 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         bannerText: buildTask._bannerText
     });
 
-    return copyTaskRunner;
+    return taskRunner;
 }
