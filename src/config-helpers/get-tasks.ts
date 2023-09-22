@@ -57,12 +57,10 @@ async function getPackageJsonInfo(
     }
 
     const slashIndex = packageName.indexOf('/');
-    let packageNameWithoutScope = packageName;
     let packageScope: string | null = null;
 
     if (slashIndex > -1 && packageName.startsWith('@')) {
         packageScope = packageName.substring(0, slashIndex);
-        packageNameWithoutScope = packageName.substring(slashIndex + 1);
     }
 
     let rootPackageJson: { [key: string]: unknown; version?: string } | null = null;
@@ -114,7 +112,6 @@ async function getPackageJsonInfo(
         packageJsonPath,
         packageJson,
         packageName,
-        packageNameWithoutScope,
         packageScope,
         rootPackageJsonPath,
         rootPackageJson,
@@ -182,7 +179,7 @@ function mergeBuildTaskWithCmdOptions(buildTask: BuildTask, cmdOptions: ParsedCo
             if (Array.isArray(buildTask.script)) {
                 buildTask.script = [...cmdOptions._scriptEntries];
             } else {
-                buildTask.script.bundles = cmdOptions._scriptEntries.map((entry) => {
+                buildTask.script.compilations = cmdOptions._scriptEntries.map((entry) => {
                     return {
                         entry
                     };
