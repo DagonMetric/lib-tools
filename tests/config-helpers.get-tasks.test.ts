@@ -36,7 +36,6 @@ void describe('config-helpers/get-tasks', () => {
                     },
                     packageJsonPath: path.resolve(process.cwd(), workspaceRel, './packages/package-1/package.json'),
                     packageName: '@scope/package-1',
-                    packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
                     rootPackageJsonPath: path.resolve(process.cwd(), workspaceRel, './package.json'),
                     rootPackageJson: {
@@ -112,7 +111,6 @@ void describe('config-helpers/get-tasks', () => {
                     },
                     packageJsonPath: path.resolve(process.cwd(), workspaceRel, './packages/package-1/package.json'),
                     packageName: '@scope/package-1',
-                    packageNameWithoutScope: 'package-1',
                     packageScope: '@scope',
                     rootPackageJsonPath: path.resolve(process.cwd(), workspaceRel, './package.json'),
                     rootPackageJson: {
