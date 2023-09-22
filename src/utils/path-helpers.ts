@@ -140,7 +140,11 @@ export async function findUp(
     if (!startDir || (Array.isArray(startDir) && !startDir.length)) {
         startDirs.push(endDir);
     } else if (Array.isArray(startDir)) {
-        startDirs.push(...startDir);
+        startDir.forEach((p) => {
+            if (!startDirs.includes(p)) {
+                startDirs.push(p);
+            }
+        });
     } else {
         startDirs.push(startDir);
     }
