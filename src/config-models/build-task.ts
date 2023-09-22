@@ -1,3 +1,5 @@
+import { ScriptTarget } from 'typescript';
+
 import { OverridableTaskOptions, Task } from './task.js';
 
 /**
@@ -145,21 +147,56 @@ export interface StyleOptions {
 }
 
 /**
- * Script bundle entry options.
+ * Script module format.
  */
-export interface ScriptBundleEntry {
+export type ScriptModuleFormat = 'iife' | 'cjs' | 'esm';
+
+/**
+ * Script target.
+ */
+export type ScriptTargetStrings = keyof typeof ScriptTarget;
+
+/**
+ * Compilation / bundle tool.
+ */
+export type ScriptCompilationTools = 'esbuild' | 'webpack' | 'rollup';
+
+/**
+ * Script compilation / bundle options.
+ */
+export interface ScriptCompilation {
     /**
-     * Specify the format of the generated bundle.
+     * Compilation / bundle tool.
      */
-    moduleFormat?: 'cjs' | 'es' | 'umd';
+    tool?: ScriptCompilationTools;
     /**
-     * Entry file to bundle.
+     * If true, all imported dependencies will be inlined into the generated output file.
+     */
+    bundle?: boolean;
+    /**
+     * Entry file.
      */
     entry?: string;
     /**
-     * Custom bundle output file.
+     * Custom output bundle file name or directory path relative to project `outDir`.
      */
-    outputFile?: string;
+    out?: string;
+    /**
+     * Module format.
+     */
+    moduleFormat?: ScriptModuleFormat;
+    /**
+     * Script target.
+     */
+    scriptTarget?: ScriptTargetStrings;
+    /**
+     * Typescript configuration file for this compilation.
+     */
+    tsconfig?: string;
+    /**
+     * Target environments for this compilation.
+     */
+    environmentTargets?: string[];
     /**
      *  If true, sourcemap file will be generated.
      */
@@ -169,17 +206,9 @@ export interface ScriptBundleEntry {
      */
     minify?: boolean;
     /**
-     * External id and global variable name mapping for bundling options.
+     * Exclude list for externals for this compilation.
      */
-    externals?: Record<string, string>;
-    /**
-     * If true, 'dependencies' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
-     */
-    dependenciesAsExternals?: boolean;
-    /**
-     * If true, 'peerDependenciesAsExternals' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
-     */
-    peerDependenciesAsExternals?: boolean;
+    externalExclude?: string[];
 }
 
 /**
@@ -187,29 +216,29 @@ export interface ScriptBundleEntry {
  */
 export interface ScriptOptions {
     /**
-     * List of bundle options.
+     * Specify list of script compilation / bundle options. Set `auto` for automatic compilations based on project structure.
      */
-    bundles: ScriptBundleEntry[];
+    compilations: ScriptCompilation[] | 'auto';
     /**
-     * Typescript configuration file to be used.
+     * Specify typescript configuration file.
      */
-    tsConfig?: string;
+    tsconfig?: string;
     /**
-     * Entry file to bundle or entry point name to add to package.json. By default it will be automatically detected.
+     * Specify target environments.
      */
-    entry?: string;
+    environmentTargets?: string[];
     /**
-     * External id and global variable name mapping for bundling options.
+     * Specify list of external modules.
      */
-    externals?: Record<string, string>;
+    externals?: (Record<string, string> | string)[];
     /**
-     * If true, 'dependencies' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
+     * Specify exclude list for externals.
      */
-    dependenciesAsExternals?: boolean;
+    externalExclude?: string[];
     /**
-     * If true, 'peerDependenciesAsExternals' keys in package.json are marked as externals and not included in bundle. Default to 'true'.
+     * If true, all package dependency fields in package.json are marked as externals. Default is 'true'.
      */
-    peerDependenciesAsExternals?: boolean;
+    packageDependenciesAsExternals?: boolean;
 }
 
 /**

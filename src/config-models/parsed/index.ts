@@ -23,7 +23,6 @@ export interface PackageJsonInfo {
     };
     readonly packageJsonPath: string;
     readonly packageName: string;
-    readonly packageNameWithoutScope: string;
     readonly packageScope: string | null;
     readonly rootPackageJson: {
         [key: string]: unknown;
