@@ -1,0 +1,12 @@
+{
+  "name": "hello-world",
+  "version": "0.0.0-PLACEHOLDER",
+  "description": "This is a hello world package.",
+  "author": "DagonMetric",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dagonmetric/lib-tools.git"
+  },
+  "homepage": "https://github.com/dagonmetric/lib-tools"
+}

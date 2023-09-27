@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../dist/schemas/schema.json",
+  "projects": {
+    "hello-world": {
+      "root": "./packages/hello-world",
+      "tasks": {
+        "build": {
+          "outDir": "../../dist",
+          "script": {
+            "compilations": [
+              {
+                "bundle": true,
+                "sourceMap": true,
+                "minify": true,
+                "environmentTargets": [],
+                "externalExclude": []
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
