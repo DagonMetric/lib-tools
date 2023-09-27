@@ -157,18 +157,9 @@ export type ScriptModuleFormat = 'iife' | 'cjs' | 'esm';
 export type ScriptTargetStrings = keyof typeof ScriptTarget;
 
 /**
- * Compilation / bundle tool.
- */
-export type ScriptCompilationTools = 'esbuild' | 'webpack' | 'rollup';
-
-/**
  * Script compilation / bundle options.
  */
 export interface ScriptCompilation {
-    /**
-     * Compilation / bundle tool.
-     */
-    tool?: ScriptCompilationTools;
     /**
      * If true, all imported dependencies will be inlined into the generated output file.
      */
@@ -193,6 +184,15 @@ export interface ScriptCompilation {
      * Typescript configuration file for this compilation.
      */
     tsconfig?: string;
+    /**
+     * To override `declaration` options in tsconfig.
+     */
+    declaration?: boolean;
+    /**
+     * If true, only output d.ts files not javascript files.
+     */
+    emitDeclarationOnly?: boolean;
+
     /**
      * Target environments for this compilation.
      */
