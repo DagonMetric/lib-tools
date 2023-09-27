@@ -1,5 +1,6 @@
 import { glob } from 'glob';
 
+import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
@@ -124,17 +125,35 @@ export function resolvePath(rootPath: string, currentPath: string): string {
         : path.resolve(rootPath, normalizePathToPOSIXStyle(currentPath));
 }
 
-export async function pathExists(path: string): Promise<boolean> {
+const pathExistsCache = new Map<string, boolean>();
+export async function pathExists(p: string, useCache = false): Promise<boolean> {
+    if (useCache) {
+        const cached = pathExistsCache.get(p);
+        if (cached != null) {
+            return cached;
+        }
+    }
+
     return fs
-        .access(path)
-        .then(() => true)
-        .catch(() => false);
+        .access(p)
+        .then(() => {
+            pathExistsCache.set(p, true);
+
+            return true;
+        })
+        .catch(() => {
+            pathExistsCache.set(p, false);
+
+            return false;
+        });
 }
 
+const findUpCache = new Map<string, string>();
 export async function findUp(
     pathToFind: string,
     startDir: string | string[] | null,
-    endDir: string
+    endDir: string,
+    useCache = false
 ): Promise<string | null> {
     const startDirs: string[] = [];
     if (!startDir || (Array.isArray(startDir) && !startDir.length)) {
@@ -149,14 +168,25 @@ export async function findUp(
         startDirs.push(startDir);
     }
 
+    const cacheKey = `${pathToFind}!${startDirs.join('!')}!${endDir}`;
+    if (useCache) {
+        const cached = findUpCache.get(cacheKey);
+        if (cached != null) {
+            return cached.length ? cached : null;
+        }
+    }
+
     const rootPath = path.parse(endDir).root;
 
     for (let currentDir of startDirs) {
         do {
             const filePath = resolvePath(currentDir, pathToFind);
-            if (await pathExists(filePath)) {
+            if (await pathExists(filePath, useCache)) {
+                findUpCache.set(cacheKey, filePath);
+
                 return filePath;
             }
+
             currentDir = path.dirname(currentDir);
         } while (
             currentDir &&
@@ -164,6 +194,8 @@ export async function findUp(
             (isSamePaths(endDir, currentDir) || isInFolder(endDir, currentDir))
         );
     }
+
+    findUpCache.set(cacheKey, '');
 
     return null;
 }
@@ -176,12 +208,54 @@ export interface AbsolutePathInfo {
     readonly isSymbolicLink: boolean | null;
 }
 
+const globCache = new Map<string, string[]>();
+async function globSearch(normalizedPathOrPattern: string, cwd: string, useCache = false): Promise<string[]> {
+    const cacheKey = `${cwd}!${normalizedPathOrPattern}`;
+    if (useCache) {
+        const cached = globCache.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+    }
+
+    const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
+    globCache.set(cacheKey, foundPaths);
+
+    return foundPaths;
+}
+
+const fsStatCache = new Map<string, Stats>();
+async function getStats(absolutePath: string, useCache = false): Promise<Stats> {
+    if (useCache) {
+        const cached = fsStatCache.get(absolutePath);
+        if (cached) {
+            return cached;
+        }
+    }
+
+    const stats = await fs.stat(absolutePath);
+
+    fsStatCache.set(absolutePath, stats);
+
+    return stats;
+}
+
+const getAbsolutePathInfoesCache = new Map<string, AbsolutePathInfo[]>();
 export async function getAbsolutePathInfoes(
     globPatternsOrRelativePaths: string[],
-    cwd: string
+    cwd: string,
+    useCache = false
 ): Promise<AbsolutePathInfo[]> {
     if (!globPatternsOrRelativePaths.length) {
         return [];
+    }
+
+    const cacheKey = `${cwd}!${globPatternsOrRelativePaths.join('!')}`;
+    if (useCache) {
+        const cached = getAbsolutePathInfoesCache.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
     }
 
     const pathInfoes: AbsolutePathInfo[] = [];
@@ -202,7 +276,8 @@ export async function getAbsolutePathInfoes(
         }
 
         if (glob.hasMagic(normalizedPathOrPattern)) {
-            const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
+            const foundPaths = await globSearch(normalizedPathOrPattern, cwd, useCache);
+
             for (const absolutePath of foundPaths) {
                 if (pathInfoes.find((i) => i.path === absolutePath)) {
                     continue;
@@ -213,7 +288,7 @@ export async function getAbsolutePathInfoes(
                 let isFile: boolean | null = isSystemRoot ? false : null;
                 let isSymbolicLink: boolean | null = null;
                 if (!isSystemRoot) {
-                    const stats = await fs.stat(absolutePath);
+                    const stats = await getStats(absolutePath, useCache);
                     isDirectory = stats.isDirectory();
                     isFile = !isDirectory && stats.isFile();
                     isSymbolicLink = stats.isSymbolicLink();
@@ -239,8 +314,8 @@ export async function getAbsolutePathInfoes(
             let isFile: boolean | null = isSystemRoot ? false : null;
             let isSymbolicLink: boolean | null = null;
 
-            if (!isSystemRoot && (await pathExists(absolutePath))) {
-                const stats = await fs.stat(absolutePath);
+            if (!isSystemRoot && (await pathExists(absolutePath, useCache))) {
+                const stats = await getStats(absolutePath, useCache);
                 isDirectory = stats.isDirectory();
                 isFile = !isDirectory && stats.isFile();
                 isSymbolicLink = stats.isSymbolicLink();
@@ -255,6 +330,8 @@ export async function getAbsolutePathInfoes(
             });
         }
     }
+
+    getAbsolutePathInfoesCache.set(cacheKey, pathInfoes);
 
     return pathInfoes;
 }
