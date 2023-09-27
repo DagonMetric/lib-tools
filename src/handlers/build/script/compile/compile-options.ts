@@ -1,9 +1,11 @@
+import { ParsedCommandLine } from 'typescript';
+
 import { ScriptModuleFormat, ScriptTargetStrings } from '../../../../config-models/index.js';
 import { LogLevelStrings } from '../../../../utils/index.js';
 
 export interface TsConfigInfo {
     jsonConfig: Record<string, unknown>;
-    parsedConfig: import('typescript').ParsedCommandLine;
+    parsedConfig: ParsedCommandLine;
     configPath: string;
 }
 

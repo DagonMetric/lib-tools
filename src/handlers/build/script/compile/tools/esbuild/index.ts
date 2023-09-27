@@ -1,7 +1,6 @@
 import * as esbuild from 'esbuild';
 
 import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 
 import { LogLevelStrings } from '../../../../../../utils/index.js';
 
@@ -53,11 +52,8 @@ export default async function (options: CompileOptions): Promise<CompileResult> 
     const startTime = Date.now();
 
     const esBuildResult = await esbuild.build({
-        // entryNames
         entryPoints: [options.entryFilePath],
-        // outExtension
-        outdir: path.dirname(options.outFilePath),
-        outfile: path.basename(options.outFilePath),
+        outfile: options.outFilePath,
         banner: options.bannerText ? { js: options.bannerText } : undefined,
         sourcemap: options.sourceMap ? 'linked' : false,
         minify: options.minify,
