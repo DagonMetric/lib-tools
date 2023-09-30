@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
@@ -17,15 +17,11 @@
     "noUnusedParameters": true,
     "strict": true,
     "strictNullChecks": true,
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "sourceRoot": ".",
     "declaration": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "types": ["node"],
-    "baseUrl": "./",
-    "rootDir": "./"
+    "baseUrl": "./"
   }
 }

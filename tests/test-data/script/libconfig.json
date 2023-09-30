@@ -5,17 +5,23 @@
       "root": "./packages/hello-world",
       "tasks": {
         "build": {
+          "banner": true,
           "outDir": "../../dist",
           "script": {
             "compilations": [
               {
-                "bundle": true,
-                "sourceMap": true,
-                "minify": true,
+                // "emitDeclarationOnly": true,
+                "declaration": true,
+                "bundle": false,
+                // "sourceMap": true,
+                "minify": false,
                 "environmentTargets": [],
                 "externalExclude": []
               }
             ]
+          },
+          "packageJson": {
+            "packageVersion": "1.0.0"
           }
         }
       }
