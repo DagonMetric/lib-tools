@@ -2,7 +2,12 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { BuildTask } from '../config-models/index.js';
-import { PackageJsonInfo, ParsedBuildTaskConfig, WorkspaceInfo } from '../config-models/parsed/index.js';
+import {
+    PackageJsonInfo,
+    ParsedBuildTaskConfig,
+    SubstitutionInfo,
+    WorkspaceInfo
+} from '../config-models/parsed/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
 import { findUp, isInFolder, isSamePaths, pathExists, resolvePath } from '../utils/index.js';
 
@@ -42,10 +47,104 @@ function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
     }
 }
 
+function getSubstitutions(workspaceInfo: WorkspaceInfo, packageJsonInfo: PackageJsonInfo | null): SubstitutionInfo[] {
+    const substitutions: SubstitutionInfo[] = [];
+
+    substitutions.push({
+        test: /\[current_?year\]/gi,
+        value: new Date().getFullYear().toString(),
+        description: 'current year',
+        bannerOnly: true
+    });
+
+    if (workspaceInfo.projectName) {
+        substitutions.push({
+            test: /\[project_?name\]/gi,
+            value: workspaceInfo.projectName,
+            description: 'project name',
+            bannerOnly: true
+        });
+    }
+
+    if (packageJsonInfo) {
+        const packageName = packageJsonInfo.packageName;
+        const packageVersion = packageJsonInfo.newPackageVersion ?? packageJsonInfo.packageJson.version;
+        const mergedPackageJson = packageJsonInfo.rootPackageJson
+            ? { ...packageJsonInfo.rootPackageJson, ...packageJsonInfo.packageJson }
+            : packageJsonInfo.packageJson;
+
+        substitutions.push({
+            test: /\[package_?name\]/gi,
+            value: packageName,
+            description: 'package name',
+            bannerOnly: true
+        });
+
+        if (packageVersion && typeof packageVersion === 'string') {
+            substitutions.push({
+                test: /(\[package_?version\]|0\.0\.0-placeholder)/gi,
+                value: packageVersion,
+                description: 'package version',
+                bannerOnly: false
+            });
+        }
+
+        if (mergedPackageJson.description && typeof mergedPackageJson.description === 'string') {
+            substitutions.push({
+                test: /\[description\]/gi,
+                value: mergedPackageJson.description,
+                description: 'description',
+                bannerOnly: true
+            });
+        }
+
+        if (mergedPackageJson.license && typeof mergedPackageJson.license === 'string') {
+            substitutions.push({
+                test: /\[license\]/gi,
+                value: mergedPackageJson.license,
+                description: 'license',
+                bannerOnly: true
+            });
+        }
+
+        if (mergedPackageJson.homepage && typeof mergedPackageJson.homepage === 'string') {
+            substitutions.push({
+                test: /\[homepage\]/gi,
+                value: mergedPackageJson.homepage,
+                description: 'homepage',
+                bannerOnly: true
+            });
+        }
+
+        if (mergedPackageJson.author) {
+            let author: string | null = null;
+            if (typeof mergedPackageJson.author === 'string') {
+                author = mergedPackageJson.author;
+            } else if (
+                typeof mergedPackageJson.author === 'object' &&
+                (mergedPackageJson.author as { name: string }).name
+            ) {
+                author = (mergedPackageJson.author as { name: string }).name;
+            }
+
+            if (author) {
+                substitutions.push({
+                    test: /\[author\]/gi,
+                    value: author,
+                    description: 'author',
+                    bannerOnly: true
+                });
+            }
+        }
+    }
+
+    return substitutions;
+}
+
 async function parseBannerText(
     banner: string | boolean,
     workspaceInfo: WorkspaceInfo,
-    packageJsonInfo: PackageJsonInfo | null
+    substitutions: { test: RegExp; value: string; description: string }[]
 ): Promise<string | null> {
     if (!banner) {
         return null;
@@ -114,52 +213,8 @@ async function parseBannerText(
             bannerText = wrapComment(bannerText);
         }
 
-        bannerText = bannerText.replace(/\[current_?year\]/gim, new Date().getFullYear().toString());
-
-        if (workspaceInfo.projectName) {
-            bannerText = bannerText.replace(/\[project_?name\]/gim, workspaceInfo.projectName);
-        }
-
-        if (packageJsonInfo) {
-            const packageName = packageJsonInfo.packageName;
-            const packageVersion = packageJsonInfo.newPackageVersion ?? packageJsonInfo.packageJson.version;
-            const mergedPackageJson = packageJsonInfo.rootPackageJson
-                ? { ...packageJsonInfo.rootPackageJson, ...packageJsonInfo.packageJson }
-                : packageJsonInfo.packageJson;
-
-            bannerText = bannerText.replace(/\[package_?name\]/gim, packageName);
-
-            if (packageVersion && typeof packageVersion === 'string') {
-                bannerText = bannerText.replace(/\[package_?version\]/gim, packageVersion);
-            }
-
-            if (mergedPackageJson.description && typeof mergedPackageJson.description === 'string') {
-                bannerText = bannerText.replace(/\[package_?description\]/gim, mergedPackageJson.description);
-            }
-
-            if (mergedPackageJson.license && typeof mergedPackageJson.license === 'string') {
-                bannerText = bannerText.replace(/\[(package_?)?license\]/gim, mergedPackageJson.license);
-            }
-
-            if (mergedPackageJson.homepage && typeof mergedPackageJson.homepage === 'string') {
-                bannerText = bannerText.replace(/\[(package_?)?homepage\]/gim, mergedPackageJson.homepage);
-            }
-
-            if (mergedPackageJson.author) {
-                let author: string | null = null;
-                if (typeof mergedPackageJson.author === 'string') {
-                    author = mergedPackageJson.author;
-                } else if (
-                    typeof mergedPackageJson.author === 'object' &&
-                    (mergedPackageJson.author as { name: string }).name
-                ) {
-                    author = (mergedPackageJson.author as { name: string }).name;
-                }
-
-                if (author) {
-                    bannerText = bannerText.replace(/\[(package_?)?author\]/gim, author);
-                }
-            }
+        for (const substitution of substitutions) {
+            bannerText = bannerText.replace(substitution.test, substitution.value);
         }
     }
 
@@ -179,9 +234,9 @@ export async function getParsedBuildTask(
         validateOutDir(outDir, workspaceInfo);
     }
 
-    const bannerText = buildTask.banner
-        ? await parseBannerText(buildTask.banner, workspaceInfo, packageJsonInfo)
-        : null;
+    const substitutions = getSubstitutions(workspaceInfo, packageJsonInfo);
+
+    const bannerText = buildTask.banner ? await parseBannerText(buildTask.banner, workspaceInfo, substitutions) : null;
 
     const parsedBuildTask: ParsedBuildTaskConfig = {
         ...buildTask,
@@ -189,7 +244,8 @@ export async function getParsedBuildTask(
         _workspaceInfo: workspaceInfo,
         _packageJsonInfo: packageJsonInfo,
         _outDir: outDir,
-        _bannerText: bannerText
+        _bannerText: bannerText,
+        _substitutions: substitutions
     };
 
     return parsedBuildTask;
