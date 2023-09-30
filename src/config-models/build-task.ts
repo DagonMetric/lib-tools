@@ -192,7 +192,6 @@ export interface ScriptCompilation {
      * If true, only output d.ts files not javascript files.
      */
     emitDeclarationOnly?: boolean;
-
     /**
      * Target environments for this compilation.
      */

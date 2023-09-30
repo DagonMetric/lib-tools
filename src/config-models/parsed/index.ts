@@ -46,9 +46,17 @@ export interface ParsedTaskConfig extends Task {
     readonly _workspaceInfo: WorkspaceInfo;
 }
 
+export interface SubstitutionInfo {
+    test: RegExp;
+    value: string;
+    description: string;
+    bannerOnly: boolean;
+}
+
 export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _outDir: string;
     readonly _bannerText: string | null;
+    readonly _substitutions: SubstitutionInfo[];
     readonly _packageJsonInfo: PackageJsonInfo | null;
 }
 
