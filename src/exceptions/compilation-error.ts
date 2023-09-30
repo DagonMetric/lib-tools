@@ -1,4 +1,4 @@
-export class WebpackCompilationError extends Error {
+export class CompilationError extends Error {
     constructor(message: string) {
         super(message);
     }
