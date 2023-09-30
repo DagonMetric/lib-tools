@@ -2,7 +2,7 @@ import * as esbuild from 'esbuild';
 
 import * as fs from 'node:fs/promises';
 
-import { LogLevelStrings } from '../../../../../../utils/index.js';
+import { LogLevelStrings, LoggerBase } from '../../../../../../utils/index.js';
 
 import { CompileOptions } from '../../compile-options.js';
 import { CompileResult } from '../../compile-result.js';
@@ -48,8 +48,12 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     }
 }
 
-export default async function (options: CompileOptions): Promise<CompileResult> {
+export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     const startTime = Date.now();
+
+    logger.info(
+        `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
+    );
 
     const esBuildResult = await esbuild.build({
         entryPoints: [options.entryFilePath],
@@ -61,7 +65,7 @@ export default async function (options: CompileOptions): Promise<CompileResult> 
         target: getEsBuildTargets(options),
         platform: getEsBuildPlatform(options),
         tsconfig: options.tsConfigInfo?.configPath,
-        bundle: options.bundle,
+        bundle: true,
         external: options.externals,
         write: false,
         // treeShaking: options.treeShaking,
@@ -81,7 +85,7 @@ export default async function (options: CompileOptions): Promise<CompileResult> 
 
     for (const outputFile of esBuildResult.outputFiles) {
         if (!options.dryRun) {
-            await fs.writeFile(outputFile.path, outputFile.contents);
+            await fs.writeFile(outputFile.path, outputFile.contents, 'utf-8');
         }
 
         result.builtAssets.push({

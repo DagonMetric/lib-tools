@@ -10,7 +10,7 @@ import {
     ScriptOptions,
     ScriptTargetStrings
 } from '../../../config-models/index.js';
-import { PackageJsonInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
+import { PackageJsonInfo, SubstitutionInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
     LogLevelStrings,
@@ -28,15 +28,15 @@ import {
 
 import { BuildTaskHandleContext } from '../../interfaces/index.js';
 import { CompileOptions, TsConfigInfo } from './compile/compile-options.js';
+import { CompileResult } from './compile/compile-result.js';
 
 const supportdEntryExtPattern = '\\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$';
 const supportdEntryExtRegExp = new RegExp(supportdEntryExtPattern, 'i');
-const supportedOutExtRegExp = /\.(d\.ts|mjs|cjs|json|jsx?)$/i;
+const supportedOutExtRegExp = /\.(d\.[cm]?ts|mjs|cjs|json|jsx?)$/i;
 const tsConfigPathsCache = new Map<string, string>();
 const tsConfigInfoCache = new Map<string, TsConfigInfo>();
 const entryFilePathsCache = new Map<string, string>();
-
-type ScriptCompilationTools = 'esbuild' | 'webpack' | 'rollup';
+const toolCache = new Map<string, (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>>();
 
 export interface ScriptTaskRunnerOptions {
     readonly scriptOptions: ScriptOptions;
@@ -47,6 +47,7 @@ export interface ScriptTaskRunnerOptions {
     readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: PackageJsonInfo | null;
     readonly bannerText: string | null;
+    readonly substitutions: SubstitutionInfo[];
     readonly env: string | undefined;
 }
 
@@ -81,21 +82,17 @@ export class ScriptTaskRunner {
         const compileConfigs = await this.getCompileConfigs();
 
         for (const compileConfig of compileConfigs) {
-            if (compileConfig.tools === 'esbuild') {
-                const esbuildModule = await import('./compile/tools/esbuild/index.js');
-                const compileResult = await esbuildModule.default(compileConfig.options);
-                totalTime += compileResult.time;
-                const mainOuputAsset = compileResult.builtAssets.find(
-                    (a) => a.path === compileConfig.options.outFilePath
-                );
-                if (mainOuputAsset) {
-                    mainOutputAssets.push({
-                        moduleFormat: compileConfig.options.moduleFormat,
-                        scriptTarget: compileConfig.options.scriptTarget,
-                        outputFilePath: mainOuputAsset.path,
-                        size: mainOuputAsset.size
-                    });
-                }
+            const compileResult = await compileConfig.compilerFn(compileConfig.options, this.logger);
+
+            totalTime += compileResult.time;
+            const mainOuputAsset = compileResult.builtAssets.find((a) => a.path === compileConfig.options.outFilePath);
+            if (mainOuputAsset) {
+                mainOutputAssets.push({
+                    moduleFormat: compileConfig.options.moduleFormat,
+                    scriptTarget: compileConfig.options.scriptTarget,
+                    outputFilePath: mainOuputAsset.path,
+                    size: mainOuputAsset.size
+                });
             }
         }
 
@@ -111,8 +108,16 @@ export class ScriptTaskRunner {
         return result;
     }
 
-    private async getCompileConfigs(): Promise<{ tools: ScriptCompilationTools; options: CompileOptions }[]> {
-        const compileConfigs: { tools: ScriptCompilationTools; options: CompileOptions }[] = [];
+    private async getCompileConfigs(): Promise<
+        {
+            compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
+            options: CompileOptions;
+        }[]
+    > {
+        const compileConfigs: {
+            compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
+            options: CompileOptions;
+        }[] = [];
         const compilations = await this.getCompilations();
 
         for (let i = 0; i < compilations.length; i++) {
@@ -133,22 +138,26 @@ export class ScriptTaskRunner {
                 scriptTarget
             );
 
+            const bundle = compilation.bundle !== false ? true : false;
+
             // environmentTargets
             const environmentTargets: string[] =
                 compilation.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
 
             // minify
-            let minify = compilation.bundle !== false && moduleFormat === 'iife' ? true : false;
+            let minify = bundle && moduleFormat === 'iife' ? true : false;
             if (compilation.minify != null) {
                 minify = compilation.minify;
             }
 
             // sourceMap
-            let sourceMap = compilation.bundle !== false || compilations.length === 1 ? true : false;
+            let sourceMap = true;
             if (compilation.sourceMap != null) {
                 sourceMap = compilation.sourceMap;
-            } else if (compilation.tsconfig && tsConfigInfo?.parsedConfig.options.sourceMap != null) {
-                sourceMap = tsConfigInfo.parsedConfig.options.sourceMap;
+            } else if (tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
+                sourceMap = tsConfigInfo?.compilerOptions.inlineSourceMap;
+            } else if (tsConfigInfo?.compilerOptions.sourceMap != null) {
+                sourceMap = tsConfigInfo?.compilerOptions.sourceMap;
             }
 
             // externals
@@ -171,9 +180,10 @@ export class ScriptTaskRunner {
             }
 
             const compileOptions: CompileOptions = {
+                workspaceInfo: this.options.workspaceInfo,
                 entryFilePath,
                 outFilePath,
-                bundle: compilation.bundle !== false,
+                bundle,
                 tsConfigInfo,
                 moduleFormat,
                 scriptTarget,
@@ -183,13 +193,37 @@ export class ScriptTaskRunner {
                 minify,
                 sourceMap,
                 bannerText: this.options.bannerText,
+                substitutions: this.options.substitutions,
                 dryRun: this.options.dryRun,
                 logLevel: this.options.logLevel
             };
 
+            let compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
+
+            if (!bundle || compilation.emitDeclarationOnly) {
+                const cacheKey = 'typescript';
+                const cachefn = toolCache.get(cacheKey);
+                if (cachefn) {
+                    compilerFn = cachefn;
+                } else {
+                    const compilerModule = await import('./compile/tools/typescript/index.js');
+                    compilerFn = compilerModule.default;
+                    toolCache.set(cacheKey, compilerModule.default);
+                }
+            } else {
+                const cacheKey = 'esbuild';
+                const cachefn = toolCache.get(cacheKey);
+                if (cachefn) {
+                    compilerFn = cachefn;
+                } else {
+                    const compilerModule = await import('./compile/tools/esbuild/index.js');
+                    compilerFn = compilerModule.default;
+                    toolCache.set(cacheKey, compilerModule.default);
+                }
+            }
+
             compileConfigs.push({
-                // TODO:
-                tools: 'esbuild',
+                compilerFn,
                 options: compileOptions
             });
         }
@@ -228,10 +262,10 @@ export class ScriptTaskRunner {
                 this.options.packageJsonInfo &&
                 this.options.packageJsonInfo.packageJson.private !== false &&
                 tsConfigInfo != null &&
-                (tsConfigInfo.parsedConfig.options.module as number) > 3 &&
-                (tsConfigInfo.parsedConfig.options.module as number) < 100 &&
-                (tsConfigInfo.parsedConfig.options.target as number) > 1 &&
-                (tsConfigInfo.parsedConfig.options.target as number) < 100
+                (tsConfigInfo.compilerOptions.module as number) > 3 &&
+                (tsConfigInfo.compilerOptions.module as number) < 100 &&
+                (tsConfigInfo.compilerOptions.target as number) > 1 &&
+                (tsConfigInfo.compilerOptions.target as number) < 100
             ) {
                 const scriptTarget = this.getScriptTarget(null, tsConfigInfo) ?? 'ESNext';
                 const year = this.getYearFromScriptTarget(scriptTarget);
@@ -241,8 +275,13 @@ export class ScriptTaskRunner {
                     bundle: false,
                     entry,
                     tsconfig,
+                    scriptTarget: 'Latest',
+                    moduleFormat: 'esm',
+                    emitDeclarationOnly: true,
                     declaration: true,
-                    emitDeclarationOnly: true
+                    sourceMap: false,
+                    minify: false,
+                    out: 'types'
                 });
 
                 // esm
@@ -250,9 +289,12 @@ export class ScriptTaskRunner {
                     bundle: false,
                     entry,
                     tsconfig,
-                    declaration: true,
                     scriptTarget,
                     moduleFormat: 'esm',
+                    emitDeclarationOnly: false,
+                    declaration: false,
+                    sourceMap: true,
+                    minify: false,
                     out: `esm${year}`
                 });
 
@@ -261,9 +303,12 @@ export class ScriptTaskRunner {
                     bundle: true,
                     entry,
                     tsconfig,
-                    declaration: false,
                     scriptTarget,
                     moduleFormat: 'esm',
+                    emitDeclarationOnly: false,
+                    declaration: false,
+                    sourceMap: true,
+                    minify: false,
                     out: `fesm${year}`
                 });
             } else {
@@ -316,10 +361,9 @@ export class ScriptTaskRunner {
                 const moduleFormat = compilation.moduleFormat ?? '';
                 const scriptTarget = compilation.scriptTarget ?? '';
                 const tsconfig = compilation.tsconfig ?? this.options.scriptOptions.tsconfig ?? '';
-                const declaration = compilation.declaration ? 'declaration' : '';
                 const declarationOnly = compilation.emitDeclarationOnly ? 'declarationOnly' : '';
 
-                const outKey = `${out}!${bundle}!${moduleFormat}!${scriptTarget}!${tsconfig}!${declaration}!${declarationOnly}`;
+                const outKey = `${out}!${bundle}!${moduleFormat}!${scriptTarget}!${tsconfig}!${declarationOnly}`;
 
                 if (processedOutKeys.includes(outKey)) {
                     throw new InvalidConfigError(
@@ -381,10 +425,45 @@ export class ScriptTaskRunner {
             throw new InvalidConfigError(errMsg, this.options.workspaceInfo.configPath, configLocation);
         }
 
+        const compilerOptions = parsedConfig.options;
+
+        if (compilation?.declaration != null) {
+            compilerOptions.declaration = compilation.declaration;
+        }
+
+        if (compilation?.emitDeclarationOnly != null) {
+            compilerOptions.emitDeclarationOnly = compilation.emitDeclarationOnly;
+            if (compilation.emitDeclarationOnly) {
+                compilerOptions.declaration = true;
+            }
+        }
+
+        if (compilation?.sourceMap != null) {
+            if (compilerOptions.sourceMap != null && compilerOptions.inlineSourceMap != null) {
+                if (compilation?.bundle !== false) {
+                    compilerOptions.sourceMap = compilation.sourceMap;
+                    compilerOptions.inlineSourceMap = undefined;
+                } else {
+                    compilerOptions.sourceMap = undefined;
+                    compilerOptions.inlineSourceMap = compilation.sourceMap;
+                }
+            } else if (compilerOptions.sourceMap == null && compilerOptions.inlineSourceMap == null) {
+                if (compilation?.bundle !== false) {
+                    compilerOptions.sourceMap = compilation.sourceMap;
+                } else {
+                    compilerOptions.inlineSourceMap = compilation.sourceMap;
+                }
+            } else if (compilerOptions.sourceMap != null) {
+                compilerOptions.sourceMap = compilation.sourceMap;
+            } else {
+                compilerOptions.inlineSourceMap = compilation.sourceMap;
+            }
+        }
+
         const tsConfigInfo: TsConfigInfo = {
             configPath: tsConfigPath,
-            jsonConfig: configJson.config as Record<string, unknown>,
-            parsedConfig
+            fileNames: parsedConfig.fileNames,
+            compilerOptions
         };
 
         tsConfigInfoCache.set(tsConfigPath, tsConfigInfo);
@@ -536,14 +615,9 @@ export class ScriptTaskRunner {
     }
 
     private async detectEntryFilePath(tsConfigInfo: TsConfigInfo | null): Promise<string | null> {
-        let packagenamePrefix: string | null = null;
-        if (this.options.packageJsonInfo?.packageName) {
-            const packageName = this.options.packageJsonInfo.packageName;
-            const lastSlashIndex = packageName.lastIndexOf('/');
-            packagenamePrefix = lastSlashIndex > -1 ? packageName.substring(lastSlashIndex + 1) : packageName;
-        }
+        const lastPartPackageName = this.getLastPartPackageName();
 
-        if (tsConfigInfo?.parsedConfig.fileNames.length) {
+        if (tsConfigInfo?.fileNames.length && tsConfigInfo.configPath) {
             const cacheKey = tsConfigInfo.configPath;
             const cached = entryFilePathsCache.get(cacheKey);
             if (cached) {
@@ -552,11 +626,11 @@ export class ScriptTaskRunner {
 
             this.logger.debug('Detecting entry file...');
 
-            let foundPath = tsConfigInfo.parsedConfig.fileNames[0];
+            let foundPath = tsConfigInfo.fileNames[0];
 
-            if (packagenamePrefix) {
-                const fileNameTestRegExp = new RegExp('[\\/]' + packagenamePrefix + supportdEntryExtPattern, 'i');
-                for (const filePath of tsConfigInfo.parsedConfig.fileNames) {
+            if (lastPartPackageName) {
+                const fileNameTestRegExp = new RegExp('[\\/]' + lastPartPackageName + supportdEntryExtPattern, 'i');
+                for (const filePath of tsConfigInfo.fileNames) {
                     if (fileNameTestRegExp.test(filePath)) {
                         foundPath = filePath;
                         break;
@@ -619,18 +693,18 @@ export class ScriptTaskRunner {
                 'index.js'
             ];
 
-            if (packagenamePrefix) {
+            if (lastPartPackageName) {
                 // ts
-                packageNameEntryNames.push(`${packagenamePrefix}.mts`);
-                packageNameEntryNames.push(`${packagenamePrefix}.cts`);
-                packageNameEntryNames.push(`${packagenamePrefix}.tsx`);
-                packageNameEntryNames.push(`${packagenamePrefix}.ts`);
+                packageNameEntryNames.push(`${lastPartPackageName}.mts`);
+                packageNameEntryNames.push(`${lastPartPackageName}.cts`);
+                packageNameEntryNames.push(`${lastPartPackageName}.tsx`);
+                packageNameEntryNames.push(`${lastPartPackageName}.ts`);
 
                 // js
-                packageNameEntryNames.push(`${packagenamePrefix}.mjs`);
-                packageNameEntryNames.push(`${packagenamePrefix}.cjs`);
-                packageNameEntryNames.push(`${packagenamePrefix}.jsx`);
-                packageNameEntryNames.push(`${packagenamePrefix}.js`);
+                packageNameEntryNames.push(`${lastPartPackageName}.mjs`);
+                packageNameEntryNames.push(`${lastPartPackageName}.cjs`);
+                packageNameEntryNames.push(`${lastPartPackageName}.jsx`);
+                packageNameEntryNames.push(`${lastPartPackageName}.js`);
             }
 
             let foundPath: string | null = null;
@@ -714,21 +788,29 @@ export class ScriptTaskRunner {
             ) {
                 // Validation
                 //
-                if (forTypesOutput && !/\.d\.ts$/i.test(normalziedOutExt)) {
+                if (forTypesOutput && !/\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
                     throw new InvalidConfigError(
-                        `To use 'emitDeclarationOnly' options, output file extension must be .d.ts.`,
+                        'Invalid file extension to emit declarations.',
                         this.options.workspaceInfo.configPath,
                         `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
                     );
                 } else if (scriptTarget === 'JSON' && !/\.json$/i.test(normalziedOutExt)) {
                     throw new InvalidConfigError(
-                        `To use 'JSON' scriptTarget, output file extension must be .json.`,
+                        'Invalid file extension for json output.',
                         this.options.workspaceInfo.configPath,
                         `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
                     );
                 }
 
-                outFilePath = resolvePath(this.options.outDir, normalziedOut);
+                const outFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
+                const lastPartPackageName = this.getLastPartPackageName();
+
+                let outFileName = normalziedOut.replace(/\[name\]/g, outFileNameWithoutExt);
+                if (lastPartPackageName) {
+                    outFileName = outFileName.replace(/\[package_?name\]/g, lastPartPackageName);
+                }
+
+                outFilePath = resolvePath(this.options.outDir, outFileName);
             } else {
                 const outFileName =
                     entryFileName.substring(0, entryFileName.length - entryFileExt.length) + suggestedOutFileExt;
@@ -760,23 +842,23 @@ export class ScriptTaskRunner {
                 entryFileName.substring(0, entryFileName.length - entryFileExt.length) + suggestedOutFileExt;
 
             if (
-                tsConfigInfo?.parsedConfig.options.outFile != null &&
+                tsConfigInfo?.compilerOptions.outFile != null &&
                 (compilation.moduleFormat === 'iife' ||
                     // eslint-disable-next-line import/no-named-as-default-member
-                    tsConfigInfo?.parsedConfig.options.module === ts.ModuleKind.None ||
+                    tsConfigInfo?.compilerOptions.module === ts.ModuleKind.None ||
                     // eslint-disable-next-line import/no-named-as-default-member
-                    tsConfigInfo?.parsedConfig.options.module === ts.ModuleKind.AMD ||
+                    tsConfigInfo?.compilerOptions.module === ts.ModuleKind.AMD ||
                     // eslint-disable-next-line import/no-named-as-default-member
-                    tsConfigInfo?.parsedConfig.options.module === ts.ModuleKind.System)
+                    tsConfigInfo?.compilerOptions.module === ts.ModuleKind.System)
             ) {
-                const tsOutFileName = path.basename(tsConfigInfo.parsedConfig.options.outFile);
+                const tsOutFileName = path.basename(tsConfigInfo.compilerOptions.outFile);
                 const tsOutFileExt = path.extname(tsOutFileName);
                 outFileName =
                     tsOutFileName.substring(0, tsOutFileName.length - tsOutFileExt.length) + suggestedOutFileExt;
             }
 
-            if (tsConfigInfo?.parsedConfig.options.outDir != null) {
-                customOutDir = path.resolve(tsConfigInfo.parsedConfig.options.outDir);
+            if (tsConfigInfo?.compilerOptions.outDir != null) {
+                customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);
             } else {
                 const projectRoot = this.options.workspaceInfo.projectRoot;
                 const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
@@ -819,6 +901,17 @@ export class ScriptTaskRunner {
         }
     }
 
+    private getLastPartPackageName(): string | null {
+        let lastPartPackageName: string | null = null;
+        if (this.options.packageJsonInfo?.packageName) {
+            const packageName = this.options.packageJsonInfo.packageName;
+            const lastSlashIndex = packageName.lastIndexOf('/');
+            lastPartPackageName = lastSlashIndex > -1 ? packageName.substring(lastSlashIndex + 1) : packageName;
+        }
+
+        return lastPartPackageName;
+    }
+
     private getYearFromScriptTarget(scriptTarget: ScriptTargetStrings): number {
         if (scriptTarget === 'ESNext' || scriptTarget === 'Latest') {
             const year = new Date().getFullYear() - 1;
@@ -849,9 +942,9 @@ export class ScriptTaskRunner {
             return compilation.scriptTarget;
         }
 
-        if (tsConfigInfo?.parsedConfig.options.target) {
+        if (tsConfigInfo?.compilerOptions.target) {
             // eslint-disable-next-line import/no-named-as-default-member
-            return ts.ScriptTarget[tsConfigInfo.parsedConfig.options.target] as ScriptTargetStrings;
+            return ts.ScriptTarget[tsConfigInfo.compilerOptions.target] as ScriptTargetStrings;
         }
 
         return undefined;
@@ -879,8 +972,8 @@ export class ScriptTaskRunner {
             }
         }
 
-        if (tsConfigInfo?.parsedConfig.options.module != null) {
-            const moduleKind = tsConfigInfo.parsedConfig.options.module;
+        if (tsConfigInfo?.compilerOptions.module != null) {
+            const moduleKind = tsConfigInfo.compilerOptions.module;
             // eslint-disable-next-line import/no-named-as-default-member
             if (moduleKind === ts.ModuleKind.CommonJS) {
                 return 'cjs';
@@ -1113,7 +1206,8 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
             }),
         env: context.env,
         packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerText
+        bannerText: buildTask._bannerText,
+        substitutions: buildTask._substitutions
     });
 
     return taskRunner;

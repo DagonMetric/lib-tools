@@ -1,17 +1,13 @@
 import { Compiler, sources } from 'webpack';
 
-import { WebpackCompilationError } from '../../../../../exceptions/index.js';
-import { LogLevelStrings, LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
-
-function formatSize(size: number): string {
-    if (size < 1024) {
-        return `${size.toLocaleString('en-US', { maximumFractionDigits: 2 })} bytes`;
-    } else if (size < 1024 * 1024) {
-        return `${(size / 1024).toLocaleString('en-US', { maximumFractionDigits: 2 })} KB`;
-    } else {
-        return `${(size / (1024 * 1024)).toLocaleString('en-US', { maximumFractionDigits: 2 })} MB`;
-    }
-}
+import { CompilationError } from '../../../../../exceptions/index.js';
+import {
+    LogLevelStrings,
+    LoggerBase,
+    colors,
+    formatSizeInBytes,
+    normalizePathToPOSIXStyle
+} from '../../../../../utils/index.js';
 
 export interface StyleWebpackPluginOptions {
     readonly outDir: string;
@@ -147,7 +143,7 @@ export class StyleWebpackPlugin {
                 const assetPath = compilation.getAssetPath(assetName, { hash: compilation.hash });
                 const assetSize = source.size();
 
-                this.logger.info(`Built: ${assetPath}, size: ${formatSize(assetSize)}`);
+                this.logger.info(`Built: ${assetPath}, size: ${formatSizeInBytes(assetSize)}`);
             }
         });
 
@@ -274,7 +270,7 @@ export class StyleWebpackPlugin {
                     }
                 }
 
-                throw new WebpackCompilationError(errorMessage);
+                throw new CompilationError(errorMessage);
             }
 
             const builtAssetsCount = Object.keys(stats.compilation.assets).length;
