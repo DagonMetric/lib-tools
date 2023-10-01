@@ -154,7 +154,7 @@ export type ScriptModuleFormat = 'iife' | 'cjs' | 'esm';
 /**
  * Script target.
  */
-export type ScriptTargetStrings = keyof typeof ScriptTarget;
+export type ScriptTargetStrings = Exclude<keyof typeof ScriptTarget, 'JSON' | 'ES3' | 'Latest'>;
 
 /**
  * Script compilation / bundle options.
@@ -180,6 +180,10 @@ export interface ScriptCompilation {
      * Script target.
      */
     scriptTarget?: ScriptTargetStrings;
+    /**
+     * Global name for iife moudle format.
+     */
+    globalName?: string;
     /**
      * Typescript configuration file for this compilation.
      */

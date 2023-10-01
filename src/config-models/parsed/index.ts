@@ -47,9 +47,9 @@ export interface ParsedTaskConfig extends Task {
 }
 
 export interface SubstitutionInfo {
-    test: RegExp;
+    searchRegExp: RegExp;
+    searchString: string;
     value: string;
-    description: string;
     bannerOnly: boolean;
 }
 
