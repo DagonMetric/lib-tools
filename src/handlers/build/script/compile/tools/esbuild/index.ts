@@ -1,32 +1,27 @@
 import * as esbuild from 'esbuild';
 
 import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 
-import { LogLevelStrings, LoggerBase } from '../../../../../../utils/index.js';
+import { CompilationError } from '../../../../../../exceptions/index.js';
+import {
+    LoggerBase,
+    colors,
+    formatSizeInBytes,
+    normalizePathToPOSIXStyle,
+    pathExists
+} from '../../../../../../utils/index.js';
 
 import { CompileOptions } from '../../compile-options.js';
 import { CompileResult } from '../../compile-result.js';
 
-function toEsBuildLogLevel(logLevel: LogLevelStrings): esbuild.LogLevel {
-    switch (logLevel) {
-        case 'debug':
-            return 'debug';
-        case 'info':
-            return 'info';
-        case 'warn':
-            return 'warning';
-        case 'error':
-            return 'error';
-        default:
-            return 'silent';
-    }
-}
-
-// TODO:
 function getEsBuildTargets(options: CompileOptions): string[] {
     const targets: string[] = [options.scriptTarget.toLowerCase()];
     if (options.environmentTargets) {
         for (const target of options.environmentTargets) {
+            if (target === 'web') {
+                continue;
+            }
             targets.push(target);
         }
     }
@@ -39,60 +34,125 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
         return 'neutral';
     } else if (
         options.moduleFormat === 'cjs' ||
+        path.extname(options.outFilePath).toLowerCase() === '.cjs' ||
         options.environmentTargets.find((t) => t.startsWith('node') || t.startsWith('deno')) != null
     ) {
         return 'node';
-    } else {
-        // TODO: To review
+    } else if (options.moduleFormat === 'iife' || options.environmentTargets.find((t) => t === 'web') != null) {
         return 'browser';
     }
+
+    return undefined;
 }
 
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    const startTime = Date.now();
-
     logger.info(
         `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
     );
 
-    const esBuildResult = await esbuild.build({
-        entryPoints: [options.entryFilePath],
-        outfile: options.outFilePath,
-        banner: options.bannerText ? { js: options.bannerText } : undefined,
-        sourcemap: options.sourceMap ? 'linked' : false,
-        minify: options.minify,
-        format: options.moduleFormat,
-        target: getEsBuildTargets(options),
-        platform: getEsBuildPlatform(options),
-        tsconfig: options.tsConfigInfo?.configPath,
-        bundle: true,
-        external: options.externals,
-        write: false,
-        // treeShaking: options.treeShaking,
-        // preserveSymlinks: options.preserveSymlinks,
-        logLevel: toEsBuildLogLevel(options.logLevel)
-        // plugins: []
-    });
+    try {
+        const startTime = Date.now();
 
-    const result: CompileResult = {
-        builtAssets: [],
-        time: Date.now() - startTime
-    };
+        const esbuildResult = await esbuild.build({
+            entryPoints: [options.entryFilePath],
+            outfile: options.outFilePath,
+            bundle: true,
+            banner: options.bannerText ? { js: options.bannerText } : undefined,
+            sourcemap: options.sourceMap ? 'linked' : false,
+            minify: options.minify,
+            format: options.moduleFormat,
+            target: getEsBuildTargets(options),
+            platform: getEsBuildPlatform(options),
+            tsconfig: options.tsConfigInfo?.configPath,
+            external: options.externals,
+            globalName: options.globalName,
+            write: false,
+            preserveSymlinks: options.tsConfigInfo?.compilerOptions.preserveSymlinks,
+            logLevel: 'silent'
+        });
 
-    if (!esBuildResult.outputFiles) {
-        return result;
-    }
+        if (esbuildResult.errors.length > 0) {
+            const formattedMessages = await esbuild.formatMessages(esbuildResult.errors, {
+                kind: 'error',
+                color: true
+                // terminalWidth: 100
+            });
 
-    for (const outputFile of esBuildResult.outputFiles) {
-        if (!options.dryRun) {
-            await fs.writeFile(outputFile.path, outputFile.contents, 'utf-8');
+            throw new CompilationError(
+                colors.lightRed('Running esbuild compilation task failed with errors:') +
+                    '\n' +
+                    formattedMessages.join('\n').trim()
+            );
+        } else if (esbuildResult.warnings.length > 0) {
+            const formattedMessages = await esbuild.formatMessages(esbuildResult.warnings, {
+                kind: 'warning',
+                color: false
+            });
+
+            logger.warn(formattedMessages.join('\n').trim());
         }
 
-        result.builtAssets.push({
-            path: outputFile.path,
-            size: outputFile.contents.length
-        });
-    }
+        const result: CompileResult = {
+            builtAssets: [],
+            time: Date.now() - startTime
+        };
 
-    return result;
+        if (!esbuildResult.outputFiles) {
+            return result;
+        }
+
+        for (const outputFile of esbuildResult.outputFiles) {
+            const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), outputFile.path));
+            const size = outputFile.contents.length;
+
+            if (options.dryRun) {
+                logger.debug(`Built: ${pathRel}, size: ${formatSizeInBytes(size)}`);
+            } else {
+                const dirOfFilePath = path.dirname(outputFile.path);
+
+                if (!(await pathExists(dirOfFilePath))) {
+                    await fs.mkdir(dirOfFilePath, { recursive: true });
+                }
+
+                await fs.writeFile(outputFile.path, outputFile.contents, 'utf-8');
+                logger.debug(`Emitted: ${pathRel}, size: ${formatSizeInBytes(size)}`);
+            }
+
+            result.builtAssets.push({
+                path: outputFile.path,
+                size
+            });
+        }
+
+        const builtAssetsCount = result.builtAssets.length;
+        const msgSuffix = options.dryRun ? 'built' : 'emitted';
+        const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
+        logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
+
+        return result;
+    } catch (err) {
+        if (!err) {
+            throw new CompilationError(colors.lightRed('Running esbuild compilation task failed.'));
+        }
+
+        let errorMessage = colors.lightRed('Running esbuild compilation task failed with errors:');
+
+        if ((err as esbuild.BuildResult)?.errors && (err as esbuild.BuildResult).errors.length > 0) {
+            const formattedMessages = await esbuild.formatMessages((err as esbuild.BuildResult).errors, {
+                kind: 'error',
+                color: true
+            });
+
+            errorMessage += '\n' + formattedMessages.join('\n').trim();
+        } else if ((err as esbuild.BuildResult)?.warnings && (err as esbuild.BuildResult).warnings.length > 0) {
+            const formattedMessages = await esbuild.formatMessages((err as esbuild.BuildResult).warnings, {
+                kind: 'warning',
+                color: true
+            });
+
+            errorMessage += '\n' + formattedMessages.join('\n').trim();
+        }
+
+        throw new CompilationError(errorMessage);
+    }
 }

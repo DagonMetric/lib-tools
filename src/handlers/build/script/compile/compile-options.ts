@@ -14,13 +14,13 @@ export interface CompileOptions {
     workspaceInfo: WorkspaceInfo;
     entryFilePath: string;
     outFilePath: string;
-    bundle: boolean;
     tsConfigInfo: TsConfigInfo | null | undefined;
     moduleFormat: ScriptModuleFormat;
     scriptTarget: ScriptTargetStrings;
     environmentTargets: string[];
     externals: string[];
     globals: Record<string, string>;
+    globalName: string | undefined;
     sourceMap: boolean;
     minify: boolean;
     bannerText: string | null | undefined;

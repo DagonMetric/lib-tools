@@ -34,6 +34,39 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         ? { ...options.tsConfigInfo.compilerOptions }
         : {};
 
+    if (compilerOptions.target !== ts.ScriptTarget[options.scriptTarget]) {
+        compilerOptions.target = ts.ScriptTarget[options.scriptTarget];
+    }
+
+    if (options.moduleFormat === 'cjs') {
+        if (
+            compilerOptions.module !== ts.ModuleKind.CommonJS &&
+            compilerOptions.module !== ts.ModuleKind.Node16 &&
+            compilerOptions.module !== ts.ModuleKind.NodeNext
+        ) {
+            compilerOptions.module = ts.ModuleKind.CommonJS;
+        }
+    } else if (options.moduleFormat === 'esm') {
+        if (
+            compilerOptions.module == null ||
+            compilerOptions.module === ts.ModuleKind.None ||
+            compilerOptions.module === ts.ModuleKind.AMD ||
+            compilerOptions.module === ts.ModuleKind.CommonJS ||
+            compilerOptions.module === ts.ModuleKind.System ||
+            compilerOptions.module === ts.ModuleKind.UMD
+        ) {
+            compilerOptions.module = ts.ModuleKind.ESNext;
+        }
+    } else if (options.moduleFormat === 'iife') {
+        if (compilerOptions.module !== ts.ModuleKind.System && compilerOptions.module !== ts.ModuleKind.UMD) {
+            compilerOptions.module = ts.ModuleKind.UMD;
+        }
+
+        if (compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
+            compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
+        }
+    }
+
     compilerOptions.outDir = outDir;
     if (compilerOptions.rootDir != null) {
         compilerOptions.rootDir = path.dirname(options.entryFilePath);
@@ -127,16 +160,18 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         if (file && isInFolder(projectRoot, filePath) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
             if (!compilerOptions.emitDeclarationOnly) {
                 for (const substitution of options.substitutions.filter((s) => !s.bannerOnly)) {
-                    if (substitution.test.test(file)) {
+                    const m = file.match(substitution.searchRegExp);
+                    if (m != null && m.length > 0) {
+                        const matchedText = m[0];
                         logger.debug(
-                            `Substituting ${substitution.description} with value '${substitution.value}' in file ${filePathRel}`
+                            `Substituting ${matchedText} with value '${substitution.value}' in file ${filePathRel}`
                         );
-                        file = file.replace(substitution.test, substitution.value);
+                        file = file.replace(substitution.searchRegExp, substitution.value);
                     }
                 }
             }
 
-            if (options.bannerText) {
+            if (options.bannerText && !file.trim().startsWith(options.bannerText.trim())) {
                 logger.debug(`Adding banner to file ${filePathRel}`);
                 file = `${options.bannerText}\n${host.getNewLine()}${file}`;
             }

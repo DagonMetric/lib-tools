@@ -1,7 +1,9 @@
+/* eslint-disable import/default */
+/* eslint-disable import/no-named-as-default-member */
+
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-// eslint-disable-next-line import/default
 import ts from 'typescript';
 
 import {
@@ -183,10 +185,10 @@ export class ScriptTaskRunner {
                 workspaceInfo: this.options.workspaceInfo,
                 entryFilePath,
                 outFilePath,
-                bundle,
                 tsConfigInfo,
                 moduleFormat,
                 scriptTarget,
+                globalName: compilation.globalName,
                 environmentTargets,
                 externals,
                 globals,
@@ -275,7 +277,7 @@ export class ScriptTaskRunner {
                     bundle: false,
                     entry,
                     tsconfig,
-                    scriptTarget: 'Latest',
+                    scriptTarget: 'ESNext',
                     moduleFormat: 'esm',
                     emitDeclarationOnly: true,
                     declaration: true,
@@ -392,13 +394,11 @@ export class ScriptTaskRunner {
 
         const jsonText = await fs.readFile(tsConfigPath, 'utf-8');
 
-        // eslint-disable-next-line import/no-named-as-default-member
         const configJson = ts.parseConfigFileTextToJson(tsConfigPath, jsonText);
 
         if (!configJson.config || configJson.error) {
             const tsMsg = configJson.error
-                ? // eslint-disable-next-line import/no-named-as-default-member
-                  '\n' + ts.flattenDiagnosticMessageText(configJson.error.messageText, '\n').trim()
+                ? '\n' + ts.flattenDiagnosticMessageText(configJson.error.messageText, '\n').trim()
                 : '';
             const tsConfigPathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), tsConfigPath));
             const errMsg = `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`;
@@ -408,12 +408,10 @@ export class ScriptTaskRunner {
             throw new InvalidConfigError(errMsg, this.options.workspaceInfo.configPath, configLocation);
         }
 
-        // eslint-disable-next-line import/no-named-as-default-member
         const parsedConfig = ts.parseJsonConfigFileContent(configJson.config, ts.sys, path.dirname(tsConfigPath));
 
         if (parsedConfig.errors.length) {
             const tsMsg = parsedConfig.errors
-                // eslint-disable-next-line import/no-named-as-default-member
                 .map((e) => ts.flattenDiagnosticMessageText(e.messageText, '\n').trim())
                 .join('\n');
 
@@ -757,21 +755,9 @@ export class ScriptTaskRunner {
         let suggestedOutFileExt = '.js';
         if (forTypesOutput) {
             suggestedOutFileExt = '.d.ts';
-        } else if (scriptTarget === 'JSON') {
-            suggestedOutFileExt = '.json';
-        } else if (
-            moduleFormat === 'esm' &&
-            scriptTarget !== 'ES5' &&
-            scriptTarget !== 'ES3' &&
-            /\.m(t|j)s$/i.test(entryFileExt)
-        ) {
+        } else if (moduleFormat === 'esm' && scriptTarget !== 'ES5' && /\.m(t|j)s$/i.test(entryFileExt)) {
             suggestedOutFileExt = '.mjs';
-        } else if (
-            moduleFormat === 'cjs' &&
-            scriptTarget !== 'ES5' &&
-            scriptTarget !== 'ES3' &&
-            /\.c(t|j)s$/i.test(entryFileExt)
-        ) {
+        } else if (moduleFormat === 'cjs' && scriptTarget !== 'ES5' && /\.c(t|j)s$/i.test(entryFileExt)) {
             suggestedOutFileExt = '.cjs';
         } else if (/\.(t|j)sx$/i.test(entryFileExt)) {
             suggestedOutFileExt = '.jsx';
@@ -791,12 +777,6 @@ export class ScriptTaskRunner {
                 if (forTypesOutput && !/\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
                     throw new InvalidConfigError(
                         'Invalid file extension to emit declarations.',
-                        this.options.workspaceInfo.configPath,
-                        `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
-                    );
-                } else if (scriptTarget === 'JSON' && !/\.json$/i.test(normalziedOutExt)) {
-                    throw new InvalidConfigError(
-                        'Invalid file extension for json output.',
                         this.options.workspaceInfo.configPath,
                         `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
                     );
@@ -844,11 +824,8 @@ export class ScriptTaskRunner {
             if (
                 tsConfigInfo?.compilerOptions.outFile != null &&
                 (compilation.moduleFormat === 'iife' ||
-                    // eslint-disable-next-line import/no-named-as-default-member
                     tsConfigInfo?.compilerOptions.module === ts.ModuleKind.None ||
-                    // eslint-disable-next-line import/no-named-as-default-member
                     tsConfigInfo?.compilerOptions.module === ts.ModuleKind.AMD ||
-                    // eslint-disable-next-line import/no-named-as-default-member
                     tsConfigInfo?.compilerOptions.module === ts.ModuleKind.System)
             ) {
                 const tsOutFileName = path.basename(tsConfigInfo.compilerOptions.outFile);
@@ -869,14 +846,7 @@ export class ScriptTaskRunner {
                     }
                 }
 
-                if (
-                    !forTypesOutput &&
-                    moduleFormat === 'esm' &&
-                    scriptTarget &&
-                    scriptTarget !== 'ES5' &&
-                    scriptTarget !== 'ES3' &&
-                    scriptTarget !== 'JSON'
-                ) {
+                if (!forTypesOutput && moduleFormat === 'esm' && scriptTarget && scriptTarget !== 'ES5') {
                     const year = this.getYearFromScriptTarget(scriptTarget);
 
                     if (year > 2014) {
@@ -913,7 +883,7 @@ export class ScriptTaskRunner {
     }
 
     private getYearFromScriptTarget(scriptTarget: ScriptTargetStrings): number {
-        if (scriptTarget === 'ESNext' || scriptTarget === 'Latest') {
+        if (scriptTarget === 'ESNext') {
             const year = new Date().getFullYear() - 1;
             const esmVerson = year - 2013;
             if (esmVerson > 1 && esmVerson < 99) {
@@ -943,7 +913,6 @@ export class ScriptTaskRunner {
         }
 
         if (tsConfigInfo?.compilerOptions.target) {
-            // eslint-disable-next-line import/no-named-as-default-member
             return ts.ScriptTarget[tsConfigInfo.compilerOptions.target] as ScriptTargetStrings;
         }
 
@@ -974,17 +943,12 @@ export class ScriptTaskRunner {
 
         if (tsConfigInfo?.compilerOptions.module != null) {
             const moduleKind = tsConfigInfo.compilerOptions.module;
-            // eslint-disable-next-line import/no-named-as-default-member
             if (moduleKind === ts.ModuleKind.CommonJS) {
                 return 'cjs';
             }
 
             if (
-                // eslint-disable-next-line import/no-named-as-default-member
                 moduleKind === ts.ModuleKind.UMD ||
-                // eslint-disable-next-line import/no-named-as-default-member
-                moduleKind === ts.ModuleKind.AMD ||
-                // eslint-disable-next-line import/no-named-as-default-member
                 moduleKind === ts.ModuleKind.System ||
                 (moduleKind as number) === 0
             ) {
@@ -1017,7 +981,9 @@ export class ScriptTaskRunner {
             (environmentTargets.includes('web') ||
                 environmentTargets.includes('browser') ||
                 this.options.packageJsonInfo == null) &&
-            environmentTargets.find((e) => e.startsWith('node')) == null
+            environmentTargets.find((e) => e.startsWith('node')) == null &&
+            tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.NodeNext &&
+            tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node16
         ) {
             return 'iife';
         }
