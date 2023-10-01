@@ -1,10 +1,11 @@
 /*!
  * @license
- * Copyright [current_year] [author] All Rights Reserved.
+ * Copyright [CURRENT_YEAR] [AUTHOR] All Rights Reserved.
  *
- * Use of this source code is governed by an [license]-style license that can be
- * found in the LICENSE file at [homepage].
- * packagename: [packagename]
- * packageversion: [packageversion]
- * description: [description]
+ * Use of this source code is governed by an [LICENSE]-style license that can be
+ * found in the LICENSE file at [HOMEPAGE].
+ * project name: [PROJECT_NAME]
+ * package name: [PACKAGE_NAME]
+ * package version: [PACKAGE_VERSION]
+ * description: [DESCRIPTION]
  */

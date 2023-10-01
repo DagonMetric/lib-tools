@@ -1,12 +1,12 @@
 /*!
- * Cssnano Note - any special comments marked with ! are kept by default.
  * @license
- * Copyright [current_year] [author] All Rights Reserved.
+ * Copyright [CURRENT_YEAR] [AUTHOR] All Rights Reserved.
  *
- * Use of this source code is governed by an [license]-style license that can be
- * found in the LICENSE file at [homepage].
- * packagename: [packagename]
- * packageversion: [packageversion]
- * packagedescription: [package_description]
+ * Use of this source code is governed by an [LICENSE]-style license that can be
+ * found in the LICENSE file at [HOMEPAGE].
+ * project name: [PROJECT_NAME]
+ * package name: [PACKAGE_NAME]
+ * package version: [PACKAGE_VERSION]
+ * description: [DESCRIPTION]
  * fullhash:[fullhash], chunkhash:[chunkhash], name:[name], filebase:[filebase], query:[query], file:[file]
  */

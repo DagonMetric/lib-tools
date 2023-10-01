@@ -1,5 +1,5 @@
-// Banner
 import { Message } from './message';
+import { Person } from './person';
 
 export const VERSION = '0.0.0-PLACEHOLDER';
 
@@ -8,6 +8,6 @@ export const VERSION = '0.0.0-PLACEHOLDER';
  * @param message Message object.
  */
 export function sayHello(message: Message) {
-    // eslint-disable-next-line no-console
-    console.log(message.text);
+    const person = new Person(message);
+    person.greet();
 }

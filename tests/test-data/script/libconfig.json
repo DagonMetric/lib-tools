@@ -10,10 +10,7 @@
           "script": {
             "compilations": [
               {
-                // "emitDeclarationOnly": true,
-                "declaration": true,
                 "bundle": false,
-                // "sourceMap": true,
                 "minify": false,
                 "environmentTargets": [],
                 "externalExclude": []
