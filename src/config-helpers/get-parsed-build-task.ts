@@ -51,17 +51,17 @@ function getSubstitutions(workspaceInfo: WorkspaceInfo, packageJsonInfo: Package
     const substitutions: SubstitutionInfo[] = [];
 
     substitutions.push({
-        test: /\[current_?year\]/gi,
+        searchString: '[CURRENT_YEAR]',
+        searchRegExp: /\[CURRENT_YEAR\]/g,
         value: new Date().getFullYear().toString(),
-        description: 'current year',
         bannerOnly: true
     });
 
     if (workspaceInfo.projectName) {
         substitutions.push({
-            test: /\[project_?name\]/gi,
+            searchString: '[PROJECT_NAME]',
+            searchRegExp: /\[PROJECT_NAME\]/g,
             value: workspaceInfo.projectName,
-            description: 'project name',
             bannerOnly: true
         });
     }
@@ -74,44 +74,51 @@ function getSubstitutions(workspaceInfo: WorkspaceInfo, packageJsonInfo: Package
             : packageJsonInfo.packageJson;
 
         substitutions.push({
-            test: /\[package_?name\]/gi,
+            searchString: '[PACKAGE_NAME]',
+            searchRegExp: /\[PACKAGE_NAME\]/g,
             value: packageName,
-            description: 'package name',
             bannerOnly: true
         });
 
         if (packageVersion && typeof packageVersion === 'string') {
             substitutions.push({
-                test: /(\[package_?version\]|0\.0\.0-placeholder)/gi,
+                searchString: '[PACKAGE_VERSION]',
+                searchRegExp: /\[PACKAGE_VERSION\]/g,
                 value: packageVersion,
-                description: 'package version',
+                bannerOnly: true
+            });
+
+            substitutions.push({
+                searchString: '0.0.0-PLACEHOLDER',
+                searchRegExp: /0\.0\.0-PLACEHOLDER/g,
+                value: packageVersion,
                 bannerOnly: false
             });
         }
 
         if (mergedPackageJson.description && typeof mergedPackageJson.description === 'string') {
             substitutions.push({
-                test: /\[description\]/gi,
+                searchString: '[DESCRIPTION]',
+                searchRegExp: /\[DESCRIPTION\]/g,
                 value: mergedPackageJson.description,
-                description: 'description',
                 bannerOnly: true
             });
         }
 
         if (mergedPackageJson.license && typeof mergedPackageJson.license === 'string') {
             substitutions.push({
-                test: /\[license\]/gi,
+                searchString: '[LICENSE]',
+                searchRegExp: /\[LICENSE\]/g,
                 value: mergedPackageJson.license,
-                description: 'license',
                 bannerOnly: true
             });
         }
 
         if (mergedPackageJson.homepage && typeof mergedPackageJson.homepage === 'string') {
             substitutions.push({
-                test: /\[homepage\]/gi,
+                searchString: '[HOMEPAGE]',
+                searchRegExp: /\[HOMEPAGE\]/g,
                 value: mergedPackageJson.homepage,
-                description: 'homepage',
                 bannerOnly: true
             });
         }
@@ -129,9 +136,9 @@ function getSubstitutions(workspaceInfo: WorkspaceInfo, packageJsonInfo: Package
 
             if (author) {
                 substitutions.push({
-                    test: /\[author\]/gi,
+                    searchString: '[AUTHOR]',
+                    searchRegExp: /\[AUTHOR\]/g,
                     value: author,
-                    description: 'author',
                     bannerOnly: true
                 });
             }
@@ -144,7 +151,7 @@ function getSubstitutions(workspaceInfo: WorkspaceInfo, packageJsonInfo: Package
 async function parseBannerText(
     banner: string | boolean,
     workspaceInfo: WorkspaceInfo,
-    substitutions: { test: RegExp; value: string; description: string }[]
+    substitutions: SubstitutionInfo[]
 ): Promise<string | null> {
     if (!banner) {
         return null;
@@ -214,7 +221,7 @@ async function parseBannerText(
         }
 
         for (const substitution of substitutions) {
-            bannerText = bannerText.replace(substitution.test, substitution.value);
+            bannerText = bannerText.replace(substitution.searchRegExp, substitution.value);
         }
     }
 
