@@ -161,6 +161,10 @@ export type ScriptTargetStrings = Exclude<keyof typeof ScriptTarget, 'JSON' | 'E
  */
 export interface ScriptCompilation {
     /**
+     * Preferred compiler / bundler tool for this compilation.
+     */
+    compiler?: string;
+    /**
      * If true, all imported dependencies will be inlined into the generated output file.
      */
     bundle?: boolean;
