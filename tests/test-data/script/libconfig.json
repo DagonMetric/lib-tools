@@ -1,8 +1,8 @@
 {
   "$schema": "../../../dist/schemas/schema.json",
   "projects": {
-    "hello-world": {
-      "root": "./packages/hello-world",
+    "hello": {
+      "root": "./packages/hello",
       "tasks": {
         "build": {
           "banner": true,
@@ -11,9 +11,11 @@
             "compilations": [
               {
                 "bundle": false,
-                "minify": false,
-                "environmentTargets": [],
-                "externalExclude": []
+                "emitDeclarationOnly": true
+              },
+              {
+                "bundle": false,
+                "declaration": false
               }
             ]
           },
