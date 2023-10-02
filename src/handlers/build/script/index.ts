@@ -13,7 +13,7 @@ import {
     ScriptTargetStrings
 } from '../../../config-models/index.js';
 import { PackageJsonInfo, SubstitutionInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
-import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
+import { CompilationError, InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
     LogLevelStrings,
     Logger,
@@ -36,9 +36,25 @@ const supportdEntryExtPattern = '\\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$';
 const supportdEntryExtRegExp = new RegExp(supportdEntryExtPattern, 'i');
 const supportedOutExtRegExp = /\.(d\.[cm]?ts|mjs|cjs|json|jsx?)$/i;
 const tsConfigPathsCache = new Map<string, string>();
-const tsConfigInfoCache = new Map<string, TsConfigInfo>();
+const tsConfigInfoCache = new Map<string, { locationKey: string; tsConfigInfo: TsConfigInfo }>();
 const entryFilePathsCache = new Map<string, string>();
 const compilerCache = new Map<string, CompilerFn>();
+
+interface ParsedScriptCompilation extends ScriptCompilation {
+    readonly _entryFilePath: string;
+    readonly _outFilePath: string;
+    readonly _moduleFormat: ScriptModuleFormat;
+    readonly _scriptTarget: ScriptTargetStrings;
+    readonly _bundle: boolean;
+    readonly _sourceMap: boolean;
+    readonly _minify: boolean;
+    readonly _environmentTargets: string[];
+    readonly _externals: string[];
+    readonly _tsConfigInfo: TsConfigInfo | null | undefined;
+    readonly _declaration: boolean | undefined;
+    readonly _emitDeclarationOnly: boolean;
+    readonly _globals: Record<string, string>;
+}
 
 export * from './interfaces/index.js';
 
@@ -82,120 +98,30 @@ export class ScriptTaskRunner {
 
         const mainOutputAssets: ScriptMainOutputAsset[] = [];
         let totalTime = 0;
-
-        const compileConfigs = await this.getCompileConfigs();
-
-        for (const compileConfig of compileConfigs) {
-            const compileResult = await compileConfig.compilerFn(compileConfig.options, this.logger);
-
-            totalTime += compileResult.time;
-            const mainOuputAsset = compileResult.builtAssets.find((a) => a.path === compileConfig.options.outFilePath);
-            if (mainOuputAsset) {
-                mainOutputAssets.push({
-                    moduleFormat: compileConfig.options.moduleFormat,
-                    scriptTarget: compileConfig.options.scriptTarget,
-                    outputFilePath: mainOuputAsset.path,
-                    size: mainOuputAsset.size
-                });
-            }
-        }
-
-        const result: ScriptResult = {
-            mainOutputAssets,
-            time: totalTime,
-            emitted: this.options.dryRun ? false : true
-        };
-
-        this.logger.groupEnd();
-        this.logger.info(`${colors.lightGreen('\u25B6')} script [${colors.lightGreen(`${result.time} ms`)}]`);
-
-        return result;
-    }
-
-    private async getCompileConfigs(): Promise<
-        {
-            compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
-            options: CompileOptions;
-        }[]
-    > {
-        const compileConfigs: {
-            compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
-            options: CompileOptions;
-        }[] = [];
-        const compilations = await this.getCompilations();
+        const compilations = await this.getParsedCompilations();
 
         for (let i = 0; i < compilations.length; i++) {
             const compilation = compilations[i];
 
-            const tsConfigPath = await this.getTsConfigPath(compilation, i);
-            const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, compilation, i) : null;
-            const entryFilePath = await this.getEntryFilePath(compilation, i);
-            const scriptTarget = this.getScriptTarget(compilation, tsConfigInfo);
-            const moduleFormat = this.getModuleFormat(compilation, tsConfigInfo, entryFilePath);
-            const outFilePath = this.getOutputFilePath(
-                compilation,
-                i,
-                entryFilePath,
-                compilation.emitDeclarationOnly,
-                tsConfigInfo,
-                moduleFormat,
-                scriptTarget
-            );
-
-            const bundle = compilation.bundle !== false ? true : false;
-
-            // environmentTargets
-            const environmentTargets: string[] =
-                compilation.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
-
-            // minify
-            let minify = bundle && moduleFormat === 'iife' ? true : false;
-            if (compilation.minify != null) {
-                minify = compilation.minify;
-            }
-
-            // sourceMap
-            let sourceMap = true;
-            if (compilation.sourceMap != null) {
-                sourceMap = compilation.sourceMap;
-            } else if (tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
-                sourceMap = tsConfigInfo?.compilerOptions.inlineSourceMap;
-            } else if (tsConfigInfo?.compilerOptions.sourceMap != null) {
-                sourceMap = tsConfigInfo?.compilerOptions.sourceMap;
-            }
-
-            // externals
-            const { externals, globals } = this.getExternalsAndGlobals(compilation);
-
-            if (!moduleFormat) {
-                throw new InvalidConfigError(
-                    `Could not detect module format automatically. Specify 'moduleFormat' value in script compilations.`,
-                    this.options.workspaceInfo.configPath,
-                    `${this.configLocationPrefix}/compilations/${i}/moduleFormat`
-                );
-            }
-
-            if (!scriptTarget) {
-                throw new InvalidConfigError(
-                    `Could not detect script target automatically. Specify 'scriptTarget' value in script compilations.`,
-                    this.options.workspaceInfo.configPath,
-                    `${this.configLocationPrefix}/compilations/${i}/scriptTarget`
-                );
+            if (compilations.length > 1) {
+                this.logger.group(`\u25B7 compilations/${i}`);
             }
 
             const compileOptions: CompileOptions = {
                 workspaceInfo: this.options.workspaceInfo,
-                entryFilePath,
-                outFilePath,
-                tsConfigInfo,
-                moduleFormat,
-                scriptTarget,
+                entryFilePath: compilation._entryFilePath,
+                outFilePath: compilation._outFilePath,
+                tsConfigInfo: compilation._tsConfigInfo,
+                emitDeclarationOnly: compilation._emitDeclarationOnly,
+                declaration: compilation._declaration,
+                moduleFormat: compilation._moduleFormat,
+                scriptTarget: compilation._scriptTarget,
+                environmentTargets: compilation._environmentTargets,
+                externals: compilation._externals,
+                globals: compilation._globals,
+                sourceMap: compilation._sourceMap,
+                minify: compilation._minify,
                 globalName: compilation.globalName,
-                environmentTargets,
-                externals,
-                globals,
-                minify,
-                sourceMap,
                 bannerText: this.options.bannerText,
                 substitutions: this.options.substitutions,
                 dryRun: this.options.dryRun,
@@ -207,8 +133,8 @@ export class ScriptTaskRunner {
             if (
                 compilation.compiler?.toLowerCase().trim() === 'tsc' ||
                 compilation.compiler?.toLowerCase().trim() === 'typescript' ||
-                !bundle ||
-                compilation.emitDeclarationOnly
+                !compilation._bundle ||
+                compilation._emitDeclarationOnly
             ) {
                 const cacheKey = 'tsc';
                 const cachefn = compilerCache.get(cacheKey);
@@ -221,7 +147,7 @@ export class ScriptTaskRunner {
                 }
             } else if (
                 compilation.compiler?.toLowerCase().trim() === 'webpack' ||
-                (bundle && compileOptions.moduleFormat === 'iife')
+                (compilation._bundle && compileOptions.moduleFormat === 'iife')
             ) {
                 const cacheKey = 'webpack';
                 const cachefn = compilerCache.get(cacheKey);
@@ -269,19 +195,63 @@ export class ScriptTaskRunner {
                 }
             }
 
-            compileConfigs.push({
-                compilerFn,
-                options: compileOptions
+            const compileResult = await compilerFn(compileOptions, this.logger);
+
+            totalTime += compileResult.time;
+            const mainOuputAsset = compileResult.builtAssets.find((a) =>
+                isSamePaths(a.path, compileOptions.outFilePath)
+            );
+
+            if (!mainOuputAsset) {
+                const outputPathRel = normalizePathToPOSIXStyle(
+                    path.relative(process.cwd(), compileOptions.outFilePath)
+                );
+
+                throw new CompilationError(
+                    `${colors.lightRed(
+                        'Error in compilation.'
+                    )} The output file ${outputPathRel} could not be generated.`
+                );
+            }
+
+            mainOutputAssets.push({
+                moduleFormat: compileOptions.moduleFormat,
+                scriptTarget: compileOptions.scriptTarget,
+                outputFilePath: path.resolve(mainOuputAsset.path),
+                size: mainOuputAsset.size
             });
+
+            const builtAssetsCount = compileResult.builtAssets.length;
+            const msgSuffix = this.options.dryRun ? 'built [dry run]' : 'emitted';
+            const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
+            this.logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
+
+            if (compilations.length > 1) {
+                this.logger.groupEnd();
+                this.logger.info(
+                    `${colors.lightGreen('\u25B6')} compilations/${i} [${colors.lightGreen(
+                        `${compileResult.time} ms`
+                    )}]`
+                );
+            }
         }
 
-        return compileConfigs;
+        const result: ScriptResult = {
+            mainOutputAssets,
+            time: totalTime,
+            emitted: this.options.dryRun ? false : true
+        };
+
+        this.logger.groupEnd();
+        this.logger.info(`${colors.lightGreen('\u25B6')} script [${colors.lightGreen(`${result.time} ms`)}]`);
+
+        return result;
     }
 
-    private async getCompilations(): Promise<ScriptCompilation[]> {
-        if (this.options.scriptOptions.compilations === 'auto') {
-            this.logger.debug('Auto detecting script compilations...');
+    private async getParsedCompilations(): Promise<ParsedScriptCompilation[]> {
+        this.logger.debug('Preparing compilations...');
 
+        if (this.options.scriptOptions.compilations === 'auto') {
             const tsConfigPath = await this.detectTsConfigPath();
             const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, null, null) : null;
             const entryFilePath = await this.detectEntryFilePath(tsConfigInfo);
@@ -294,7 +264,7 @@ export class ScriptTaskRunner {
                 );
             }
 
-            const compilations: ScriptCompilation[] = [];
+            const parsedScriptCompilations: ParsedScriptCompilation[] = [];
 
             const entry = normalizePathToPOSIXStyle(
                 path.relative(this.options.workspaceInfo.projectRoot, entryFilePath)
@@ -314,74 +284,224 @@ export class ScriptTaskRunner {
                 (tsConfigInfo.compilerOptions.target as number) > 1 &&
                 (tsConfigInfo.compilerOptions.target as number) < 100
             ) {
+                const moduleFormat: ScriptModuleFormat = 'esm';
                 const scriptTarget = this.getScriptTarget(null, tsConfigInfo) ?? 'ESNext';
                 const year = this.getYearFromScriptTarget(scriptTarget);
 
                 // types
-                compilations.push({
+                //
+                const typesCompilation: ScriptCompilation = {
                     bundle: false,
                     entry,
                     tsconfig,
-                    scriptTarget: 'ESNext',
-                    moduleFormat: 'esm',
+                    scriptTarget,
+                    moduleFormat,
                     emitDeclarationOnly: true,
                     declaration: true,
                     sourceMap: false,
                     minify: false,
                     out: 'types'
+                };
+
+                const typesOutFilePath = this.getOutputFilePath(
+                    typesCompilation,
+                    0,
+                    entryFilePath,
+                    true,
+                    tsConfigInfo,
+                    typesCompilation.moduleFormat,
+                    typesCompilation.scriptTarget
+                );
+
+                parsedScriptCompilations.push({
+                    ...typesCompilation,
+
+                    _entryFilePath: entryFilePath,
+                    _outFilePath: typesOutFilePath,
+                    _moduleFormat: moduleFormat,
+                    _scriptTarget: scriptTarget,
+                    _tsConfigInfo: tsConfigInfo,
+                    _emitDeclarationOnly: true,
+                    _declaration: true,
+                    _bundle: false,
+                    _sourceMap: false,
+                    _minify: false,
+                    _environmentTargets: [],
+                    _externals: [],
+                    _globals: {}
                 });
 
                 // esm
-                compilations.push({
+                //
+                const esmCompilation: ScriptCompilation = {
                     bundle: false,
                     entry,
                     tsconfig,
                     scriptTarget,
-                    moduleFormat: 'esm',
+                    moduleFormat,
                     emitDeclarationOnly: false,
                     declaration: false,
                     sourceMap: true,
                     minify: false,
                     out: `esm${year}`
+                };
+
+                const esmOutFilePath = this.getOutputFilePath(
+                    esmCompilation,
+                    1,
+                    entryFilePath,
+                    false,
+                    tsConfigInfo,
+                    esmCompilation.moduleFormat,
+                    esmCompilation.scriptTarget
+                );
+
+                parsedScriptCompilations.push({
+                    ...esmCompilation,
+
+                    _entryFilePath: entryFilePath,
+                    _outFilePath: esmOutFilePath,
+                    _moduleFormat: moduleFormat,
+                    _scriptTarget: scriptTarget,
+                    _tsConfigInfo: tsConfigInfo,
+                    _emitDeclarationOnly: false,
+                    _declaration: false,
+                    _bundle: false,
+                    _sourceMap: true,
+                    _minify: false,
+                    _environmentTargets: [],
+                    _externals: [],
+                    _globals: {}
                 });
 
                 // fesm
-                compilations.push({
+                //
+                const fesmCompilation: ScriptCompilation = {
                     bundle: true,
                     entry,
                     tsconfig,
                     scriptTarget,
-                    moduleFormat: 'esm',
+                    moduleFormat,
                     emitDeclarationOnly: false,
                     declaration: false,
                     sourceMap: true,
                     minify: false,
                     out: `fesm${year}`
+                };
+
+                const fesmOutFilePath = this.getOutputFilePath(
+                    fesmCompilation,
+                    2,
+                    entryFilePath,
+                    false,
+                    tsConfigInfo,
+                    fesmCompilation.moduleFormat,
+                    fesmCompilation.scriptTarget
+                );
+
+                parsedScriptCompilations.push({
+                    ...fesmCompilation,
+
+                    _entryFilePath: entryFilePath,
+                    _outFilePath: fesmOutFilePath,
+                    _moduleFormat: moduleFormat,
+                    _scriptTarget: scriptTarget,
+                    _tsConfigInfo: tsConfigInfo,
+                    _emitDeclarationOnly: false,
+                    _declaration: false,
+                    _bundle: true,
+                    _minify: false,
+                    _sourceMap: true,
+                    _environmentTargets: [],
+                    _externals: [],
+                    _globals: {}
                 });
             } else {
+                // emitDeclarationOnly
+                let emitDeclarationOnly = false;
+                if (tsConfigInfo?.compilerOptions.emitDeclarationOnly != null) {
+                    emitDeclarationOnly = tsConfigInfo.compilerOptions.emitDeclarationOnly;
+                }
+
+                // declaration
+                let declaration = false;
+                if (emitDeclarationOnly) {
+                    declaration = true;
+                } else if (tsConfigInfo?.compilerOptions.declaration != null) {
+                    declaration = tsConfigInfo.compilerOptions.declaration;
+                }
+
+                // moduleFormat
                 let moduleFormat = this.getModuleFormat(null, tsConfigInfo, entryFilePath);
                 if (!moduleFormat) {
-                    moduleFormat = 'iife';
+                    moduleFormat = emitDeclarationOnly ? 'esm' : 'iife';
                 }
 
                 let scriptTarget = this.getScriptTarget(null, tsConfigInfo);
                 if (!scriptTarget) {
-                    scriptTarget = moduleFormat === 'iife' ? 'ES5' : 'ESNext';
+                    scriptTarget = moduleFormat === 'iife' && !emitDeclarationOnly ? 'ES5' : 'ESNext';
                 }
 
-                compilations.push({
+                const compilation: ScriptCompilation = {
                     bundle: true,
                     entry,
                     tsconfig,
+                    emitDeclarationOnly,
+                    declaration,
                     moduleFormat,
                     scriptTarget
+                };
+
+                const outFilePath = this.getOutputFilePath(
+                    compilation,
+                    0,
+                    entryFilePath,
+                    emitDeclarationOnly,
+                    tsConfigInfo,
+                    moduleFormat,
+                    scriptTarget
+                );
+
+                // environmentTargets
+                const environmentTargets: string[] = this.options.scriptOptions.environmentTargets ?? [];
+
+                // minify
+                const minify = moduleFormat === 'iife' && !emitDeclarationOnly ? true : false;
+
+                // sourceMap
+                let sourceMap = true;
+                if (emitDeclarationOnly) {
+                    sourceMap = false;
+                } else if (tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
+                    sourceMap = tsConfigInfo?.compilerOptions.inlineSourceMap;
+                } else if (tsConfigInfo?.compilerOptions.sourceMap != null) {
+                    sourceMap = tsConfigInfo?.compilerOptions.sourceMap;
+                }
+
+                // externals
+                const { externals, globals } = this.getExternalsAndGlobals(compilation);
+
+                parsedScriptCompilations.push({
+                    ...compilation,
+
+                    _entryFilePath: entryFilePath,
+                    _outFilePath: outFilePath,
+                    _moduleFormat: moduleFormat,
+                    _scriptTarget: scriptTarget,
+                    _tsConfigInfo: tsConfigInfo,
+                    _emitDeclarationOnly: emitDeclarationOnly,
+                    _declaration: declaration,
+                    _bundle: true,
+                    _sourceMap: sourceMap,
+                    _minify: minify,
+                    _environmentTargets: environmentTargets,
+                    _externals: externals,
+                    _globals: globals
                 });
             }
 
-            return compilations;
+            return parsedScriptCompilations;
         } else {
-            // Validations
-            //
             if (!this.options.scriptOptions.compilations.length) {
                 throw new InvalidConfigError(
                     'No compilation options.',
@@ -390,7 +510,7 @@ export class ScriptTaskRunner {
                 );
             }
 
-            const processedOutKeys: string[] = [];
+            const parsedScriptCompilations: ParsedScriptCompilation[] = [];
 
             for (let i = 0; i < this.options.scriptOptions.compilations.length; i++) {
                 const compilation = this.options.scriptOptions.compilations[i];
@@ -399,31 +519,115 @@ export class ScriptTaskRunner {
                     throw new InvalidConfigError(
                         'Invalid empty compilation options.',
                         this.options.workspaceInfo.configPath,
-                        `${this.configLocationPrefix}/scriptOptions/${i}`
+                        `${this.configLocationPrefix}/compilations/${i}`
                     );
                 }
 
-                const out = compilation.out ?? '';
-                const bundle = compilation.bundle ? 'bundle' : '';
-                const moduleFormat = compilation.moduleFormat ?? '';
-                const scriptTarget = compilation.scriptTarget ?? '';
-                const tsconfig = compilation.tsconfig ?? this.options.scriptOptions.tsconfig ?? '';
-                const declarationOnly = compilation.emitDeclarationOnly ? 'declarationOnly' : '';
+                const tsConfigPath = await this.getTsConfigPath(compilation, i);
+                const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, compilation, i) : null;
+                const entryFilePath = await this.getEntryFilePath(compilation, i);
+                const scriptTarget = this.getScriptTarget(compilation, tsConfigInfo);
+                const moduleFormat = this.getModuleFormat(compilation, tsConfigInfo, entryFilePath);
 
-                const outKey = `${out}!${bundle}!${moduleFormat}!${scriptTarget}!${tsconfig}!${declarationOnly}`;
+                // emitDeclarationOnly
+                let emitDeclarationOnly = false;
+                if (compilation.emitDeclarationOnly != null) {
+                    emitDeclarationOnly = compilation.emitDeclarationOnly;
+                } else if (tsConfigInfo?.compilerOptions.emitDeclarationOnly != null) {
+                    emitDeclarationOnly = tsConfigInfo.compilerOptions.emitDeclarationOnly;
+                }
 
-                if (processedOutKeys.includes(outKey)) {
+                // declaration
+                let declaration = false;
+                if (compilation.declaration != null) {
+                    declaration = compilation.declaration;
+                } else if (emitDeclarationOnly) {
+                    declaration = true;
+                } else if (tsConfigInfo?.compilerOptions.declaration != null) {
+                    declaration = tsConfigInfo.compilerOptions.declaration;
+                }
+
+                const outFilePath = this.getOutputFilePath(
+                    compilation,
+                    i,
+                    entryFilePath,
+                    emitDeclarationOnly,
+                    tsConfigInfo,
+                    moduleFormat,
+                    scriptTarget
+                );
+
+                if (!moduleFormat) {
                     throw new InvalidConfigError(
-                        'Duplicate compilation output options.',
+                        `Could not detect module format automatically. Specify 'moduleFormat' value in script compilations.`,
                         this.options.workspaceInfo.configPath,
-                        `${this.configLocationPrefix}/scriptOptions/${i}`
+                        `${this.configLocationPrefix}/compilations/${i}/moduleFormat`
                     );
                 }
 
-                processedOutKeys.push(outKey);
+                if (!scriptTarget) {
+                    throw new InvalidConfigError(
+                        `Could not detect script target automatically. Specify 'scriptTarget' value in script compilations.`,
+                        this.options.workspaceInfo.configPath,
+                        `${this.configLocationPrefix}/compilations/${i}/scriptTarget`
+                    );
+                }
+
+                // environmentTargets
+                const environmentTargets: string[] =
+                    compilation.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
+
+                // bundle
+                let bundle = true;
+                if (compilation.bundle != null) {
+                    bundle = compilation.bundle;
+                } else if (emitDeclarationOnly) {
+                    bundle = false;
+                }
+
+                // minify
+                let minify = false;
+                if (compilation.minify != null) {
+                    minify = compilation.minify;
+                } else {
+                    if (bundle && moduleFormat === 'iife' && !emitDeclarationOnly) {
+                        minify = true;
+                    }
+                }
+
+                // sourceMap
+                let sourceMap = true;
+                if (compilation.sourceMap != null) {
+                    sourceMap = compilation.sourceMap;
+                } else if (!emitDeclarationOnly && tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
+                    sourceMap = tsConfigInfo?.compilerOptions.inlineSourceMap;
+                } else if (!emitDeclarationOnly && tsConfigInfo?.compilerOptions.sourceMap != null) {
+                    sourceMap = tsConfigInfo?.compilerOptions.sourceMap;
+                }
+
+                // externals
+                const { externals, globals } = this.getExternalsAndGlobals(compilation);
+
+                parsedScriptCompilations.push({
+                    ...compilation,
+
+                    _entryFilePath: entryFilePath,
+                    _outFilePath: outFilePath,
+                    _moduleFormat: moduleFormat,
+                    _scriptTarget: scriptTarget,
+                    _tsConfigInfo: tsConfigInfo,
+                    _emitDeclarationOnly: emitDeclarationOnly,
+                    _declaration: declaration,
+                    _bundle: bundle,
+                    _minify: minify,
+                    _sourceMap: sourceMap,
+                    _environmentTargets: environmentTargets,
+                    _externals: externals,
+                    _globals: globals
+                });
             }
 
-            return this.options.scriptOptions.compilations;
+            return parsedScriptCompilations;
         }
     }
 
@@ -432,10 +636,21 @@ export class ScriptTaskRunner {
         compilation: ScriptCompilation | null,
         compilationIndex: number | null
     ): Promise<TsConfigInfo> {
-        const cachedTsConfigInfo = tsConfigInfoCache.get(tsConfigPath);
-        if (cachedTsConfigInfo) {
-            return cachedTsConfigInfo;
+        const projectRoot = this.options.workspaceInfo.projectRoot;
+
+        const locationKey = `${projectRoot}!${this.configLocationPrefix}/compilations/${compilationIndex ?? 0}`;
+        const cacheData = tsConfigInfoCache.get(tsConfigPath);
+        if (cacheData) {
+            if (cacheData.locationKey === locationKey) {
+                return cacheData.tsConfigInfo;
+            } else {
+                return JSON.parse(JSON.stringify(cacheData.tsConfigInfo)) as TsConfigInfo;
+            }
         }
+
+        const configLocation = compilation?.tsconfig
+            ? `${this.configLocationPrefix}/compilations/${compilationIndex ?? 0}/tsconfig`
+            : `${this.configLocationPrefix}/tsconfig`;
 
         const jsonText = await fs.readFile(tsConfigPath, 'utf-8');
 
@@ -446,11 +661,12 @@ export class ScriptTaskRunner {
                 ? '\n' + ts.flattenDiagnosticMessageText(configJson.error.messageText, '\n').trim()
                 : '';
             const tsConfigPathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), tsConfigPath));
-            const errMsg = `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`;
-            const configLocation = compilation?.tsconfig
-                ? `${this.configLocationPrefix}/compilations/[${compilationIndex}]/tsconfig`
-                : `${this.configLocationPrefix}/tsconfig`;
-            throw new InvalidConfigError(errMsg, this.options.workspaceInfo.configPath, configLocation);
+
+            throw new InvalidConfigError(
+                `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`,
+                this.options.workspaceInfo.configPath,
+                configLocation
+            );
         }
 
         const parsedConfig = ts.parseJsonConfigFileContent(configJson.config, ts.sys, path.dirname(tsConfigPath));
@@ -461,55 +677,24 @@ export class ScriptTaskRunner {
                 .join('\n');
 
             const tsConfigPathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), tsConfigPath));
-            const errMsg = `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`;
-            const configLocation = compilation?.tsconfig
-                ? `${this.configLocationPrefix}/compilations/[${compilationIndex}]/tsconfig`
-                : `${this.configLocationPrefix}/tsconfig`;
-            throw new InvalidConfigError(errMsg, this.options.workspaceInfo.configPath, configLocation);
-        }
 
-        const compilerOptions = parsedConfig.options;
-
-        if (compilation?.declaration != null) {
-            compilerOptions.declaration = compilation.declaration;
-        }
-
-        if (compilation?.emitDeclarationOnly != null) {
-            compilerOptions.emitDeclarationOnly = compilation.emitDeclarationOnly;
-            if (compilation.emitDeclarationOnly) {
-                compilerOptions.declaration = true;
-            }
-        }
-
-        if (compilation?.sourceMap != null) {
-            if (compilerOptions.sourceMap != null && compilerOptions.inlineSourceMap != null) {
-                if (compilation?.bundle !== false) {
-                    compilerOptions.sourceMap = compilation.sourceMap;
-                    compilerOptions.inlineSourceMap = undefined;
-                } else {
-                    compilerOptions.sourceMap = undefined;
-                    compilerOptions.inlineSourceMap = compilation.sourceMap;
-                }
-            } else if (compilerOptions.sourceMap == null && compilerOptions.inlineSourceMap == null) {
-                if (compilation?.bundle !== false) {
-                    compilerOptions.sourceMap = compilation.sourceMap;
-                } else {
-                    compilerOptions.inlineSourceMap = compilation.sourceMap;
-                }
-            } else if (compilerOptions.sourceMap != null) {
-                compilerOptions.sourceMap = compilation.sourceMap;
-            } else {
-                compilerOptions.inlineSourceMap = compilation.sourceMap;
-            }
+            throw new InvalidConfigError(
+                `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`,
+                this.options.workspaceInfo.configPath,
+                configLocation
+            );
         }
 
         const tsConfigInfo: TsConfigInfo = {
             configPath: tsConfigPath,
             fileNames: parsedConfig.fileNames,
-            compilerOptions
+            compilerOptions: parsedConfig.options
         };
 
-        tsConfigInfoCache.set(tsConfigPath, tsConfigInfo);
+        tsConfigInfoCache.set(tsConfigPath, {
+            locationKey,
+            tsConfigInfo
+        });
 
         return tsConfigInfo;
     }
@@ -519,7 +704,12 @@ export class ScriptTaskRunner {
         compilationIndex: number | null
     ): Promise<string | null> {
         const tsConfigFile = compilation?.tsconfig ?? this.options.scriptOptions.tsconfig;
+
         if (tsConfigFile) {
+            const configLocation = compilation?.tsconfig
+                ? `${this.configLocationPrefix}/compilations/${compilationIndex}/tsconfig`
+                : `${this.configLocationPrefix}/tsconfig`;
+
             const projectRoot = this.options.workspaceInfo.projectRoot;
             const normalizedTsConfigFile = normalizePathToPOSIXStyle(tsConfigFile);
             const cacheKey = `${projectRoot}!${normalizedTsConfigFile}`;
@@ -533,21 +723,21 @@ export class ScriptTaskRunner {
                 normalizedTsConfigFile.length < 6 ||
                 !/\.json$/i.test(normalizedTsConfigFile)
             ) {
-                const errMsg = `Invalid tsconfig file ${tsConfigFile}.`;
-                const configLocation = compilation?.tsconfig
-                    ? `${this.configLocationPrefix}/compilations/[${compilationIndex}]/tsconfig`
-                    : `${this.configLocationPrefix}/tsconfig`;
-                throw new InvalidConfigError(errMsg, this.options.workspaceInfo.configPath, configLocation);
+                throw new InvalidConfigError(
+                    `Invalid tsconfig file ${tsConfigFile}.`,
+                    this.options.workspaceInfo.configPath,
+                    configLocation
+                );
             }
 
             const tsConfigFilePath = resolvePath(projectRoot, normalizedTsConfigFile);
 
             if (!(await pathExists(tsConfigFilePath, true))) {
-                const errMsg = `The tsconfig file ${tsConfigFile} doesn't exist.`;
-                const configLocation = compilation?.tsconfig
-                    ? `${this.configLocationPrefix}/compilations/[${compilationIndex}]/tsconfig`
-                    : `${this.configLocationPrefix}/tsconfig`;
-                throw new InvalidConfigError(errMsg, this.options.workspaceInfo.configPath, configLocation);
+                throw new InvalidConfigError(
+                    `The tsconfig file ${tsConfigFile} doesn't exist.`,
+                    this.options.workspaceInfo.configPath,
+                    configLocation
+                );
             }
 
             tsConfigPathsCache.set(cacheKey, tsConfigFilePath);
@@ -565,8 +755,6 @@ export class ScriptTaskRunner {
         if (cachedPath != null) {
             return cachedPath.length ? cachedPath : null;
         }
-
-        this.logger.debug('Detecting tsconfig file...');
 
         const configFiles = [
             'tsconfig.build.json',
@@ -588,9 +776,6 @@ export class ScriptTaskRunner {
 
         if (foundPath) {
             tsConfigPathsCache.set(cacheKey, foundPath);
-
-            const relPath = normalizePathToPOSIXStyle(path.relative(process.cwd(), foundPath));
-            this.logger.debug(`${relPath} is detected as a tsconfig file.`);
         } else {
             tsConfigPathsCache.set(cacheKey, '');
         }
@@ -602,9 +787,7 @@ export class ScriptTaskRunner {
         const projectRoot = this.options.workspaceInfo.projectRoot;
         const projectName = this.options.workspaceInfo.projectName;
         const configPath = this.options.workspaceInfo.configPath;
-        const configLocation = `projects/${
-            projectName ?? '0'
-        }/tasks/build/script/compilations/[${compilationIndex}]/entry`;
+        const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/entry`;
 
         if (compilation.entry) {
             const normalizedEntry = normalizePathToPOSIXStyle(compilation.entry);
@@ -667,8 +850,6 @@ export class ScriptTaskRunner {
                 return cached;
             }
 
-            this.logger.debug('Detecting entry file...');
-
             let foundPath = tsConfigInfo.fileNames[0];
 
             if (lastPartPackageName) {
@@ -683,9 +864,6 @@ export class ScriptTaskRunner {
 
             entryFilePathsCache.set(cacheKey, foundPath);
 
-            const relPath = normalizePathToPOSIXStyle(path.relative(process.cwd(), foundPath));
-            this.logger.debug(`${relPath} is detected as an entry file.`);
-
             return foundPath;
         } else {
             const projectRoot = this.options.workspaceInfo.projectRoot;
@@ -694,8 +872,6 @@ export class ScriptTaskRunner {
             if (cached !== null) {
                 return cached?.length ? cached : null;
             }
-
-            this.logger.debug('Detecting entry file...');
 
             const packageNameEntryNames: string[] = [];
             const commonEntryNames = [
@@ -809,6 +985,8 @@ export class ScriptTaskRunner {
         }
 
         if (compilation.out?.trim().length) {
+            const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/out`;
+
             let outFilePath: string;
             const normalziedOut = normalizePathToPOSIXStyle(compilation.out);
             const normalziedOutExt = path.extname(normalziedOut);
@@ -823,7 +1001,7 @@ export class ScriptTaskRunner {
                     throw new InvalidConfigError(
                         'Invalid file extension to emit declarations.',
                         this.options.workspaceInfo.configPath,
-                        `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
+                        configLocation
                     );
                 }
 
@@ -846,7 +1024,7 @@ export class ScriptTaskRunner {
                 throw new InvalidConfigError(
                     'The compilation output path must not be the same as entry file path.',
                     this.options.workspaceInfo.configPath,
-                    `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
+                    configLocation
                 );
             }
 
@@ -854,14 +1032,12 @@ export class ScriptTaskRunner {
                 throw new InvalidConfigError(
                     'The compilation output path must not be outside of project outDir.',
                     this.options.workspaceInfo.configPath,
-                    `${this.configLocationPrefix}/compilations/[${compilationIndex}]/out`
+                    configLocation
                 );
             }
 
             return outFilePath;
         } else {
-            this.logger.debug('Detecting output file...');
-
             let customOutDir = this.options.outDir;
             let outFileName =
                 entryFileName.substring(0, entryFileName.length - entryFileExt.length) + suggestedOutFileExt;
@@ -891,7 +1067,9 @@ export class ScriptTaskRunner {
                     }
                 }
 
-                if (!forTypesOutput && moduleFormat === 'esm' && scriptTarget && scriptTarget !== 'ES5') {
+                if (forTypesOutput) {
+                    customOutDir = path.resolve(customOutDir, `types`);
+                } else if (moduleFormat === 'esm' && scriptTarget && scriptTarget !== 'ES5') {
                     const year = this.getYearFromScriptTarget(scriptTarget);
 
                     if (year > 2014) {
@@ -900,6 +1078,8 @@ export class ScriptTaskRunner {
                                 ? path.resolve(customOutDir, `fesm${year}`)
                                 : path.resolve(customOutDir, `esm${year}`);
                     }
+                } else if (compilation.bundle !== false && moduleFormat === 'iife') {
+                    customOutDir = path.resolve(customOutDir, `bundle`);
                 }
             }
 
@@ -908,9 +1088,6 @@ export class ScriptTaskRunner {
             }
 
             const outputPath = resolvePath(customOutDir, outFileName);
-
-            const relPath = normalizePathToPOSIXStyle(path.relative(process.cwd(), outputPath));
-            this.logger.debug(`${relPath} will be used as a main output file.`);
 
             return outputPath;
         }
@@ -1036,13 +1213,13 @@ export class ScriptTaskRunner {
         return undefined;
     }
 
-    private getExternalsAndGlobals(compilation: ScriptCompilation): {
+    private getExternalsAndGlobals(compilation: ScriptCompilation | null): {
         externals: string[];
         globals: Record<string, string>;
     } {
         const externalGlobalMap = new Map<string, string>();
         const externals: string[] = [];
-        const excludes = compilation.externalExclude ?? this.options.scriptOptions.externalExclude ?? [];
+        const excludes = compilation?.externalExclude ?? this.options.scriptOptions.externalExclude ?? [];
 
         if (this.options.scriptOptions.packageDependenciesAsExternals !== false) {
             if (this.options.packageJsonInfo?.packageJson?.devDependencies) {

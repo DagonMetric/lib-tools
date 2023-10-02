@@ -1,19 +1,11 @@
 /* eslint-disable import/default */
 /* eslint-disable import/no-named-as-default-member */
-
 import * as path from 'node:path';
 
 import ts from 'typescript';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
-import {
-    LoggerBase,
-    colors,
-    formatSizeInBytes,
-    isInFolder,
-    isSamePaths,
-    normalizePathToPOSIXStyle
-} from '../../../../../utils/index.js';
+import { LoggerBase, colors, isInFolder, isSamePaths, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
 import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
@@ -75,6 +67,12 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         compilerOptions.sourceMap = undefined;
     }
 
+    compilerOptions.emitDeclarationOnly = options.emitDeclarationOnly;
+
+    if (options.declaration != null) {
+        compilerOptions.declaration = options.declaration;
+    }
+
     if (compilerOptions.emitDeclarationOnly) {
         compilerOptions.declaration = true;
         compilerOptions.sourceMap = undefined;
@@ -107,12 +105,25 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     }
 
     if (compilerOptions.emitDeclarationOnly) {
-        logger.info('Generating typing declaration files with tsc...');
+        logger.info(`Generating typing declaration files with ${colors.lightMagenta('tsc')}...`);
     } else {
-        logger.info(
-            `Compiling with tsc, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
-        );
+        logger.info(`Compiling with ${colors.lightMagenta('tsc')}...`);
     }
+
+    const entryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath));
+    let infoMsg = `Using entry file: ${entryFilePathRel}`;
+    if (options.tsConfigInfo?.configPath) {
+        const tsConfigPathRel = normalizePathToPOSIXStyle(
+            path.relative(process.cwd(), options.tsConfigInfo.configPath)
+        );
+        infoMsg += `\nUsing tsconfig file: ${tsConfigPathRel}`;
+    }
+
+    infoMsg += `\nWith script target: '${ts.ScriptTarget[compilerOptions.target]}'`;
+    if (compilerOptions.module != null) {
+        infoMsg += ` and module format: '${ts.ModuleKind[compilerOptions.module]}'`;
+    }
+    logger.info(infoMsg);
 
     const startTime = Date.now();
     const host = ts.createCompilerHost(compilerOptions);
@@ -139,10 +150,10 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         const size = Buffer.byteLength(content, 'utf-8');
 
         if (options.dryRun) {
-            logger.debug(`Built: ${pathRel}, size: ${formatSizeInBytes(size)}`);
+            logger.info(`Built: ${pathRel}`);
         } else {
             baseWriteFile.call(host, newOutFilePath, content, writeByteOrderMark, onError, sourceFiles);
-            logger.debug(`Emitted: ${pathRel}, size: ${formatSizeInBytes(size)}`);
+            logger.info(`Emitted: ${pathRel}`);
         }
 
         builtAssets.push({
@@ -215,11 +226,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         builtAssets,
         time: Date.now() - startTime
     };
-
-    const builtAssetsCount = builtAssets.length;
-    const msgSuffix = options.dryRun ? 'built' : 'emitted';
-    const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
-    logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
 
     return Promise.resolve(result);
 }

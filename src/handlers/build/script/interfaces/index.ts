@@ -15,6 +15,8 @@ export interface CompileOptions {
     readonly entryFilePath: string;
     readonly outFilePath: string;
     readonly tsConfigInfo: TsConfigInfo | null | undefined;
+    readonly emitDeclarationOnly: boolean;
+    readonly declaration: boolean | undefined;
     readonly moduleFormat: ScriptModuleFormat;
     readonly scriptTarget: ScriptTargetStrings;
     readonly environmentTargets: string[];
