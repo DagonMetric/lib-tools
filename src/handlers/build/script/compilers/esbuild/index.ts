@@ -3,17 +3,16 @@ import * as esbuild from 'esbuild';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { CompilationError } from '../../../../../../exceptions/index.js';
+import { CompilationError } from '../../../../../exceptions/index.js';
 import {
     LoggerBase,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle,
     pathExists
-} from '../../../../../../utils/index.js';
+} from '../../../../../utils/index.js';
 
-import { CompileOptions } from '../../compile-options.js';
-import { CompileResult } from '../../compile-result.js';
+import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
 function getEsBuildTargets(options: CompileOptions): string[] {
     const targets: string[] = [options.scriptTarget.toLowerCase()];

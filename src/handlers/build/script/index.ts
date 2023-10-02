@@ -1,8 +1,8 @@
 /* eslint-disable import/default */
 /* eslint-disable import/no-named-as-default-member */
-
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import ts from 'typescript';
 
@@ -29,8 +29,8 @@ import {
 } from '../../../utils/index.js';
 
 import { BuildTaskHandleContext } from '../../interfaces/index.js';
-import { CompileOptions, TsConfigInfo } from './compile/compile-options.js';
-import { CompileResult } from './compile/compile-result.js';
+
+import { CompileOptions, CompileResult, CompilerFn, TsConfigInfo } from './interfaces/index.js';
 
 const supportdEntryExtPattern = '\\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$';
 const supportdEntryExtRegExp = new RegExp(supportdEntryExtPattern, 'i');
@@ -38,7 +38,9 @@ const supportedOutExtRegExp = /\.(d\.[cm]?ts|mjs|cjs|json|jsx?)$/i;
 const tsConfigPathsCache = new Map<string, string>();
 const tsConfigInfoCache = new Map<string, TsConfigInfo>();
 const entryFilePathsCache = new Map<string, string>();
-const toolCache = new Map<string, (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>>();
+const compilerCache = new Map<string, CompilerFn>();
+
+export * from './interfaces/index.js';
 
 export interface ScriptTaskRunnerOptions {
     readonly scriptOptions: ScriptOptions;
@@ -202,25 +204,68 @@ export class ScriptTaskRunner {
 
             let compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
 
-            if (!bundle || compilation.emitDeclarationOnly) {
-                const cacheKey = 'typescript';
-                const cachefn = toolCache.get(cacheKey);
+            if (
+                compilation.compiler?.toLowerCase().trim() === 'tsc' ||
+                compilation.compiler?.toLowerCase().trim() === 'typescript' ||
+                !bundle ||
+                compilation.emitDeclarationOnly
+            ) {
+                const cacheKey = 'tsc';
+                const cachefn = compilerCache.get(cacheKey);
                 if (cachefn) {
                     compilerFn = cachefn;
                 } else {
-                    const compilerModule = await import('./compile/tools/typescript/index.js');
+                    const compilerModule = await import('./compilers/tsc/index.js');
                     compilerFn = compilerModule.default;
-                    toolCache.set(cacheKey, compilerModule.default);
+                    compilerCache.set(cacheKey, compilerModule.default);
+                }
+            } else if (
+                compilation.compiler?.toLowerCase().trim() === 'webpack' ||
+                (bundle && compileOptions.moduleFormat === 'iife')
+            ) {
+                const cacheKey = 'webpack';
+                const cachefn = compilerCache.get(cacheKey);
+                if (cachefn) {
+                    compilerFn = cachefn;
+                } else {
+                    const compilerModule = await import('./compilers/webpack/index.js');
+                    compilerFn = compilerModule.default;
+                    compilerCache.set(cacheKey, compilerModule.default);
+                }
+            } else if (compilation.compiler && compilation.compiler.trim().length > 0) {
+                const handlerStr = compilation.compiler.trim();
+                const cacheKey = handlerStr;
+                const cachefn = compilerCache.get(cacheKey);
+                if (cachefn) {
+                    compilerFn = cachefn;
+                } else {
+                    const projectRoot = this.options.workspaceInfo.projectRoot;
+                    const handlerPath = resolvePath(projectRoot, handlerStr);
+
+                    const compilerModule = (await import(pathToFileURL(handlerPath).toString())) as {
+                        default?: CompilerFn;
+                    };
+
+                    if (!compilerModule.default || typeof compilerModule.default !== 'function') {
+                        throw new InvalidConfigError(
+                            'No default function export found for custom compiler module.',
+                            this.options.workspaceInfo.configPath,
+                            `${this.configLocationPrefix}/compilations/${i}/compiler`
+                        );
+                    }
+
+                    compilerFn = compilerModule.default;
+                    compilerCache.set(cacheKey, compilerModule.default);
                 }
             } else {
                 const cacheKey = 'esbuild';
-                const cachefn = toolCache.get(cacheKey);
+                const cachefn = compilerCache.get(cacheKey);
                 if (cachefn) {
                     compilerFn = cachefn;
                 } else {
-                    const compilerModule = await import('./compile/tools/esbuild/index.js');
+                    const compilerModule = await import('./compilers/esbuild/index.js');
                     compilerFn = compilerModule.default;
-                    toolCache.set(cacheKey, compilerModule.default);
+                    compilerCache.set(cacheKey, compilerModule.default);
                 }
             }
 

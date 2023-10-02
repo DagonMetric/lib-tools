@@ -5,7 +5,7 @@ import * as path from 'node:path';
 
 import ts from 'typescript';
 
-import { CompilationError } from '../../../../../../exceptions/index.js';
+import { CompilationError } from '../../../../../exceptions/index.js';
 import {
     LoggerBase,
     colors,
@@ -13,10 +13,9 @@ import {
     isInFolder,
     isSamePaths,
     normalizePathToPOSIXStyle
-} from '../../../../../../utils/index.js';
+} from '../../../../../utils/index.js';
 
-import { CompileOptions } from '../../compile-options.js';
-import { CompileResult } from '../../compile-result.js';
+import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
 export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     const projectRoot = options.workspaceInfo.projectRoot;
@@ -108,10 +107,10 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     }
 
     if (compilerOptions.emitDeclarationOnly) {
-        logger.info('Generating typing declaration files with typescript...');
+        logger.info('Generating typing declaration files with tsc...');
     } else {
         logger.info(
-            `Compiling with typescript, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
+            `Compiling with tsc, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
         );
     }
 

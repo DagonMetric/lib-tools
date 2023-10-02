@@ -5,10 +5,9 @@ import * as path from 'node:path';
 import ts from 'typescript';
 import webpackDefault, { Configuration, StatsAsset } from 'webpack';
 
-import { LoggerBase, normalizePathToPOSIXStyle } from '../../../../../../utils/index.js';
+import { LoggerBase, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
-import { CompileOptions } from '../../compile-options.js';
-import { CompileResult } from '../../compile-result.js';
+import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
 import { ScriptWebpackPlugin } from './plugins/script-webpack-plugin/index.js';
 

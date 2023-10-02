@@ -1,13 +1,13 @@
 import { Compiler, sources } from 'webpack';
 
-import { CompilationError } from '../../../../../../../../exceptions/index.js';
+import { CompilationError } from '../../../../../../../exceptions/index.js';
 import {
     LogLevelStrings,
     LoggerBase,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle
-} from '../../../../../../../../utils/index.js';
+} from '../../../../../../../utils/index.js';
 
 export interface ScriptWebpackPluginOptions {
     readonly outDir: string;
