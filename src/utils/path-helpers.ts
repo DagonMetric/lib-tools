@@ -214,7 +214,7 @@ async function globSearch(normalizedPathOrPattern: string, cwd: string, useCache
     if (useCache) {
         const cached = globCache.get(cacheKey);
         if (cached) {
-            return cached;
+            return JSON.parse(JSON.stringify(cached)) as string[];
         }
     }
 
@@ -254,7 +254,7 @@ export async function getAbsolutePathInfoes(
     if (useCache) {
         const cached = getAbsolutePathInfoesCache.get(cacheKey);
         if (cached) {
-            return cached;
+            return JSON.parse(JSON.stringify(cached)) as AbsolutePathInfo[];
         }
     }
 
