@@ -9,21 +9,17 @@ import { LoggerBase, colors, isInFolder, isSamePaths, normalizePathToPOSIXStyle 
 
 import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
-export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    const projectRoot = options.workspaceInfo.projectRoot;
-    const outDir = path.dirname(options.outFilePath);
-    const outFileName = path.basename(options.outFilePath);
-    const outFileExt = path.extname(options.outFilePath);
-    const entryOutFileWithoutExt = options.entryFilePath.substring(
-        0,
-        options.entryFilePath.length - path.extname(options.entryFilePath).length
-    );
-
-    const builtAssets: { path: string; size: number }[] = [];
-
+function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     const compilerOptions: ts.CompilerOptions = options.tsConfigInfo?.compilerOptions
         ? { ...options.tsConfigInfo.compilerOptions }
         : {};
+
+    compilerOptions.outDir = path.dirname(options.outFilePath);
+    compilerOptions.rootDir = path.dirname(options.entryFilePath);
+
+    if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
+        compilerOptions.allowJs = true;
+    }
 
     if (compilerOptions.target !== ts.ScriptTarget[options.scriptTarget]) {
         compilerOptions.target = ts.ScriptTarget[options.scriptTarget];
@@ -31,11 +27,18 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
 
     if (options.moduleFormat === 'cjs') {
         if (
-            compilerOptions.module !== ts.ModuleKind.CommonJS &&
-            compilerOptions.module !== ts.ModuleKind.Node16 &&
-            compilerOptions.module !== ts.ModuleKind.NodeNext
+            compilerOptions.module == null ||
+            (compilerOptions.module !== ts.ModuleKind.CommonJS &&
+                compilerOptions.module !== ts.ModuleKind.Node16 &&
+                compilerOptions.module !== ts.ModuleKind.NodeNext)
         ) {
-            compilerOptions.module = ts.ModuleKind.CommonJS;
+            if ((compilerOptions.target as number) > 8) {
+                // TODO: To review
+                compilerOptions.module = ts.ModuleKind.NodeNext;
+            } else {
+                // TODO: To review
+                compilerOptions.module = ts.ModuleKind.CommonJS;
+            }
         }
     } else if (options.moduleFormat === 'esm') {
         if (
@@ -46,6 +49,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             compilerOptions.module === ts.ModuleKind.System ||
             compilerOptions.module === ts.ModuleKind.UMD
         ) {
+            // TODO: To review
             compilerOptions.module = ts.ModuleKind.ESNext;
         }
     } else if (options.moduleFormat === 'iife') {
@@ -53,21 +57,15 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             compilerOptions.module = ts.ModuleKind.UMD;
         }
 
+        // TODO: To review
         if (compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
             compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
         }
     }
 
-    compilerOptions.outDir = outDir;
-    if (compilerOptions.rootDir != null) {
-        compilerOptions.rootDir = path.dirname(options.entryFilePath);
+    if (options.emitDeclarationOnly != null) {
+        compilerOptions.emitDeclarationOnly = options.emitDeclarationOnly;
     }
-
-    if (compilerOptions.sourceMap != null && compilerOptions.inlineSourceMap != null) {
-        compilerOptions.sourceMap = undefined;
-    }
-
-    compilerOptions.emitDeclarationOnly = options.emitDeclarationOnly;
 
     if (options.declaration != null) {
         compilerOptions.declaration = options.declaration;
@@ -83,26 +81,38 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             compilerOptions.types = undefined;
         }
     } else {
-        if (options.sourceMap != null) {
-            if (compilerOptions.sourceMap != null) {
-                compilerOptions.sourceMap = options.sourceMap;
-            } else {
-                compilerOptions.inlineSourceMap = options.sourceMap;
-            }
-        }
-
-        if (compilerOptions.inlineSources == null && (compilerOptions.inlineSourceMap ?? compilerOptions.sourceMap)) {
-            compilerOptions.inlineSources = true;
-        }
-
-        if (compilerOptions.sourceRoot != null) {
+        if (options.sourceMap) {
             compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+
+            if (
+                (compilerOptions.sourceMap && compilerOptions.inlineSourceMap) ??
+                (!compilerOptions.sourceMap && !compilerOptions.inlineSourceMap)
+            ) {
+                compilerOptions.sourceMap = true;
+                compilerOptions.inlineSourceMap = false;
+            }
+        } else {
+            compilerOptions.sourceMap = false;
+            compilerOptions.inlineSourceMap = false;
+            compilerOptions.inlineSources = false;
+            compilerOptions.sourceRoot = undefined;
         }
     }
 
-    if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
-        compilerOptions.allowJs = true;
-    }
+    return compilerOptions;
+}
+
+export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+    const projectRoot = options.workspaceInfo.projectRoot;
+    const outFileName = path.basename(options.outFilePath);
+    const outFileExt = path.extname(options.outFilePath);
+    const entryOutFileWithoutExt = options.entryFilePath.substring(
+        0,
+        options.entryFilePath.length - path.extname(options.entryFilePath).length
+    );
+    const compilerOptions = getTsCompilerOptions(options);
+
+    const builtAssets: { path: string; size: number }[] = [];
 
     if (compilerOptions.emitDeclarationOnly) {
         logger.info(`Generating typing declaration files with ${colors.lightMagenta('tsc')}...`);
@@ -111,17 +121,18 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     }
 
     const entryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath));
-    let infoMsg = `Using entry file: ${entryFilePathRel}`;
+    logger.info(`With entry file: ${entryFilePathRel}`);
     if (options.tsConfigInfo?.configPath) {
         const tsConfigPathRel = normalizePathToPOSIXStyle(
             path.relative(process.cwd(), options.tsConfigInfo.configPath)
         );
-        infoMsg += `\nUsing tsconfig file: ${tsConfigPathRel}`;
+
+        logger.info(`With tsconfig file: ${tsConfigPathRel}`);
     }
 
-    infoMsg += `\nWith script target: '${ts.ScriptTarget[compilerOptions.target]}'`;
+    let infoMsg = `With script target: '${options.scriptTarget}'`;
     if (compilerOptions.module != null) {
-        infoMsg += ` and module format: '${ts.ModuleKind[compilerOptions.module]}'`;
+        infoMsg += `, module format: '${ts.ModuleKind[compilerOptions.module]}'`;
     }
     logger.info(infoMsg);
 
@@ -168,7 +179,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         let file: string | undefined = baseReadFile.call(host, filePath);
         const filePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), filePath));
         if (file && isInFolder(projectRoot, filePath) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
-            if (!compilerOptions.emitDeclarationOnly) {
+            if (!compilerOptions.emitDeclarationOnly && options.substitutions) {
                 for (const substitution of options.substitutions.filter((s) => !s.bannerOnly)) {
                     const m = file.match(substitution.searchRegExp);
                     if (m != null && m.length > 0) {

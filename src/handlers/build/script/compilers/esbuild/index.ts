@@ -34,10 +34,10 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     } else if (
         options.moduleFormat === 'cjs' ||
         path.extname(options.outFilePath).toLowerCase() === '.cjs' ||
-        options.environmentTargets.find((t) => t.startsWith('node') || t.startsWith('deno')) != null
+        options.environmentTargets?.find((t) => t.startsWith('node') || t.startsWith('deno')) != null
     ) {
         return 'node';
-    } else if (options.moduleFormat === 'iife' || options.environmentTargets.find((t) => t === 'web') != null) {
+    } else if (options.moduleFormat === 'iife' || options.environmentTargets?.find((t) => t === 'web') != null) {
         return 'browser';
     }
 

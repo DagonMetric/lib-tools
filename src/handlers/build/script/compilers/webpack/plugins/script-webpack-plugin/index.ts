@@ -1,4 +1,6 @@
-import { Compiler, sources } from 'webpack';
+import * as path from 'node:path';
+
+import { Compiler, StatsAsset, sources } from 'webpack';
 
 import { CompilationError } from '../../../../../../../exceptions/index.js';
 import {
@@ -12,7 +14,7 @@ import {
 export interface ScriptWebpackPluginOptions {
     readonly outDir: string;
     readonly logger: LoggerBase;
-    readonly logLevel: LogLevelStrings;
+    readonly logLevel: LogLevelStrings | undefined;
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
@@ -62,6 +64,10 @@ export class ScriptWebpackPlugin {
                                     };
 
                                     if (!cached || cached.comment !== comment) {
+                                        const fileRel = normalizePathToPOSIXStyle(
+                                            path.relative(process.cwd(), path.resolve(this.options.outDir, file))
+                                        );
+                                        this.logger.debug(`Adding banner to file ${fileRel}`);
                                         const source = new compiler.webpack.sources.ConcatSource(comment, '\n', old);
 
                                         bannerCache.set(old, { source, comment });
@@ -96,37 +102,30 @@ export class ScriptWebpackPlugin {
                     }
                 }
             );
-        });
 
-        compiler.hooks.afterCompile.tap(this.name, (compilation) => {
-            if (compilation.getStats().hasErrors()) {
-                return;
-            }
+            // If emitDeclarationOnly then supress .js output
+            // compilation.hooks.chunkAsset.tap(this.name, (chunk, filename) => {
+            //     if (!filename.endsWith('.js') || !this.options.emitDeclarationOnly) {
+            //         return;
+            //     }
 
-            for (const [assetName, source] of Object.entries(compilation.assets)) {
-                const assetPath = compilation.getAssetPath(assetName, { hash: compilation.hash });
-                const assetSize = source.size();
-
-                this.logger.info(`Built: ${assetPath}, size: ${formatSizeInBytes(assetSize)}`);
-            }
+            //     chunk.files.delete(filename);
+            //     compilation.deleteAsset(filename);
+            // });
         });
 
         compiler.hooks.shouldEmit.tap(this.name, (compilation) => {
-            if (compilation.getStats().hasErrors()) {
+            // if (this.options.emitDeclarationOnly) {
+            //     compilation.errors = compilation.errors.filter((err) => {
+            //         !err.message.includes('TypeScript emitted no output for ');
+            //     });
+            // }
+
+            if (compilation.errors.length > 0) {
                 return false;
             }
 
-            if (this.options.dryRun) {
-                this.logger.info('Emiting is not performed because the dryRun parameter is passed.');
-            } else {
-                this.logger.info('Emiting...');
-            }
-
             return !this.options.dryRun;
-        });
-
-        compiler.hooks.assetEmitted.tap(this.name, (_1, { targetPath }) => {
-            this.logger.debug(`${targetPath} emitted.`);
         });
 
         compiler.hooks.done.tap(this.name, (stats) => {
@@ -237,29 +236,51 @@ export class ScriptWebpackPlugin {
                 throw new CompilationError(errorMessage);
             }
 
-            const builtAssetsCount = Object.keys(stats.compilation.assets).length;
-            const msgSuffix = this.options.dryRun ? 'built' : 'emitted';
-            const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
-            this.logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
+            const statsJson = stats.toJson({
+                version: false,
+                hash: false,
+                publicPath: false,
+                chunks: false,
+                chunkGroups: false,
+                modules: false,
+                entrypoints: false,
+                errors: false,
+                errorsCount: false,
+                warnings: false,
+                warningsCount: false,
+                builtAt: false,
+                children: false,
+                timings: true,
+                outputPath: true,
+                assets: true
+            });
 
-            if (this.options.logLevel === 'debug') {
-                const msg = stats.toString();
-                if (msg?.trim()) {
-                    this.logger.group(colors.lightMagenta('Webpack stats start'));
-                    this.logger.debug(msg);
-                    this.logger.groupEnd();
-                    this.logger.debug(colors.lightMagenta('Webpack stats end'));
+            const outputPath = statsJson.outputPath ?? this.options.outDir;
+            this.displayBuiltAssets(statsJson.assets ?? [], outputPath);
+
+            if (stats.hasWarnings()) {
+                let msg = stats.toString('errors-warnings').trim();
+                const warningPrefixRegExp = /^(Warn(ing)?\s?:?\s*)/i;
+                if (warningPrefixRegExp.test(msg)) {
+                    msg = msg.replace(warningPrefixRegExp, '').trim();
                 }
-            } else {
-                if (stats.hasWarnings()) {
-                    let msg = stats.toString('errors-warnings').trim();
-                    const warningPrefixRegExp = /^(Warn(ing)?\s?:?\s*)/i;
-                    if (warningPrefixRegExp.test(msg)) {
-                        msg = msg.replace(warningPrefixRegExp, '').trim();
-                    }
-                    this.logger.warn(msg);
-                }
+                this.logger.warn(msg);
             }
         });
+    }
+
+    private displayBuiltAssets(assets: StatsAsset[], outputPath: string): void {
+        for (const asset of assets) {
+            const outputFilePath = path.resolve(outputPath, asset.name);
+            const outputFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), outputFilePath));
+
+            const prefix = asset.emitted ? 'Emitted: ' : 'Built: ';
+            const suffix = ` - ${formatSizeInBytes(asset.size)}`;
+            this.logger.info(`${prefix}${outputFilePathRel}${suffix}`);
+
+            if (asset.related && Array.isArray(asset.related)) {
+                this.displayBuiltAssets(asset.related, outputPath);
+            }
+        }
     }
 }

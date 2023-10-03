@@ -48,12 +48,12 @@ interface ParsedScriptCompilation extends ScriptCompilation {
     readonly _bundle: boolean;
     readonly _sourceMap: boolean;
     readonly _minify: boolean;
-    readonly _environmentTargets: string[];
-    readonly _externals: string[];
-    readonly _tsConfigInfo: TsConfigInfo | null | undefined;
+    readonly _environmentTargets: string[] | undefined;
+    readonly _externals: string[] | undefined;
+    readonly _tsConfigInfo: TsConfigInfo | undefined;
     readonly _declaration: boolean | undefined;
-    readonly _emitDeclarationOnly: boolean;
-    readonly _globals: Record<string, string>;
+    readonly _emitDeclarationOnly: boolean | undefined;
+    readonly _globals: Record<string, string> | undefined;
 }
 
 export * from './interfaces/index.js';
@@ -111,17 +111,17 @@ export class ScriptTaskRunner {
                 workspaceInfo: this.options.workspaceInfo,
                 entryFilePath: compilation._entryFilePath,
                 outFilePath: compilation._outFilePath,
-                tsConfigInfo: compilation._tsConfigInfo,
-                emitDeclarationOnly: compilation._emitDeclarationOnly,
-                declaration: compilation._declaration,
                 moduleFormat: compilation._moduleFormat,
                 scriptTarget: compilation._scriptTarget,
-                environmentTargets: compilation._environmentTargets,
-                externals: compilation._externals,
-                globals: compilation._globals,
                 sourceMap: compilation._sourceMap,
                 minify: compilation._minify,
                 globalName: compilation.globalName,
+                tsConfigInfo: compilation._tsConfigInfo,
+                emitDeclarationOnly: compilation._emitDeclarationOnly,
+                declaration: compilation._declaration,
+                environmentTargets: compilation._environmentTargets,
+                externals: compilation._externals,
+                globals: compilation._globals,
                 bannerText: this.options.bannerText,
                 substitutions: this.options.substitutions,
                 dryRun: this.options.dryRun,
@@ -133,8 +133,7 @@ export class ScriptTaskRunner {
             if (
                 compilation.compiler?.toLowerCase().trim() === 'tsc' ||
                 compilation.compiler?.toLowerCase().trim() === 'typescript' ||
-                !compilation._bundle ||
-                compilation._emitDeclarationOnly
+                (!compilation.compiler?.trim().length && (!compilation._bundle || compilation._emitDeclarationOnly))
             ) {
                 const cacheKey = 'tsc';
                 const cachefn = compilerCache.get(cacheKey);
@@ -147,7 +146,7 @@ export class ScriptTaskRunner {
                 }
             } else if (
                 compilation.compiler?.toLowerCase().trim() === 'webpack' ||
-                (compilation._bundle && compileOptions.moduleFormat === 'iife')
+                (!compilation.compiler?.trim().length && compilation._bundle && compileOptions.moduleFormat === 'iife')
             ) {
                 const cacheKey = 'webpack';
                 const cachefn = compilerCache.get(cacheKey);
@@ -155,6 +154,19 @@ export class ScriptTaskRunner {
                     compilerFn = cachefn;
                 } else {
                     const compilerModule = await import('./compilers/webpack/index.js');
+                    compilerFn = compilerModule.default;
+                    compilerCache.set(cacheKey, compilerModule.default);
+                }
+            } else if (
+                compilation.compiler?.toLowerCase().trim() === 'esbuild' ||
+                (!compilation.compiler?.trim().length && compilation._bundle && compileOptions.moduleFormat === 'esm')
+            ) {
+                const cacheKey = 'esbuild';
+                const cachefn = compilerCache.get(cacheKey);
+                if (cachefn) {
+                    compilerFn = cachefn;
+                } else {
+                    const compilerModule = await import('./compilers/esbuild/index.js');
                     compilerFn = compilerModule.default;
                     compilerCache.set(cacheKey, compilerModule.default);
                 }
@@ -184,15 +196,11 @@ export class ScriptTaskRunner {
                     compilerCache.set(cacheKey, compilerModule.default);
                 }
             } else {
-                const cacheKey = 'esbuild';
-                const cachefn = compilerCache.get(cacheKey);
-                if (cachefn) {
-                    compilerFn = cachefn;
-                } else {
-                    const compilerModule = await import('./compilers/esbuild/index.js');
-                    compilerFn = compilerModule.default;
-                    compilerCache.set(cacheKey, compilerModule.default);
-                }
+                throw new InvalidConfigError(
+                    'could not detect compiler tool for script compilation.',
+                    this.options.workspaceInfo.configPath,
+                    `${this.configLocationPrefix}/compilations/${i}/compiler`
+                );
             }
 
             const compileResult = await compilerFn(compileOptions, this.logger);
@@ -253,7 +261,7 @@ export class ScriptTaskRunner {
 
         if (this.options.scriptOptions.compilations === 'auto') {
             const tsConfigPath = await this.detectTsConfigPath();
-            const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, null, null) : null;
+            const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, null, null) : undefined;
             const entryFilePath = await this.detectEntryFilePath(tsConfigInfo);
 
             if (!entryFilePath) {
@@ -524,7 +532,9 @@ export class ScriptTaskRunner {
                 }
 
                 const tsConfigPath = await this.getTsConfigPath(compilation, i);
-                const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, compilation, i) : null;
+                const tsConfigInfo = tsConfigPath
+                    ? await this.getTsConfigInfo(tsConfigPath, compilation, i)
+                    : undefined;
                 const entryFilePath = await this.getEntryFilePath(compilation, i);
                 const scriptTarget = this.getScriptTarget(compilation, tsConfigInfo);
                 const moduleFormat = this.getModuleFormat(compilation, tsConfigInfo, entryFilePath);
@@ -825,7 +835,7 @@ export class ScriptTaskRunner {
         const tsConfigFilePath = await this.getTsConfigPath(compilation, compilationIndex);
         const tsConfigInfo = tsConfigFilePath
             ? await this.getTsConfigInfo(tsConfigFilePath, compilation, compilationIndex)
-            : null;
+            : undefined;
 
         const detectedEntryFilePath = await this.detectEntryFilePath(tsConfigInfo);
 
@@ -840,7 +850,7 @@ export class ScriptTaskRunner {
         return detectedEntryFilePath;
     }
 
-    private async detectEntryFilePath(tsConfigInfo: TsConfigInfo | null): Promise<string | null> {
+    private async detectEntryFilePath(tsConfigInfo: TsConfigInfo | undefined): Promise<string | null> {
         const lastPartPackageName = this.getLastPartPackageName();
 
         if (tsConfigInfo?.fileNames.length && tsConfigInfo.configPath) {
@@ -967,7 +977,7 @@ export class ScriptTaskRunner {
         compilationIndex: number,
         entryFilePath: string,
         forTypesOutput: boolean | undefined,
-        tsConfigInfo: TsConfigInfo | null,
+        tsConfigInfo: TsConfigInfo | undefined,
         moduleFormat: ScriptModuleFormat | undefined,
         scriptTarget: ScriptTargetStrings | undefined
     ): string {
@@ -1128,7 +1138,7 @@ export class ScriptTaskRunner {
 
     private getScriptTarget(
         compilation: ScriptCompilation | null,
-        tsConfigInfo: TsConfigInfo | null
+        tsConfigInfo: TsConfigInfo | undefined
     ): ScriptTargetStrings | undefined {
         if (compilation?.scriptTarget) {
             return compilation.scriptTarget;
@@ -1143,7 +1153,7 @@ export class ScriptTaskRunner {
 
     private getModuleFormat(
         compilation: ScriptCompilation | null,
-        tsConfigInfo: TsConfigInfo | null,
+        tsConfigInfo: TsConfigInfo | undefined,
         entryFilePath: string | null
     ): ScriptModuleFormat | undefined {
         if (compilation?.moduleFormat) {

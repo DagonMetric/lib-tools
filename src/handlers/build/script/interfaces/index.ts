@@ -14,21 +14,21 @@ export interface CompileOptions {
     readonly workspaceInfo: WorkspaceInfo;
     readonly entryFilePath: string;
     readonly outFilePath: string;
-    readonly tsConfigInfo: TsConfigInfo | null | undefined;
-    readonly emitDeclarationOnly: boolean;
-    readonly declaration: boolean | undefined;
-    readonly moduleFormat: ScriptModuleFormat;
     readonly scriptTarget: ScriptTargetStrings;
-    readonly environmentTargets: string[];
-    readonly externals: string[];
-    readonly globals: Record<string, string>;
-    readonly globalName: string | undefined;
+    readonly moduleFormat: ScriptModuleFormat;
     readonly sourceMap: boolean;
     readonly minify: boolean;
+    readonly globalName: string | undefined;
+    readonly tsConfigInfo: TsConfigInfo | undefined;
+    readonly emitDeclarationOnly: boolean | undefined;
+    readonly declaration: boolean | undefined;
+    readonly environmentTargets: string[] | undefined;
+    readonly externals: string[] | undefined;
+    readonly globals: Record<string, string> | undefined;
     readonly bannerText: string | null | undefined;
-    readonly substitutions: SubstitutionInfo[];
+    readonly substitutions: SubstitutionInfo[] | undefined;
     readonly dryRun: boolean | undefined;
-    readonly logLevel: LogLevelStrings;
+    readonly logLevel: LogLevelStrings | undefined;
 }
 
 export interface CompileResult {
