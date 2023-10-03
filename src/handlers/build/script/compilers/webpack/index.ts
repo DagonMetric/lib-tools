@@ -99,16 +99,16 @@ function getWebpackLibraryType(options: CompileOptions): string {
     }
 }
 
-// function getWebpackTargets(options: CompileOptions): string[] {
-//     const targets: string[] = [options.scriptTarget.toLowerCase()];
-//     if (options.environmentTargets) {
-//         for (const target of options.environmentTargets) {
-//             targets.push(target);
-//         }
-//     }
+function getWebpackTargets(options: CompileOptions): string[] {
+    const targets: string[] = [options.scriptTarget.toLowerCase()];
+    if (options.environmentTargets) {
+        for (const target of options.environmentTargets) {
+            targets.push(target);
+        }
+    }
 
-//     return targets;
-// }
+    return targets;
+}
 
 function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     const configFileCompilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
@@ -175,18 +175,9 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
 
     if (options.sourceMap) {
         compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
-
-        if (
-            (configFileCompilerOptions.sourceMap && configFileCompilerOptions.inlineSourceMap) ??
-            (!configFileCompilerOptions.sourceMap && !configFileCompilerOptions.inlineSourceMap)
-        ) {
-            compilerOptions.sourceMap = true;
-            compilerOptions.inlineSourceMap = false;
-        }
-
-        if (configFileCompilerOptions.inlineSources == null) {
-            compilerOptions.inlineSources = true;
-        }
+        compilerOptions.sourceMap = true;
+        compilerOptions.inlineSourceMap = false;
+        compilerOptions.inlineSources = true;
     } else {
         compilerOptions.sourceMap = false;
         compilerOptions.inlineSourceMap = false;
@@ -222,7 +213,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     const tsCompilerOptions = getTsCompilerOptions(options);
 
     const webpackConfig: Configuration = {
-        devtool: options.sourceMap ? (options.moduleFormat === 'iife' ? 'source-map' : 'inline-source-map') : false,
+        devtool: options.sourceMap ? 'source-map' : false,
         mode: 'production',
         entry: options.entryFilePath,
         output: {
@@ -237,8 +228,9 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 // export: 'default'
             }
         },
-        // target: getWebpackTargets(options),
+        target: getWebpackTargets(options),
         plugins: [
+            // new TsconfigPathsPlugin({/* options: see below */})
             new ScriptWebpackPlugin({
                 outDir,
                 logger,
@@ -301,7 +293,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         logger.info(`With tsconfig file: ${tsConfigPathRel}`);
     }
 
-    logger.info(`With script target: '${options.scriptTarget}', module format: '${options.moduleFormat}'`);
+    logger.info(`With script target: '${options.scriptTarget}', library type: '${libraryType}'`);
 
     const result = await runWebpack(webpackConfig, outDir);
 
