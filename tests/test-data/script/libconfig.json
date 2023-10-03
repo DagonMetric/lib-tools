@@ -9,13 +9,19 @@
           "outDir": "../../dist",
           "script": {
             "compilations": [
+              // {
+              //   "bundle": false,
+              //   "emitDeclarationOnly": true
+              // },
+              // {
+              //   "bundle": false,
+              //   "declaration": false
+              // },
               {
-                "bundle": false,
-                "emitDeclarationOnly": true
-              },
-              {
-                "bundle": false,
-                "declaration": false
+                "compiler": "webpack",
+                "bundle": true,
+                "declaration": false,
+                "entry": "public_api.ts"
               }
             ]
           },

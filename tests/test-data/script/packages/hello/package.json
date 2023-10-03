@@ -1,7 +1,7 @@
 {
-  "name": "hello-world",
+  "name": "hello",
   "version": "0.0.0-PLACEHOLDER",
-  "description": "This is a hello world package.",
+  "description": "This is a hello package.",
   "author": "DagonMetric",
   "license": "MIT",
   "repository": {

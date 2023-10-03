@@ -2,10 +2,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     // "importHelpers": true,
-    "declaration": true,
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "sourceRoot": "./"
+    "types": [],
+    "sourceMap": true,
+    // "inlineSourceMap": true
+    "inlineSources": true
+    // "sourceRoot": "./",
     // "rootDir": "./src"
   }
 }
