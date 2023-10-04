@@ -10,7 +10,7 @@ import packageJson from '../package.json' assert { type: 'json' };
 const execAsync = promisify(exec);
 const packageVersion = packageJson.version;
 
-const cmdPath = './dist/bin/lib.js';
+const cmdPath = './dist/bin/lib.mjs';
 
 const runCli = async (args: string) => {
     try {
@@ -18,7 +18,7 @@ const runCli = async (args: string) => {
 
         return stderr ? stderr.toString().trim() : stdout.toString().trim();
     } catch (err) {
-        // Line 1: Command failed: node --no-warnings ./dist/bin/lib.js build
+        // Line 1: Command failed: node --no-warnings ./dist/bin/lib.mjs build
         const errLines = (err as Error).message.split('\n');
         return errLines.length > 1 ? errLines.slice(1).join(' ').trim() : errLines.join('\n').trim();
     }
