@@ -20,7 +20,7 @@ const copyFiles = async () => {
     }
 
     // copy files
-    await fs.copyFile(path.resolve(rootDir, 'bin/lib.js'), path.resolve(distDir, 'bin/lib.js'));
+    await fs.copyFile(path.resolve(rootDir, 'bin/lib.mjs'), path.resolve(distDir, 'bin/lib.mjs'));
 
     // package.json
     const content = await fs.readFile(path.resolve(__dirname, '../package.json'), { encoding: 'utf-8' });
