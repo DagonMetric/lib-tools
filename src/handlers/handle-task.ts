@@ -35,7 +35,7 @@ export async function handleTask(
             taskOptions: task as ParsedBuildTaskConfig,
             logger,
             logLevel,
-            dryRun: options?.dryRun,
+            dryRun: options?.dryRun ? true : false,
             env: options?.env
         });
 
@@ -117,7 +117,7 @@ export async function handleTask(
                 taskOptions: customTask,
                 logger,
                 logLevel,
-                dryRun: options?.dryRun,
+                dryRun: options?.dryRun ? true : false,
                 env: options?.env
             });
 
