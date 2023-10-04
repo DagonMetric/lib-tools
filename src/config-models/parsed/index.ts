@@ -55,7 +55,7 @@ export interface SubstitutionInfo {
 
 export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _outDir: string;
-    readonly _bannerText: string | null;
+    readonly _bannerText: string | undefined;
     readonly _substitutions: SubstitutionInfo[];
     readonly _packageJsonInfo: PackageJsonInfo | null;
 }

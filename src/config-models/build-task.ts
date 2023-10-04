@@ -149,12 +149,25 @@ export interface StyleOptions {
 /**
  * Script module format.
  */
-export type ScriptModuleFormat = 'iife' | 'cjs' | 'esm';
+export type ScriptModuleFormat = 'cjs' | 'esm' | 'iife' | 'umd';
 
 /**
  * Script target.
  */
 export type ScriptTargetStrings = Exclude<keyof typeof ScriptTarget, 'JSON' | 'ES3' | 'Latest'>;
+
+/**
+ * Treeshaking options.
+ */
+export interface TreeshakingOptions {
+    annotations?: boolean;
+    correctVarValueBeforeDeclaration?: boolean;
+    manualPureFunctions?: string[];
+    moduleSideEffects?: boolean | 'no-external' | string[];
+    propertyReadSideEffects?: boolean | 'always';
+    tryCatchDeoptimization?: boolean;
+    unknownGlobalSideEffects?: boolean;
+}
 
 /**
  * Script compilation / bundle options.
@@ -216,6 +229,10 @@ export interface ScriptCompilation {
      * Exclude list for externals for this compilation.
      */
     externalExclude?: string[];
+    /**
+     * Treeshaking options.
+     */
+    treeshake?: boolean | TreeshakingOptions;
 }
 
 /**
@@ -246,6 +263,10 @@ export interface ScriptOptions {
      * If true, all package dependency fields in package.json are marked as externals. Default is 'true'.
      */
     packageDependenciesAsExternals?: boolean;
+    /**
+     * Enable or disable resolving symlinks to their realpaths.
+     */
+    preserveSymlinks?: boolean;
 }
 
 /**
