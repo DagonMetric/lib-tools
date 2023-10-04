@@ -18,7 +18,6 @@
               //   "declaration": false
               // },
               {
-                "compiler": "webpack",
                 "bundle": true,
                 "declaration": false,
                 "entry": "public_api.ts"
