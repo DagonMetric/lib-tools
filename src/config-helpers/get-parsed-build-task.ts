@@ -152,12 +152,12 @@ async function parseBannerText(
     banner: string | boolean,
     workspaceInfo: WorkspaceInfo,
     substitutions: SubstitutionInfo[]
-): Promise<string | null> {
+): Promise<string | undefined> {
     if (!banner) {
-        return null;
+        return undefined;
     }
 
-    let bannerText: string | null = null;
+    let bannerText: string | undefined;
     const configLocationPrefix = `projects/${workspaceInfo.projectName ?? '0'}/build`;
 
     if (banner === true || (typeof banner === 'string' && banner.trim().toLowerCase() === 'true')) {
@@ -243,7 +243,9 @@ export async function getParsedBuildTask(
 
     const substitutions = getSubstitutions(workspaceInfo, packageJsonInfo);
 
-    const bannerText = buildTask.banner ? await parseBannerText(buildTask.banner, workspaceInfo, substitutions) : null;
+    const bannerText = buildTask.banner
+        ? await parseBannerText(buildTask.banner, workspaceInfo, substitutions)
+        : undefined;
 
     const parsedBuildTask: ParsedBuildTaskConfig = {
         ...buildTask,
