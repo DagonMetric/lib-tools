@@ -3,7 +3,7 @@ import * as esbuild from 'esbuild';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { CompilationError } from '../../../../../exceptions/index.js';
+import { CompilationError, InvalidConfigError } from '../../../../../exceptions/index.js';
 import {
     LoggerBase,
     colors,
@@ -12,7 +12,7 @@ import {
     pathExists
 } from '../../../../../utils/index.js';
 
-import { CompileOptions, CompileResult } from '../../interfaces/index.js';
+import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/index.js';
 
 function getEsBuildTargets(options: CompileOptions): string[] {
     const targets: string[] = [options.scriptTarget.toLowerCase()];
@@ -44,6 +44,26 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     return undefined;
 }
 
+function getEsBuildModuleFormat(options: CompileOptions): esbuild.Format {
+    if (options.moduleFormat === 'esm') {
+        return 'esm';
+    } else if (options.moduleFormat === 'cjs') {
+        return 'cjs';
+    } else if (options.moduleFormat === 'iife') {
+        return 'iife';
+    } else {
+        const configLocation = `projects/${options.workspaceInfo.projectName ?? '0'}/tasks/build/script/compilations/${
+            options.compilationIndex
+        }/moduleFormat`;
+
+        throw new InvalidConfigError(
+            `The module format '${options.moduleFormat}' is not supported for esbuild.`,
+            options.workspaceInfo.configPath,
+            configLocation
+        );
+    }
+}
+
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     logger.info(
         `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
@@ -59,11 +79,11 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             banner: options.bannerText ? { js: options.bannerText } : undefined,
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
-            format: options.moduleFormat,
+            format: getEsBuildModuleFormat(options),
             target: getEsBuildTargets(options),
             platform: getEsBuildPlatform(options),
             tsconfig: options.tsConfigInfo?.configPath,
-            external: options.externals,
+            external: [...options.externals],
             globalName: options.globalName,
             write: false,
             preserveSymlinks: options.tsConfigInfo?.compilerOptions.preserveSymlinks,
@@ -91,14 +111,8 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             logger.warn(formattedMessages.join('\n').trim());
         }
 
-        const result: CompileResult = {
-            builtAssets: [],
-            time: Date.now() - startTime
-        };
-
-        if (!esbuildResult.outputFiles) {
-            return result;
-        }
+        const duration = Date.now() - startTime;
+        const builtAssets: CompileAsset[] = [];
 
         for (const outputFile of esbuildResult.outputFiles) {
             const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), outputFile.path));
@@ -117,18 +131,21 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 logger.debug(`Emitted: ${pathRel}, size: ${formatSizeInBytes(size)}`);
             }
 
-            result.builtAssets.push({
+            builtAssets.push({
                 path: outputFile.path,
                 size
             });
         }
 
-        const builtAssetsCount = result.builtAssets.length;
+        const builtAssetsCount = builtAssets.length;
         const msgSuffix = options.dryRun ? 'built' : 'emitted';
         const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
         logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
 
-        return result;
+        return {
+            time: duration,
+            builtAssets
+        };
     } catch (err) {
         if (!err) {
             throw new CompilationError(colors.lightRed('Running esbuild compilation task failed.'));

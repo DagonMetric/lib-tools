@@ -9,7 +9,7 @@ import webpackDefault, { Configuration, StatsAsset } from 'webpack';
 import { CompilationError } from '../../../../../exceptions/index.js';
 import { LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
-import { CompileOptions, CompileResult } from '../../interfaces/index.js';
+import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/index.js';
 
 import { ScriptWebpackPlugin } from './plugins/script-webpack-plugin/index.js';
 
@@ -18,7 +18,7 @@ const require = createRequire(process.cwd() + '/');
 function mapToResultAssets(
     assets: StatsAsset[],
     outputPath: string,
-    builtAssets: { path: string; size: number }[]
+    builtAssets: { path: string; size?: number }[]
 ): void {
     for (const asset of assets) {
         builtAssets.push({
@@ -64,15 +64,16 @@ async function runWebpack(webpackConfig: Configuration, outDir: string): Promise
 
             const outputPath = statsJson?.outputPath ?? outDir;
 
-            const result: CompileResult = {
-                builtAssets: [],
-                time: statsJson?.time ?? 0
-            };
+            const duration = statsJson?.time ?? 0;
+            const builtAssets: CompileAsset[] = [];
 
-            mapToResultAssets(statsJson?.assets ?? [], outputPath, result.builtAssets);
+            mapToResultAssets(statsJson?.assets ?? [], outputPath, builtAssets);
 
             webpackCompiler.close(() => {
-                resolve(result);
+                resolve({
+                    builtAssets: [],
+                    time: duration
+                });
             });
         });
     });
@@ -221,6 +222,10 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             filename: path.basename(options.outFilePath),
             iife: options.moduleFormat === 'iife' ? true : undefined,
             module: libraryType === 'module' ? true : undefined,
+            // enabledLibraryTypes: ['module'],
+            // enabledWasmLoadingTypes: ['fetch'],
+            // environment: {
+            // },
             library: {
                 type: libraryType,
                 name: options.globalName,

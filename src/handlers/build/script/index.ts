@@ -49,11 +49,12 @@ interface ParsedScriptCompilation extends ScriptCompilation {
     readonly _sourceMap: boolean;
     readonly _minify: boolean;
     readonly _environmentTargets: string[] | undefined;
-    readonly _externals: string[] | undefined;
+    readonly _externals: string[];
     readonly _tsConfigInfo: TsConfigInfo | undefined;
     readonly _declaration: boolean | undefined;
     readonly _emitDeclarationOnly: boolean | undefined;
-    readonly _globals: Record<string, string> | undefined;
+    readonly _globals: Record<string, string>;
+    readonly _preserveSymlinks: boolean | undefined;
 }
 
 export * from './interfaces/index.js';
@@ -62,11 +63,11 @@ export interface ScriptTaskRunnerOptions {
     readonly scriptOptions: ScriptOptions;
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
-    readonly dryRun: boolean | undefined;
+    readonly dryRun: boolean;
     readonly logger: LoggerBase;
     readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: PackageJsonInfo | null;
-    readonly bannerText: string | null;
+    readonly bannerText: string | undefined;
     readonly substitutions: SubstitutionInfo[];
     readonly env: string | undefined;
 }
@@ -75,7 +76,7 @@ export interface ScriptMainOutputAsset {
     readonly scriptTarget: ScriptTargetStrings;
     readonly moduleFormat: ScriptModuleFormat;
     readonly outputFilePath: string;
-    readonly size: number;
+    readonly size: number | undefined;
 }
 
 export interface ScriptResult {
@@ -109,19 +110,22 @@ export class ScriptTaskRunner {
 
             const compileOptions: CompileOptions = {
                 workspaceInfo: this.options.workspaceInfo,
+                compilationIndex: i,
                 entryFilePath: compilation._entryFilePath,
                 outFilePath: compilation._outFilePath,
                 moduleFormat: compilation._moduleFormat,
                 scriptTarget: compilation._scriptTarget,
                 sourceMap: compilation._sourceMap,
                 minify: compilation._minify,
-                globalName: compilation.globalName,
                 tsConfigInfo: compilation._tsConfigInfo,
                 emitDeclarationOnly: compilation._emitDeclarationOnly,
                 declaration: compilation._declaration,
                 environmentTargets: compilation._environmentTargets,
                 externals: compilation._externals,
                 globals: compilation._globals,
+                preserveSymlinks: compilation._preserveSymlinks,
+                globalName: compilation.globalName,
+                treeshake: compilation.treeshake,
                 bannerText: this.options.bannerText,
                 substitutions: this.options.substitutions,
                 dryRun: this.options.dryRun,
@@ -145,9 +149,19 @@ export class ScriptTaskRunner {
                     compilerCache.set(cacheKey, compilerModule.default);
                 }
             } else if (
-                compilation.compiler?.toLowerCase().trim() === 'webpack' ||
-                (!compilation.compiler?.trim().length && compilation._bundle && compileOptions.moduleFormat === 'iife')
+                compilation.compiler?.toLowerCase().trim() === 'rollup' ||
+                (!compilation.compiler?.trim().length && compilation._bundle)
             ) {
+                const cacheKey = 'rollup';
+                const cachefn = compilerCache.get(cacheKey);
+                if (cachefn) {
+                    compilerFn = cachefn;
+                } else {
+                    const compilerModule = await import('./compilers/rollup/index.js');
+                    compilerFn = compilerModule.default;
+                    compilerCache.set(cacheKey, compilerModule.default);
+                }
+            } else if (compilation.compiler?.toLowerCase().trim() === 'webpack') {
                 const cacheKey = 'webpack';
                 const cachefn = compilerCache.get(cacheKey);
                 if (cachefn) {
@@ -157,10 +171,7 @@ export class ScriptTaskRunner {
                     compilerFn = compilerModule.default;
                     compilerCache.set(cacheKey, compilerModule.default);
                 }
-            } else if (
-                compilation.compiler?.toLowerCase().trim() === 'esbuild' ||
-                (!compilation.compiler?.trim().length && compilation._bundle && compileOptions.moduleFormat === 'esm')
-            ) {
+            } else if (compilation.compiler?.toLowerCase().trim() === 'esbuild') {
                 const cacheKey = 'esbuild';
                 const cachefn = compilerCache.get(cacheKey);
                 if (cachefn) {
@@ -283,6 +294,9 @@ export class ScriptTaskRunner {
                   )
                 : undefined;
 
+            const preserveSymlinks =
+                this.options.scriptOptions.preserveSymlinks ?? tsConfigInfo?.compilerOptions.preserveSymlinks;
+
             if (
                 this.options.packageJsonInfo &&
                 this.options.packageJsonInfo.packageJson.private !== false &&
@@ -336,7 +350,8 @@ export class ScriptTaskRunner {
                     _minify: false,
                     _environmentTargets: [],
                     _externals: [],
-                    _globals: {}
+                    _globals: {},
+                    _preserveSymlinks: preserveSymlinks
                 });
 
                 // esm
@@ -379,7 +394,8 @@ export class ScriptTaskRunner {
                     _minify: false,
                     _environmentTargets: [],
                     _externals: [],
-                    _globals: {}
+                    _globals: {},
+                    _preserveSymlinks: preserveSymlinks
                 });
 
                 // fesm
@@ -422,7 +438,8 @@ export class ScriptTaskRunner {
                     _sourceMap: true,
                     _environmentTargets: [],
                     _externals: [],
-                    _globals: {}
+                    _globals: {},
+                    _preserveSymlinks: preserveSymlinks
                 });
             } else {
                 // emitDeclarationOnly
@@ -504,7 +521,8 @@ export class ScriptTaskRunner {
                     _minify: minify,
                     _environmentTargets: environmentTargets,
                     _externals: externals,
-                    _globals: globals
+                    _globals: globals,
+                    _preserveSymlinks: preserveSymlinks
                 });
             }
 
@@ -618,6 +636,10 @@ export class ScriptTaskRunner {
                 // externals
                 const { externals, globals } = this.getExternalsAndGlobals(compilation);
 
+                // preserveSymlinks
+                const preserveSymlinks =
+                    this.options.scriptOptions.preserveSymlinks ?? tsConfigInfo?.compilerOptions.preserveSymlinks;
+
                 parsedScriptCompilations.push({
                     ...compilation,
 
@@ -633,7 +655,8 @@ export class ScriptTaskRunner {
                     _sourceMap: sourceMap,
                     _environmentTargets: environmentTargets,
                     _externals: externals,
-                    _globals: globals
+                    _globals: globals,
+                    _preserveSymlinks: preserveSymlinks
                 });
             }
 
@@ -1228,7 +1251,7 @@ export class ScriptTaskRunner {
         globals: Record<string, string>;
     } {
         const externalGlobalMap = new Map<string, string>();
-        const externals: string[] = [];
+        const externals: string[] = ['tslib'];
         const excludes = compilation?.externalExclude ?? this.options.scriptOptions.externalExclude ?? [];
 
         if (this.options.scriptOptions.packageDependenciesAsExternals !== false) {
