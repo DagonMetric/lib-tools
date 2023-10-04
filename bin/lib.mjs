@@ -33,7 +33,7 @@ const getCliInfo = async () => {
 
     const cliPath = path.resolve(
         path.dirname(packageJsonPath),
-        packageJson.exports?.['.']?.import ? packageJson.exports['.'].import : packageJson.main
+        packageJson.exports?.['.']?.import ?? packageJson.module ?? packageJson.main
     );
 
     return {
