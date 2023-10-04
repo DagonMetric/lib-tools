@@ -48,6 +48,7 @@
   "scripts": {
     "lint": "eslint .",
     "compile": "tsc --project tsconfig.build.json",
+    "esbuild:compile": "esbuild src/**/*.ts --tsconfig=tsconfig.build.json --format=esm --target=esnext,node16.14 --platform=node --packages=external --sourcemap=inline --outdir=dist",
     "generate-json-schema": "node ./tools/generate-json-schema.mjs",
     "copy-files": "node ./tools/copy-files.mjs",
     "build": "npm run compile && npm run generate-json-schema && npm run copy-files",
