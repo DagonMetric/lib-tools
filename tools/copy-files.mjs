@@ -29,6 +29,9 @@ const copyFiles = async () => {
     if (packageJson.main) {
         packageJson.main = packageJson.main.replace(distStartRegExp, './');
     }
+    if (packageJson.module) {
+        packageJson.module = packageJson.module.replace(distStartRegExp, './');
+    }
     if (packageJson.types) {
         packageJson.types = packageJson.types.replace(distStartRegExp, './');
     }
