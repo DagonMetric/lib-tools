@@ -4,8 +4,8 @@ import { LogLevelStrings, LoggerBase } from '../../utils/index.js';
 export interface TaskHandleContext {
     readonly taskOptions: ParsedTaskConfig;
     readonly logger: LoggerBase | undefined;
-    readonly logLevel: LogLevelStrings | undefined;
-    readonly dryRun: boolean | undefined;
+    readonly logLevel: LogLevelStrings;
+    readonly dryRun: boolean;
     readonly env: string | undefined;
 }
 
