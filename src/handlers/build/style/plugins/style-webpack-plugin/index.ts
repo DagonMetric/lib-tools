@@ -16,7 +16,7 @@ export interface StyleWebpackPluginOptions {
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
-    readonly bannerText: string | null;
+    readonly bannerText: string | undefined;
 }
 
 export class StyleWebpackPlugin {

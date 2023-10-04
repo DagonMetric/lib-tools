@@ -200,7 +200,7 @@ export interface StyleTaskRunnerOptions {
     readonly logger: LoggerBase;
     readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: PackageJsonInfo | null;
-    readonly bannerText: string | null;
+    readonly bannerText: string | undefined;
     readonly env: string | undefined;
 }
 
