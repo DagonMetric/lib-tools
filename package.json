@@ -30,7 +30,7 @@
     "rollup"
   ],
   "bin": {
-    "lib": "./bin/lib.js"
+    "lib": "./bin/lib.mjs"
   },
   "type": "module",
   "engines": {
@@ -42,20 +42,21 @@
       "types": "./dist/cli/index.d.ts"
     }
   },
+  "module": "./dist/cli/index.js",
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
   "scripts": {
     "lint": "eslint .",
     "compile": "tsc --project tsconfig.build.json",
-    "generate-json-schema": "node ./tools/generate-json-schema.js --input-type=module",
-    "copy-files": "node ./tools/copy-files.js --input-type=module",
+    "generate-json-schema": "node ./tools/generate-json-schema.mjs",
+    "copy-files": "node ./tools/copy-files.mjs",
     "build": "npm run compile && npm run generate-json-schema && npm run copy-files",
     "test": "glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\"",
-    "lib:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --help",
-    "lib:version": "node --no-warnings --enable-source-maps ./dist/bin/lib.js --version",
-    "lib:lint": "node --no-warnings --enable-source-maps ./dist/bin/lib.js lint --logLevel=info",
-    "lib:test": "node --no-warnings --enable-source-maps ./dist/bin/lib.js test",
-    "lib:build": "node --no-warnings --enable-source-maps ./dist/bin/lib.js build"
+    "lib:help": "node --no-warnings --enable-source-maps ./dist/bin/lib.mjs --help",
+    "lib:version": "node --no-warnings --enable-source-maps ./dist/bin/lib.mjs --version",
+    "lib:lint": "node --no-warnings --enable-source-maps ./dist/bin/lib.mjs lint --logLevel=info",
+    "lib:test": "node --no-warnings --enable-source-maps ./dist/bin/lib.mjs test",
+    "lib:build": "node --no-warnings --enable-source-maps ./dist/bin/lib.mjs build"
   },
   "dependencies": {
     "@rollup/plugin-commonjs": "^25.0.4",
