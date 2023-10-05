@@ -4,31 +4,29 @@ import { CustomTask } from '../custom-task.js';
 import { Task } from '../task.js';
 
 export interface ParsedCommandOptions extends CommandOptions {
-    readonly _projects: string[];
+    readonly _projects: readonly string[];
     readonly _workspaceRoot: string;
     readonly _configPath: string | null;
 
     // For build
     readonly _outDir: string | null;
-    readonly _copyEntries: string[];
-    readonly _styleEntries: string[];
-    readonly _scriptEntries: string[];
+    readonly _copyEntries: readonly string[];
+    readonly _styleEntries: readonly string[];
+    readonly _scriptEntries: readonly string[];
+}
+
+export interface PackageJsonLike {
+    [key: string]: unknown;
+    name?: string;
+    version?: string;
 }
 
 export interface PackageJsonInfo {
-    readonly packageJson: {
-        [key: string]: unknown;
-        name?: string;
-        version?: string;
-    };
+    readonly packageJson: Readonly<PackageJsonLike>;
     readonly packageJsonPath: string;
     readonly packageName: string;
     readonly packageScope: string | null;
-    readonly rootPackageJson: {
-        [key: string]: unknown;
-        name?: string;
-        version?: string;
-    } | null;
+    readonly rootPackageJson: Readonly<PackageJsonLike> | null;
     readonly rootPackageJsonPath: string | null;
     readonly newPackageVersion: string | null;
 }
@@ -43,11 +41,10 @@ export interface WorkspaceInfo {
 
 export interface ParsedTaskConfig extends Task {
     readonly _taskName: string;
-    readonly _workspaceInfo: WorkspaceInfo;
+    readonly _workspaceInfo: Readonly<WorkspaceInfo>;
 }
 
 export interface SubstitutionInfo {
-    searchRegExp: RegExp;
     searchString: string;
     value: string;
     bannerOnly: boolean;
@@ -55,9 +52,10 @@ export interface SubstitutionInfo {
 
 export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _outDir: string;
-    readonly _bannerText: string | undefined;
-    readonly _substitutions: SubstitutionInfo[];
-    readonly _packageJsonInfo: PackageJsonInfo | null;
+    readonly _bannerTextForCss: string | undefined;
+    readonly _bannerTextForJs: string | undefined;
+    readonly _substitutions: readonly Readonly<SubstitutionInfo>[];
+    readonly _packageJsonInfo: Readonly<PackageJsonInfo> | null;
 }
 
 export interface ParsedCustomTaskConfig extends CustomTask, ParsedTaskConfig {}
