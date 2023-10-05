@@ -293,6 +293,44 @@ export interface PackageJsonOptions {
 }
 
 /**
+ * Banner options.
+ */
+export interface BannerOptions {
+    /**
+     * Banner content for both css and js files.
+     */
+    banner?: string;
+    /**
+     * Banner content for only css files.
+     */
+    bannerForCss?: string;
+    /**
+     * Banner content for only js files.
+     */
+    bannerForJs?: string;
+    /**
+     * If true, it will add comment if not present in banner. Default `true`.
+     */
+    addCommentToBanner?: boolean;
+    /**
+     * Footer content for both css and js files.
+     */
+    footer?: string;
+    /**
+     * Footer content for only css files.
+     */
+    footerForCss?: string;
+    /**
+     * Footer content for only js files.
+     */
+    footerForJs?: string;
+    /**
+     * If true, it will add comment if not present in footer. Default `true`.
+     */
+    addCommentToFooter?: boolean;
+}
+
+/**
  * Build task options.
  */
 export interface BuildTaskOptions extends Task {
@@ -317,9 +355,9 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
-     * Set true to search banner.txt file or set banner file path to add banner content to the top of each generated file.
+     * Set true to search banner text file or set banner file path or banner object options to add banner content to the generated files.
      */
-    banner?: boolean | string;
+    banner?: boolean | string | BannerOptions;
     /**
      * Options for package.json file updating.
      */
