@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { BannerOptions, BuildTask } from '../config-models/index.js';
+import { BannerFooterOptions, BuildTask } from '../config-models/index.js';
 import {
     PackageJsonInfo,
     ParsedBuildTaskConfig,
@@ -189,58 +189,74 @@ function getSubstitutions(workspaceInfo: WorkspaceInfo, packageJsonInfo: Package
     return substitutions;
 }
 
+const bannerFooterCache = new Map<string, string>();
+
 async function parseBannerOrFooter(
     forFooter: boolean,
-    input: string | BannerOptions,
+    input: boolean | string | BannerFooterOptions,
     workspaceInfo: WorkspaceInfo,
     substitutions: SubstitutionInfo[]
 ): Promise<{
-    textForJs: string | undefined;
-    textForCss: string | undefined;
+    textForScript: string | undefined;
+    textForStyle: string | undefined;
 }> {
-    let textForJs: string | undefined;
-    let textForCss: string | undefined;
+    let textForScript: string | undefined;
+    let textForStyle: string | undefined;
+
+    const searchAndReadFile = async (searchFiles: string[]): Promise<string | undefined> => {
+        for (const searchFile of searchFiles) {
+            const cacheKey = `${workspaceInfo.projectRoot}!${searchFile}`;
+            const cached = bannerFooterCache.get(cacheKey);
+            if (cached != null) {
+                if (cached.length > 0) {
+                    return cached;
+                } else {
+                    continue;
+                }
+            }
+
+            const foundPath = await findUp(searchFile, workspaceInfo.projectRoot, workspaceInfo.workspaceRoot, true);
+            if (foundPath) {
+                const cachedContent = bannerFooterCache.get(foundPath);
+                if (cachedContent) {
+                    return cachedContent;
+                }
+
+                let content = await fs.readFile(foundPath, 'utf-8');
+                content = content.trim();
+
+                bannerFooterCache.set(foundPath, content);
+                bannerFooterCache.set(cacheKey, content);
+
+                return content;
+            } else {
+                bannerFooterCache.set(cacheKey, '');
+            }
+        }
+
+        return undefined;
+    };
+
+    const filesForCommon = forFooter ? ['footer.txt'] : ['banner.txt'];
+    const filesForScript = forFooter ? ['footer.script.txt', 'footer.js.txt'] : ['banner.script.txt', 'banner.js.txt'];
+    const filesForStyle = forFooter ? ['footer.style.txt', 'footer.css.txt'] : ['banner.style.txt', 'banner.css.txt'];
 
     const configLocation = `projects/${workspaceInfo.projectName ?? '0'}/build/${forFooter ? 'footer' : 'banner'}`;
 
-    if (typeof input === 'string' && input === 'auto') {
-        const jsFilePath = await findUp(
-            forFooter ? 'footer.js.txt' : 'banner.js.txt',
-            workspaceInfo.projectRoot,
-            workspaceInfo.workspaceRoot
-        );
-        const cssFilePath = await findUp(
-            forFooter ? 'footer.css.txt' : 'banner.css.txt',
-            workspaceInfo.projectRoot,
-            workspaceInfo.workspaceRoot
-        );
+    if (input === true || (typeof input === 'string' && input.trim().toLowerCase() === 'true')) {
+        textForScript = await searchAndReadFile(filesForScript);
+        textForStyle = await searchAndReadFile(filesForStyle);
+        const textForCommon = await searchAndReadFile(filesForCommon);
 
-        let sharedText: string | undefined;
-        const sharedFilePath = await findUp(
-            forFooter ? 'footer.txt' : 'banner.txt',
-            workspaceInfo.projectRoot,
-            workspaceInfo.workspaceRoot
-        );
-        if (sharedFilePath) {
-            const content = await fs.readFile(sharedFilePath, 'utf-8');
-            sharedText = content.trim();
+        if (!textForScript) {
+            textForScript = textForCommon;
         }
 
-        if (jsFilePath) {
-            const content = await fs.readFile(jsFilePath, 'utf-8');
-            textForJs = content.trim();
-        } else {
-            textForJs = sharedText;
+        if (!textForStyle) {
+            textForStyle = textForCommon;
         }
 
-        if (cssFilePath) {
-            const content = await fs.readFile(cssFilePath, 'utf-8');
-            textForCss = content.trim();
-        } else {
-            textForCss = sharedText;
-        }
-
-        if (!jsFilePath && !cssFilePath) {
+        if (!textForScript && !textForStyle) {
             throw new InvalidConfigError(
                 `${forFooter ? 'Footer' : 'Banner'} file could not be found.`,
                 workspaceInfo.configPath,
@@ -257,18 +273,23 @@ async function parseBannerOrFooter(
             trimedInput.length <= 4096
         ) {
             const filePath = resolvePath(workspaceInfo.projectRoot, trimedInput);
-            if (await pathExists(filePath)) {
-                let content = await fs.readFile(filePath, 'utf-8');
-                content = content.trim();
+            let content = bannerFooterCache.get(filePath);
 
+            if (!content && (await pathExists(filePath))) {
+                content = await fs.readFile(filePath, 'utf-8');
+                content = content.trim();
+                bannerFooterCache.set(filePath, content);
+            }
+
+            if (content) {
                 const filePathWithoutExt = filePath.substring(0, filePath.length - path.extname(filePath).length);
-                if (/[.-]js$/i.test(filePathWithoutExt)) {
-                    textForJs = content;
-                } else if (/[.-]css$/i.test(filePathWithoutExt)) {
-                    textForCss = content;
+                if (/[.-](script|js)$/i.test(filePathWithoutExt)) {
+                    textForScript = content;
+                } else if (/[.-](style|css)$/i.test(filePathWithoutExt)) {
+                    textForStyle = content;
                 } else {
-                    textForJs = content;
-                    textForCss = content;
+                    textForScript = content;
+                    textForStyle = content;
                 }
             } else {
                 if (/\.txt$/i.test(filePath)) {
@@ -278,17 +299,119 @@ async function parseBannerOrFooter(
                         `${configLocation}`
                     );
                 } else {
-                    textForJs = trimedInput;
-                    textForCss = trimedInput;
+                    textForScript = trimedInput;
+                    textForStyle = trimedInput;
                 }
             }
         } else {
-            textForJs = trimedInput;
-            textForCss = trimedInput;
+            textForScript = trimedInput;
+            textForStyle = trimedInput;
         }
-    } else {
-        textForJs = input.js ?? input.text;
-        textForCss = input.css ?? input.text;
+    } else if (typeof input === 'object') {
+        const inputOptions = input;
+        if (inputOptions.script) {
+            if (typeof inputOptions.script === 'boolean' || inputOptions.script.trim().toLowerCase() === 'true') {
+                textForScript = await searchAndReadFile(filesForScript);
+
+                if (!textForScript) {
+                    textForScript = await searchAndReadFile(filesForCommon);
+                }
+
+                if (!textForScript) {
+                    throw new InvalidConfigError(
+                        `${forFooter ? 'Footer' : 'Banner'} file could not be found for script.`,
+                        workspaceInfo.configPath,
+                        `${configLocation}/script`
+                    );
+                }
+            } else {
+                const trimedInput = inputOptions.script.trim();
+
+                if (
+                    !trimedInput.startsWith('//') &&
+                    !trimedInput.startsWith('/*') &&
+                    !/[\n\r\t\s:*?"]/.test(trimedInput) &&
+                    trimedInput.length <= 4096
+                ) {
+                    const filePath = resolvePath(workspaceInfo.projectRoot, trimedInput);
+                    let content = bannerFooterCache.get(filePath);
+
+                    if (!content && (await pathExists(filePath))) {
+                        content = await fs.readFile(filePath, 'utf-8');
+                        content = content.trim();
+                        bannerFooterCache.set(filePath, content);
+                    }
+
+                    if (content) {
+                        textForScript = content;
+                    } else {
+                        if (/\.txt$/i.test(filePath)) {
+                            throw new InvalidConfigError(
+                                `${forFooter ? 'Footer' : 'Banner'} file could not be found for script.`,
+                                workspaceInfo.configPath,
+                                `${configLocation}/script`
+                            );
+                        } else {
+                            textForScript = trimedInput;
+                        }
+                    }
+                } else {
+                    textForScript = trimedInput;
+                }
+            }
+        }
+
+        if (inputOptions.style) {
+            if (typeof inputOptions.style === 'boolean' || inputOptions.style.trim().toLowerCase() === 'true') {
+                textForStyle = await searchAndReadFile(filesForStyle);
+
+                if (!textForStyle) {
+                    textForStyle = await searchAndReadFile(filesForCommon);
+                }
+
+                if (!textForStyle) {
+                    throw new InvalidConfigError(
+                        `${forFooter ? 'Footer' : 'Banner'} file could not be found for style.`,
+                        workspaceInfo.configPath,
+                        `${configLocation}/style`
+                    );
+                }
+            } else {
+                const trimedInput = inputOptions.style.trim();
+
+                if (
+                    !trimedInput.startsWith('//') &&
+                    !trimedInput.startsWith('/*') &&
+                    !/[\n\r\t\s:*?"]/.test(trimedInput) &&
+                    trimedInput.length <= 4096
+                ) {
+                    const filePath = resolvePath(workspaceInfo.projectRoot, trimedInput);
+                    let content = bannerFooterCache.get(filePath);
+
+                    if (!content && (await pathExists(filePath))) {
+                        content = await fs.readFile(filePath, 'utf-8');
+                        content = content.trim();
+                        bannerFooterCache.set(filePath, content);
+                    }
+
+                    if (content) {
+                        textForStyle = content;
+                    } else {
+                        if (/\.txt$/i.test(filePath)) {
+                            throw new InvalidConfigError(
+                                `${forFooter ? 'Footer' : 'Banner'} file could not be found for style.`,
+                                workspaceInfo.configPath,
+                                `${configLocation}/style`
+                            );
+                        } else {
+                            textForStyle = trimedInput;
+                        }
+                    }
+                } else {
+                    textForStyle = trimedInput;
+                }
+            }
+        }
     }
 
     const commentEndRegExp = /\*\//g;
@@ -327,19 +450,19 @@ async function parseBannerOrFooter(
         return str;
     };
 
-    if (textForJs) {
-        textForJs = wrapComment(textForJs);
-        textForJs = applySubstitutions(textForJs);
+    if (textForScript) {
+        textForScript = wrapComment(textForScript);
+        textForScript = applySubstitutions(textForScript);
     }
 
-    if (textForCss) {
-        textForCss = wrapComment(textForCss);
-        textForCss = applySubstitutions(textForCss);
+    if (textForStyle) {
+        textForStyle = wrapComment(textForStyle);
+        textForStyle = applySubstitutions(textForStyle);
     }
 
     return {
-        textForJs,
-        textForCss
+        textForScript,
+        textForStyle
     };
 }
 
@@ -358,21 +481,21 @@ export async function getParsedBuildTask(
 
     const substitutions = getSubstitutions(workspaceInfo, packageJsonInfo);
 
-    let bannerTextForJs: string | undefined;
-    let bannerTextForCss: string | undefined;
-    let footerTextForJs: string | undefined;
-    let footerTextForCss: string | undefined;
+    let bannerTextForScript: string | undefined;
+    let bannerTextForStyle: string | undefined;
+    let footerTextForScript: string | undefined;
+    let footerTextForStyle: string | undefined;
 
     if (buildTask.banner) {
         const bannerOptions = await parseBannerOrFooter(false, buildTask.banner, workspaceInfo, substitutions);
-        bannerTextForJs = bannerOptions.textForJs;
-        bannerTextForCss = bannerOptions.textForCss;
+        bannerTextForScript = bannerOptions.textForScript;
+        bannerTextForStyle = bannerOptions.textForStyle;
     }
 
     if (buildTask.footer) {
         const footerOptions = await parseBannerOrFooter(true, buildTask.footer, workspaceInfo, substitutions);
-        footerTextForJs = footerOptions.textForJs;
-        footerTextForCss = footerOptions.textForCss;
+        footerTextForScript = footerOptions.textForScript;
+        footerTextForStyle = footerOptions.textForStyle;
     }
 
     const parsedBuildTask: ParsedBuildTaskConfig = {
@@ -381,10 +504,10 @@ export async function getParsedBuildTask(
         _workspaceInfo: workspaceInfo,
         _packageJsonInfo: packageJsonInfo,
         _outDir: outDir,
-        _bannerTextForJs: bannerTextForJs,
-        _bannerTextForCss: bannerTextForCss,
-        _footerTextForJs: footerTextForJs,
-        _footerTextForCss: footerTextForCss,
+        _bannerTextForScript: bannerTextForScript,
+        _bannerTextForStyle: bannerTextForStyle,
+        _footerTextForScript: footerTextForScript,
+        _footerTextForStyle: footerTextForStyle,
         _substitutions: substitutions
     };
 
