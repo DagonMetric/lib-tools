@@ -127,7 +127,7 @@ export async function run(taskName: string, argv: CommandOptions): Promise<void>
             await handleTask(task, {
                 logger,
                 logLevel,
-                dryRun: argv.dryRun,
+                dryRun: argv.dryRun ? true : false,
                 env: argv.env
             });
         }
