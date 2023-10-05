@@ -25,7 +25,22 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'copy-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 copy: []
             };
 
@@ -46,7 +61,22 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'copy-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 copy: [' ', { from: ' ' }]
             };
 
@@ -67,7 +97,22 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'copy-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 copy: ['a.txt', 'b.txt', '**/*.md']
             };
 
@@ -102,7 +147,22 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'copy-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 copy: [
                     {
                         from: 'a.txt'
@@ -153,7 +213,22 @@ void describe('handlers/build/copy', () => {
                 _workspaceInfo: { ...workspaceInfo },
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'copy-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 copy: [
                     'a.txt',
                     {

@@ -25,7 +25,22 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'clean-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 clean: false
             };
 
@@ -46,7 +61,22 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'clean-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 clean: {
                     beforeBuild: {
                         paths: [' ']
@@ -71,7 +101,22 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'clean-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 clean: true
             };
 
@@ -105,7 +150,22 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'clean-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 clean: {
                     beforeBuild: beforeBuildCleanOptions
                 }
@@ -136,7 +196,22 @@ void describe('handlers/build/clean', () => {
                 _workspaceInfo: workspaceInfo,
                 _outDir: path.resolve(workspaceRoot, 'theout'),
                 _packageJsonInfo: null,
-                _bannerText: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'clean-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 clean: {
                     afterBuild: afterBuildCleanOptions
                 }

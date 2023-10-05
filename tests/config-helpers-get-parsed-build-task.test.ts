@@ -28,7 +28,11 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
-                _bannerText: null
+                _substitutions: null,
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -55,7 +59,11 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'out'),
-                _bannerText: null
+                _substitutions: null,
+                _bannerTextForCss: undefined,
+                _bannerTextForJs: undefined,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -63,7 +71,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
         void it('should parse build task config with inline banner options start with //', async () => {
             const buildTask: BuildTask = {
-                banner: '// This is an inline banner.\n[project_name], [current_year]'
+                banner: '// This is an inline banner.\n[PROJECTNAME], [CURRENTYEAR]'
             };
 
             const workspaceInfo: WorkspaceInfo = {
@@ -82,7 +90,22 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
-                _bannerText: `// This is an inline banner.\ntest-project, ${new Date().getFullYear().toString()}`
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `// This is an inline banner.\ntest-project, ${new Date().getFullYear().toString()}`,
+                _bannerTextForJs: `// This is an inline banner.\ntest-project, ${new Date().getFullYear().toString()}`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -90,7 +113,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
         void it('should parse build task config with inline banner options start with /*', async () => {
             const buildTask: BuildTask = {
-                banner: '/* This is an inline banner.\n[project_name], [current_year] */'
+                banner: '/* This is an inline banner.\n[PROJECTNAME], [CURRENTYEAR] */'
             };
 
             const workspaceInfo: WorkspaceInfo = {
@@ -109,7 +132,26 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
-                _bannerText: `/* This is an inline banner.\ntest-project, ${new Date().getFullYear().toString()} */`
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `/* This is an inline banner.\ntest-project, ${new Date()
+                    .getFullYear()
+                    .toString()} */`,
+                _bannerTextForJs: `/* This is an inline banner.\ntest-project, ${new Date()
+                    .getFullYear()
+                    .toString()} */`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -136,7 +178,22 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
-                _bannerText: `/*! This is an inline banner. */`
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `/*! This is an inline banner. */`,
+                _bannerTextForJs: `/*! This is an inline banner. */`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -144,7 +201,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
         void it('should parse build task config with inline banner options without comment multi-line', async () => {
             const buildTask: BuildTask = {
-                banner: 'This is an inline banner.\n[project_name], [current_year]'
+                banner: 'This is an inline banner.\n[PROJECTNAME], [CURRENTYEAR]'
             };
 
             const workspaceInfo: WorkspaceInfo = {
@@ -163,9 +220,26 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
-                _bannerText: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
                     .getFullYear()
-                    .toString()}\n */`
+                    .toString()}\n */`,
+                _bannerTextForJs: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
+                    .getFullYear()
+                    .toString()}\n */`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -186,6 +260,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
             const packageJsonInfo: PackageJsonInfo = {
                 packageJson: {
+                    name: 'test-package',
                     version: '1.0.0',
                     author: 'DagonMetric',
                     license: 'MIT',
@@ -208,17 +283,74 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: packageJsonInfo,
                 _outDir: path.resolve(workspaceInfo.projectRoot, 'dist'),
-                _bannerText: `// DagonMetric, MIT, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGENAME]',
+                        value: 'test-package',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGEVERSION]',
+                        value: '1.0.0',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '0.0.0-PLACEHOLDER',
+                        value: '1.0.0',
+                        bannerOnly: false
+                    },
+                    {
+                        searchString: '[DESCRIPTION]',
+                        value: 'This is a test project.',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSEURL]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[AUTHOR]',
+                        value: 'DagonMetric',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
-                    .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`
+                    .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
+                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);
         });
 
-        void it('should parse build task config with banner=true and packageJsonInfo', async () => {
+        void it(`should parse build task config with banner='auto' and packageJsonInfo`, async () => {
             const buildTask: BuildTask = {
-                banner: true
+                banner: 'auto'
             };
 
             const workspaceInfo: WorkspaceInfo = {
@@ -231,6 +363,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
             const packageJsonInfo: PackageJsonInfo = {
                 packageJson: {
+                    name: 'test-package',
                     version: '1.0.0',
                     author: 'DagonMetric',
                     license: 'MIT',
@@ -253,9 +386,66 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: packageJsonInfo,
                 _outDir: path.resolve(workspaceInfo.projectRoot, 'dist'),
-                _bannerText: `// DagonMetric, MIT, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGENAME]',
+                        value: 'test-package',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGEVERSION]',
+                        value: '1.0.0',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '0.0.0-PLACEHOLDER',
+                        value: '1.0.0',
+                        bannerOnly: false
+                    },
+                    {
+                        searchString: '[DESCRIPTION]',
+                        value: 'This is a test project.',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSEURL]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[AUTHOR]',
+                        value: 'DagonMetric',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
-                    .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`
+                    .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
+                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined
             };
 
             assert.deepStrictEqual(result, expected);

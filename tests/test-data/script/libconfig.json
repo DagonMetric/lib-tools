@@ -22,7 +22,8 @@
                 "declaration": false,
                 "entry": "public_api.ts"
               }
-            ]
+            ],
+            "externals": ["data.json"]
           },
           "packageJson": {
             "packageVersion": "1.0.0"

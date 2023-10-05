@@ -49,11 +49,68 @@ void describe('config-helpers/get-tasks', () => {
                     newPackageVersion: '1.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
-                _bannerText: `// DagonMetric, MIT, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'project-1',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGENAME]',
+                        value: '@scope/package-1',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGEVERSION]',
+                        value: '1.0.0',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '0.0.0-PLACEHOLDER',
+                        value: '1.0.0',
+                        bannerOnly: false
+                    },
+                    {
+                        searchString: '[DESCRIPTION]',
+                        value: 'This is a test project.',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSEURL]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[AUTHOR]',
+                        value: 'DagonMetric',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 1.0.0, This is a test project.`,
+                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 1.0.0, This is a test project.`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 clean: false,
-                banner: true,
+                banner: 'auto',
                 packageJson: {
                     packageVersion: 'root'
                 }
@@ -124,12 +181,69 @@ void describe('config-helpers/get-tasks', () => {
                     newPackageVersion: '2.0.0'
                 },
                 _outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
-                _bannerText: `// DagonMetric, MIT, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'project-1',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGENAME]',
+                        value: '@scope/package-1',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGEVERSION]',
+                        value: '1.0.0',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '0.0.0-PLACEHOLDER',
+                        value: '1.0.0',
+                        bannerOnly: false
+                    },
+                    {
+                        searchString: '[DESCRIPTION]',
+                        value: 'This is a test project.',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSEURL]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[AUTHOR]',
+                        value: 'DagonMetric',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 2.0.0, This is a test project.`,
+                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 2.0.0, This is a test project.`,
+                _footerTextForCss: undefined,
+                _footerTextForJs: undefined,
                 outDir: 'dist',
                 clean: true,
-                banner: true,
+                banner: 'auto',
                 copy: ['**/*.js', 'README.md'],
                 style: ['style.scss'],
                 script: ['index.ts'],

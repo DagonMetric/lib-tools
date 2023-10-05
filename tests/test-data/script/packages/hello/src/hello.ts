@@ -1,3 +1,5 @@
+import data from './data.json' assert { type: 'json' };
+
 import { Greeter } from './greeter';
 import { Message } from './message';
 
@@ -9,9 +11,9 @@ export * from './simple-decorator';
 
 /**
  * sayHello function.
- * @param message Message object.
  */
-export function sayHello(message: Message) {
+export function sayHello() {
+    const message: Message = data;
     const greeter = new Greeter(message);
     greeter.greet();
 }
