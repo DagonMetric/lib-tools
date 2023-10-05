@@ -21,7 +21,6 @@ export interface CompileOptions {
     readonly minify: boolean | undefined;
     readonly externals: readonly string[] | undefined;
     readonly globals: Record<string, string> | undefined;
-    readonly substitutions: readonly Readonly<SubstitutionInfo>[] | undefined;
     readonly globalName: string | undefined;
     readonly tsConfigInfo: Readonly<TsConfigInfo> | undefined;
     readonly emitDeclarationOnly: boolean | undefined;
@@ -29,6 +28,7 @@ export interface CompileOptions {
     readonly environmentTargets: readonly string[] | undefined;
     readonly bannerText: string | undefined;
     readonly footerText: string | undefined;
+    readonly substitutions: readonly Readonly<SubstitutionInfo>[];
     readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
     readonly preserveSymlinks: boolean | undefined;
     readonly dryRun: boolean;

@@ -732,8 +732,8 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
             }),
         env: context.env,
         packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerTextForCss,
-        footerText: buildTask._footerTextForCss
+        bannerText: buildTask._bannerTextForStyle,
+        footerText: buildTask._footerTextForStyle
     });
 
     return taskRunner;

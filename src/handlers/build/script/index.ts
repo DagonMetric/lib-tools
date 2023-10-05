@@ -1390,8 +1390,8 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
         logLevel: context.logLevel,
         logger: context.logger,
         packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerTextForJs,
-        footerText: buildTask._footerTextForJs,
+        bannerText: buildTask._bannerTextForScript,
+        footerText: buildTask._footerTextForScript,
         substitutions: buildTask._substitutions,
         env: context.env
     });
