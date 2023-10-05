@@ -28,7 +28,18 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
-                _substitutions: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    }
+                ],
                 _bannerTextForStyle: undefined,
                 _bannerTextForScript: undefined,
                 _footerTextForStyle: undefined,
@@ -59,7 +70,18 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _workspaceInfo: workspaceInfo,
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'out'),
-                _substitutions: null,
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'test-project',
+                        bannerOnly: true
+                    }
+                ],
                 _bannerTextForStyle: undefined,
                 _bannerTextForScript: undefined,
                 _footerTextForStyle: undefined,
@@ -264,7 +286,6 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
             const packageJsonInfo: PackageJsonInfo = {
                 packageJson: {
-                    name: 'test-package',
                     version: '1.0.0',
                     author: 'DagonMetric',
                     license: 'MIT',
@@ -300,7 +321,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
                     },
                     {
                         searchString: '[PACKAGENAME]',
-                        value: 'test-package',
+                        value: 'package-1',
                         bannerOnly: true
                     },
                     {
@@ -319,13 +340,13 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     },
                     {
-                        searchString: '[HOMEPAGE]',
-                        value: 'https://github.com/dagonmetric/lib-tools',
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
                         bannerOnly: true
                     },
                     {
-                        searchString: '[LICENSE]',
-                        value: 'MIT',
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
                         bannerOnly: true
                     },
                     {
@@ -352,9 +373,9 @@ void describe('config-helpers/get-parsed-build-task', () => {
             assert.deepStrictEqual(result, expected);
         });
 
-        void it(`should parse build task config with banner='auto' and packageJsonInfo`, async () => {
+        void it(`should parse build task config with banner='true' and packageJsonInfo`, async () => {
             const buildTask: BuildTask = {
-                banner: 'auto'
+                banner: true
             };
 
             const workspaceInfo: WorkspaceInfo = {
@@ -367,7 +388,6 @@ void describe('config-helpers/get-parsed-build-task', () => {
 
             const packageJsonInfo: PackageJsonInfo = {
                 packageJson: {
-                    name: 'test-package',
                     version: '1.0.0',
                     author: 'DagonMetric',
                     license: 'MIT',
@@ -403,7 +423,7 @@ void describe('config-helpers/get-parsed-build-task', () => {
                     },
                     {
                         searchString: '[PACKAGENAME]',
-                        value: 'test-package',
+                        value: 'package-1',
                         bannerOnly: true
                     },
                     {
@@ -422,15 +442,16 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     },
                     {
-                        searchString: '[HOMEPAGE]',
-                        value: 'https://github.com/dagonmetric/lib-tools',
-                        bannerOnly: true
-                    },
-                    {
                         searchString: '[LICENSE]',
                         value: 'MIT',
                         bannerOnly: true
                     },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+
                     {
                         searchString: '[LICENSEURL]',
                         value: 'https://github.com/dagonmetric/lib-tools',

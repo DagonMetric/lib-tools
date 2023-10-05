@@ -81,13 +81,13 @@ void describe('config-helpers/get-tasks', () => {
                         bannerOnly: true
                     },
                     {
-                        searchString: '[HOMEPAGE]',
-                        value: 'https://github.com/dagonmetric/lib-tools',
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
                         bannerOnly: true
                     },
                     {
-                        searchString: '[LICENSE]',
-                        value: 'MIT',
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
                         bannerOnly: true
                     },
                     {
@@ -110,19 +110,74 @@ void describe('config-helpers/get-tasks', () => {
                 _footerTextForStyle: undefined,
                 _footerTextForScript: undefined,
                 clean: false,
-                banner: 'auto',
+                banner: true,
                 packageJson: {
                     packageVersion: 'root'
                 }
             };
 
-            const task2 = {
+            const task2: ParsedBuildTaskConfig = {
                 ...task1,
                 _workspaceInfo: {
                     ...workspace1,
                     projectName: 'project-2'
                 },
-                _bannerText: `// DagonMetric, MIT, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'project-2',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGENAME]',
+                        value: '@scope/package-1',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGEVERSION]',
+                        value: '1.0.0',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '0.0.0-PLACEHOLDER',
+                        value: '1.0.0',
+                        bannerOnly: false
+                    },
+                    {
+                        searchString: '[DESCRIPTION]',
+                        value: 'This is a test project.',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSEURL]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[AUTHOR]',
+                        value: 'DagonMetric',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForStyle: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-2, @scope/package-1, 1.0.0, This is a test project.`,
+                _bannerTextForScript: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-2, @scope/package-1, 1.0.0, This is a test project.`
             };
@@ -199,12 +254,12 @@ void describe('config-helpers/get-tasks', () => {
                     },
                     {
                         searchString: '[PACKAGEVERSION]',
-                        value: '1.0.0',
+                        value: '2.0.0',
                         bannerOnly: true
                     },
                     {
                         searchString: '0.0.0-PLACEHOLDER',
-                        value: '1.0.0',
+                        value: '2.0.0',
                         bannerOnly: false
                     },
                     {
@@ -213,13 +268,13 @@ void describe('config-helpers/get-tasks', () => {
                         bannerOnly: true
                     },
                     {
-                        searchString: '[HOMEPAGE]',
-                        value: 'https://github.com/dagonmetric/lib-tools',
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
                         bannerOnly: true
                     },
                     {
-                        searchString: '[LICENSE]',
-                        value: 'MIT',
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
                         bannerOnly: true
                     },
                     {
@@ -243,7 +298,7 @@ void describe('config-helpers/get-tasks', () => {
                 _footerTextForScript: undefined,
                 outDir: 'dist',
                 clean: true,
-                banner: 'auto',
+                banner: true,
                 copy: ['**/*.js', 'README.md'],
                 style: ['style.scss'],
                 script: ['index.ts'],
@@ -252,13 +307,68 @@ void describe('config-helpers/get-tasks', () => {
                 }
             };
 
-            const task2 = {
+            const task2: ParsedBuildTaskConfig = {
                 ...task1,
                 _workspaceInfo: {
                     ...workspace1,
                     projectName: 'project-2'
                 },
-                _bannerText: `// DagonMetric, MIT, ${new Date()
+                _substitutions: [
+                    {
+                        searchString: '[CURRENTYEAR]',
+                        value: new Date().getFullYear().toString(),
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PROJECTNAME]',
+                        value: 'project-2',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGENAME]',
+                        value: '@scope/package-1',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[PACKAGEVERSION]',
+                        value: '2.0.0',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '0.0.0-PLACEHOLDER',
+                        value: '2.0.0',
+                        bannerOnly: false
+                    },
+                    {
+                        searchString: '[DESCRIPTION]',
+                        value: 'This is a test project.',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSE]',
+                        value: 'MIT',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[HOMEPAGE]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[LICENSEURL]',
+                        value: 'https://github.com/dagonmetric/lib-tools',
+                        bannerOnly: true
+                    },
+                    {
+                        searchString: '[AUTHOR]',
+                        value: 'DagonMetric',
+                        bannerOnly: true
+                    }
+                ],
+                _bannerTextForScript: `// DagonMetric, MIT, ${new Date()
+                    .getFullYear()
+                    .toString()}, https://github.com/dagonmetric/lib-tools, project-2, @scope/package-1, 2.0.0, This is a test project.`,
+                _bannerTextForStyle: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-2, @scope/package-1, 2.0.0, This is a test project.`
             };
