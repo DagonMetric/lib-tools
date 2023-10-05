@@ -231,10 +231,6 @@ export interface ScriptCompilation {
      */
     environmentTargets?: string[];
     /**
-     * List of external modules for this compilation.
-     */
-    externals?: (Record<string, string> | string)[];
-    /**
      * Exclude list for externals for this compilation.
      */
     externalExclude?: string[];
@@ -256,18 +252,19 @@ export interface ScriptOptions {
      * Specify target environments.
      */
     environmentTargets?: string[];
+
     /**
-     * Specify list of external modules.
+     * If true, all package dependency fields in package.json are marked as externals. Default is 'true'.
+     */
+    packageDependenciesAsExternals?: boolean;
+    /**
+     * List of external modules.
      */
     externals?: (Record<string, string> | string)[];
     /**
      * Specify exclude list for externals.
      */
     externalExclude?: string[];
-    /**
-     * If true, all package dependency fields in package.json are marked as externals. Default is 'true'.
-     */
-    packageDependenciesAsExternals?: boolean;
     /**
      * Enable or disable resolving symlinks to their realpaths.
      */
@@ -297,37 +294,17 @@ export interface PackageJsonOptions {
  */
 export interface BannerOptions {
     /**
-     * Banner content for both css and js files.
+     * Text content for both css and js files.
      */
-    banner?: string;
+    text?: string;
     /**
-     * Banner content for only css files.
+     * For only css files.
      */
-    bannerForCss?: string;
+    css?: string;
     /**
-     * Banner content for only js files.
+     * For only js files.
      */
-    bannerForJs?: string;
-    /**
-     * If true, it will add comment if not present in banner. Default `true`.
-     */
-    addCommentToBanner?: boolean;
-    /**
-     * Footer content for both css and js files.
-     */
-    footer?: string;
-    /**
-     * Footer content for only css files.
-     */
-    footerForCss?: string;
-    /**
-     * Footer content for only js files.
-     */
-    footerForJs?: string;
-    /**
-     * If true, it will add comment if not present in footer. Default `true`.
-     */
-    addCommentToFooter?: boolean;
+    js?: string;
 }
 
 /**
@@ -355,9 +332,13 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
-     * Set true to search banner text file or set banner file path or banner object options to add banner content to the generated files.
+     * Set `auto` to search banner text files, or set banner file path, or object options to add banner content to the generated files.
      */
-    banner?: boolean | string | BannerOptions;
+    banner?: string | BannerOptions;
+    /**
+     * Set `auto` to search footer text files, or set footer file path, or object options to add footer content to the generated files.
+     */
+    footer?: string | BannerOptions;
     /**
      * Options for package.json file updating.
      */
