@@ -9,7 +9,7 @@ import { InvalidCommandOptionError } from '../exceptions/invalid-command-option-
 import { isInFolder, isSamePaths, normalizePathToPOSIXStyle, pathExists, resolvePath } from '../utils/index.js';
 
 async function checkPaths(
-    globPatternsOrRelativePaths: string[],
+    globPatternsOrRelativePaths: readonly string[],
     cwd: string,
     acceptGlobMagic: boolean
 ): Promise<boolean> {
