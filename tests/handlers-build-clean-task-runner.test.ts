@@ -37,10 +37,10 @@ void describe('handlers/build/clean', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 clean: false
             };
 
@@ -73,10 +73,10 @@ void describe('handlers/build/clean', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 clean: {
                     beforeBuild: {
                         paths: [' ']
@@ -113,10 +113,10 @@ void describe('handlers/build/clean', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 clean: true
             };
 
@@ -162,10 +162,10 @@ void describe('handlers/build/clean', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 clean: {
                     beforeBuild: beforeBuildCleanOptions
                 }
@@ -208,10 +208,10 @@ void describe('handlers/build/clean', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 clean: {
                     afterBuild: afterBuildCleanOptions
                 }

@@ -101,14 +101,14 @@ void describe('config-helpers/get-tasks', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForStyle: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 1.0.0, This is a test project.`,
-                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForScript: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 1.0.0, This is a test project.`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 clean: false,
                 banner: 'auto',
                 packageJson: {
@@ -233,14 +233,14 @@ void describe('config-helpers/get-tasks', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForStyle: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 2.0.0, This is a test project.`,
-                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForScript: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, project-1, @scope/package-1, 2.0.0, This is a test project.`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 outDir: 'dist',
                 clean: true,
                 banner: 'auto',

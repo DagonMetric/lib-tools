@@ -37,10 +37,10 @@ void describe('handlers/build/copy', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 copy: []
             };
 
@@ -73,10 +73,10 @@ void describe('handlers/build/copy', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 copy: [' ', { from: ' ' }]
             };
 
@@ -109,10 +109,10 @@ void describe('handlers/build/copy', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 copy: ['a.txt', 'b.txt', '**/*.md']
             };
 
@@ -159,10 +159,10 @@ void describe('handlers/build/copy', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 copy: [
                     {
                         from: 'a.txt'
@@ -225,10 +225,10 @@ void describe('handlers/build/copy', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined,
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined,
                 copy: [
                     'a.txt',
                     {

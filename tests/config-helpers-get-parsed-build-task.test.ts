@@ -29,10 +29,10 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'dist'),
                 _substitutions: null,
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -60,10 +60,10 @@ void describe('config-helpers/get-parsed-build-task', () => {
                 _packageJsonInfo: null,
                 _outDir: path.resolve(process.cwd(), 'out'),
                 _substitutions: null,
-                _bannerTextForCss: undefined,
-                _bannerTextForJs: undefined,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _bannerTextForStyle: undefined,
+                _bannerTextForScript: undefined,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -102,10 +102,14 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `// This is an inline banner.\ntest-project, ${new Date().getFullYear().toString()}`,
-                _bannerTextForJs: `// This is an inline banner.\ntest-project, ${new Date().getFullYear().toString()}`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _bannerTextForStyle: `// This is an inline banner.\ntest-project, ${new Date()
+                    .getFullYear()
+                    .toString()}`,
+                _bannerTextForScript: `// This is an inline banner.\ntest-project, ${new Date()
+                    .getFullYear()
+                    .toString()}`,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -144,14 +148,14 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `/* This is an inline banner.\ntest-project, ${new Date()
+                _bannerTextForStyle: `/* This is an inline banner.\ntest-project, ${new Date()
                     .getFullYear()
                     .toString()} */`,
-                _bannerTextForJs: `/* This is an inline banner.\ntest-project, ${new Date()
+                _bannerTextForScript: `/* This is an inline banner.\ntest-project, ${new Date()
                     .getFullYear()
                     .toString()} */`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -190,10 +194,10 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `/*! This is an inline banner. */`,
-                _bannerTextForJs: `/*! This is an inline banner. */`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _bannerTextForStyle: `/*! This is an inline banner. */`,
+                _bannerTextForScript: `/*! This is an inline banner. */`,
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -232,14 +236,14 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
+                _bannerTextForStyle: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
                     .getFullYear()
                     .toString()}\n */`,
-                _bannerTextForJs: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
+                _bannerTextForScript: `/*!\n * This is an inline banner.\n * test-project, ${new Date()
                     .getFullYear()
                     .toString()}\n */`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -335,14 +339,14 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForStyle: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
-                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForScript: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
@@ -438,14 +442,14 @@ void describe('config-helpers/get-parsed-build-task', () => {
                         bannerOnly: true
                     }
                 ],
-                _bannerTextForCss: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForStyle: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
-                _bannerTextForJs: `// DagonMetric, MIT, ${new Date()
+                _bannerTextForScript: `// DagonMetric, MIT, ${new Date()
                     .getFullYear()
                     .toString()}, https://github.com/dagonmetric/lib-tools, test-project, package-1, 1.0.0, This is a test project.`,
-                _footerTextForCss: undefined,
-                _footerTextForJs: undefined
+                _footerTextForStyle: undefined,
+                _footerTextForScript: undefined
             };
 
             assert.deepStrictEqual(result, expected);
