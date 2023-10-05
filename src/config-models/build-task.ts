@@ -290,21 +290,17 @@ export interface PackageJsonOptions {
 }
 
 /**
- * Banner options.
+ * Banner and footer options.
  */
-export interface BannerOptions {
+export interface BannerFooterOptions {
     /**
-     * Text content for both css and js files.
+     * For only style files.
      */
-    text?: string;
+    style?: string;
     /**
-     * For only css files.
+     * For only script files.
      */
-    css?: string;
-    /**
-     * For only js files.
-     */
-    js?: string;
+    script?: string;
 }
 
 /**
@@ -332,13 +328,13 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
-     * Set `auto` to search banner text files, or set banner file path, or object options to add banner content to the generated files.
+     * Set `auto` to search banner text file, or set banner file path, or object options to add banner content to the generated files.
      */
-    banner?: string | BannerOptions;
+    banner?: string | BannerFooterOptions;
     /**
-     * Set `auto` to search footer text files, or set footer file path, or object options to add footer content to the generated files.
+     * Set `auto` to search footer text file, or set footer file path, or object options to add footer content to the generated files.
      */
-    footer?: string | BannerOptions;
+    footer?: string | BannerFooterOptions;
     /**
      * Options for package.json file updating.
      */
