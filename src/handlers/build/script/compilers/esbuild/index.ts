@@ -3,7 +3,7 @@ import * as esbuild from 'esbuild';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { CompilationError, InvalidConfigError } from '../../../../../exceptions/index.js';
+import { CompilationError } from '../../../../../exceptions/index.js';
 import {
     LoggerBase,
     colors,
@@ -44,26 +44,6 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     return undefined;
 }
 
-function getEsBuildModuleFormat(options: CompileOptions): esbuild.Format {
-    if (options.moduleFormat === 'esm') {
-        return 'esm';
-    } else if (options.moduleFormat === 'cjs') {
-        return 'cjs';
-    } else if (options.moduleFormat === 'iife') {
-        return 'iife';
-    } else {
-        const configLocation = `projects/${options.workspaceInfo.projectName ?? '0'}/tasks/build/script/compilations/${
-            options.compilationIndex
-        }/moduleFormat`;
-
-        throw new InvalidConfigError(
-            `The module format '${options.moduleFormat}' is not supported for esbuild.`,
-            options.workspaceInfo.configPath,
-            configLocation
-        );
-    }
-}
-
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     logger.info(
         `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
@@ -79,11 +59,11 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             banner: options.bannerText ? { js: options.bannerText } : undefined,
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
-            format: getEsBuildModuleFormat(options),
+            format: options.moduleFormat,
             target: getEsBuildTargets(options),
             platform: getEsBuildPlatform(options),
             tsconfig: options.tsConfigInfo?.configPath,
-            external: [...options.externals],
+            external: options.externals ? [...options.externals] : undefined,
             globalName: options.globalName,
             write: false,
             preserveSymlinks: options.tsConfigInfo?.compilerOptions.preserveSymlinks,

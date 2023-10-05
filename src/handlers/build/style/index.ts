@@ -201,6 +201,7 @@ export interface StyleTaskRunnerOptions {
     readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: PackageJsonInfo | null;
     readonly bannerText: string | undefined;
+    readonly footerText: string | undefined;
     readonly env: string | undefined;
 }
 
@@ -307,7 +308,8 @@ export class StyleTaskRunner {
                     outDir: this.options.outDir,
                     separateMinifyFile,
                     sourceMapInMinifyFile,
-                    bannerText: this.options.bannerText
+                    bannerText: this.options.bannerText,
+                    footerText: this.options.footerText
                 })
             ],
             module: {
@@ -730,7 +732,8 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
             }),
         env: context.env,
         packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerText
+        bannerText: buildTask._bannerTextForCss,
+        footerText: buildTask._footerTextForCss
     });
 
     return taskRunner;

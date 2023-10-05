@@ -16,7 +16,6 @@ import { PackageJsonInfo, SubstitutionInfo, WorkspaceInfo } from '../../../confi
 import { CompilationError, InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    Logger,
     LoggerBase,
     colors,
     dashCaseToCamelCase,
@@ -60,15 +59,16 @@ interface ParsedScriptCompilation extends ScriptCompilation {
 export * from './interfaces/index.js';
 
 export interface ScriptTaskRunnerOptions {
-    readonly scriptOptions: ScriptOptions;
-    readonly workspaceInfo: WorkspaceInfo;
+    readonly scriptOptions: Readonly<ScriptOptions>;
+    readonly workspaceInfo: Readonly<WorkspaceInfo>;
     readonly outDir: string;
     readonly dryRun: boolean;
     readonly logger: LoggerBase;
     readonly logLevel: LogLevelStrings;
-    readonly packageJsonInfo: PackageJsonInfo | null;
+    readonly packageJsonInfo: Readonly<PackageJsonInfo> | null;
     readonly bannerText: string | undefined;
-    readonly substitutions: SubstitutionInfo[];
+    readonly footerText: string | undefined;
+    readonly substitutions: readonly Readonly<SubstitutionInfo>[];
     readonly env: string | undefined;
 }
 
@@ -127,6 +127,7 @@ export class ScriptTaskRunner {
                 globalName: compilation.globalName,
                 treeshake: compilation.treeshake,
                 bannerText: this.options.bannerText,
+                footerText: this.options.footerText,
                 substitutions: this.options.substitutions,
                 dryRun: this.options.dryRun,
                 logLevel: this.options.logLevel
@@ -1250,7 +1251,7 @@ export class ScriptTaskRunner {
         externals: string[];
         globals: Record<string, string>;
     } {
-        const externalGlobalMap = new Map<string, string>();
+        const globals: Record<string, string> = {};
         const externals: string[] = ['tslib'];
         const excludes = compilation?.externalExclude ?? this.options.scriptOptions.externalExclude ?? [];
 
@@ -1300,52 +1301,39 @@ export class ScriptTaskRunner {
                             externals.push(externalKey);
                         }
 
-                        if (!externalGlobalMap.get(externalKey)) {
-                            externalGlobalMap.set(externalKey, globalName);
-                        }
+                        globals[externalKey] = globalName;
                     }
                 }
             }
         }
 
-        if (
-            externals.includes('rxjs') &&
-            !externals.includes('rxjs/operators') &&
-            !excludes.includes('rxjs/operators')
-        ) {
-            externals.push('rxjs/operators');
-
-            if (!externalGlobalMap.get('rxjs/operators')) {
-                externalGlobalMap.set('rxjs/operators', 'rxjs.operators');
-            }
-        }
-
-        const globalsObj: Record<string, string> = {};
         for (const externalkey of externals) {
-            const foundName = externalGlobalMap.get(externalkey);
-            if (foundName) {
-                globalsObj[externalkey] = foundName;
-            } else {
-                let globalName = externalkey.replace(/\//g, '.');
-                globalName = dashCaseToCamelCase(globalName);
-
-                if (globalName.startsWith('@angular')) {
-                    globalName = globalName.replace(/^@angular/, 'ng');
-                } else if (globalName.startsWith('@')) {
-                    globalName = globalName.substring(1);
-                } else if (globalName === 'jquery') {
-                    globalName = '$';
-                } else if (globalName === 'lodash') {
-                    globalName = '_';
-                }
-
-                globalsObj[externalkey] = globalName;
+            if (globals[externalkey]) {
+                continue;
             }
+
+            let globalName = externalkey.replace(/\//g, '.');
+
+            if (globalName.startsWith('@')) {
+                globalName = globalName.substring(1);
+            }
+
+            if (globalName.startsWith('angular')) {
+                globalName = globalName.replace(/^angular/, 'ng');
+            } else if (globalName === 'jquery') {
+                globalName = '$';
+            } else if (globalName === 'lodash') {
+                globalName = '_';
+            }
+
+            globalName = dashCaseToCamelCase(globalName);
+
+            globals[externalkey] = globalName;
         }
 
         return {
             externals,
-            globals: globalsObj
+            globals
         };
     }
 }
@@ -1375,10 +1363,6 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
             }
         }
 
-        if (!entries.length) {
-            return null;
-        }
-
         scriptOptions.compilations = entries.map((e) => {
             return {
                 entry: e
@@ -1388,20 +1372,6 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
         scriptOptions = {
             ...buildTask.script
         };
-
-        if (Array.isArray(scriptOptions.compilations)) {
-            const newCompilations: ScriptCompilation[] = [];
-
-            for (const compilation of scriptOptions.compilations) {
-                if (!Object.keys(compilation).length) {
-                    continue;
-                }
-
-                newCompilations.push(compilation);
-            }
-
-            scriptOptions.compilations = newCompilations;
-        }
     }
 
     if (
@@ -1417,18 +1387,13 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
         workspaceInfo: buildTask._workspaceInfo,
         outDir: buildTask._outDir,
         dryRun: context.dryRun,
-        logLevel: context.logLevel ?? 'info',
-        logger:
-            context.logger ??
-            new Logger({
-                logLevel: context.logLevel ?? 'info',
-                warnPrefix: colors.lightYellow('Warning:'),
-                groupIndentation: 4
-            }),
-        env: context.env,
+        logLevel: context.logLevel,
+        logger: context.logger,
         packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerText,
-        substitutions: buildTask._substitutions
+        bannerText: buildTask._bannerTextForJs,
+        footerText: buildTask._footerTextForJs,
+        substitutions: buildTask._substitutions,
+        env: context.env
     });
 
     return taskRunner;

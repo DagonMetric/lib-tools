@@ -6,7 +6,7 @@ import { LogLevelStrings, LoggerBase } from '../../../../utils/index.js';
 
 export interface TsConfigInfo {
     readonly compilerOptions: Readonly<CompilerOptions>;
-    readonly configPath?: string;
+    readonly configPath: string | undefined;
     readonly fileNames: readonly string[];
 }
 
@@ -18,16 +18,17 @@ export interface CompileOptions {
     readonly scriptTarget: ScriptTargetStrings;
     readonly moduleFormat: ScriptModuleFormat;
     readonly sourceMap: boolean;
-    readonly minify: boolean;
-    readonly externals: readonly string[];
-    readonly globals: Record<string, string>;
-    readonly substitutions: readonly Readonly<SubstitutionInfo>[];
+    readonly minify: boolean | undefined;
+    readonly externals: readonly string[] | undefined;
+    readonly globals: Record<string, string> | undefined;
+    readonly substitutions: readonly Readonly<SubstitutionInfo>[] | undefined;
     readonly globalName: string | undefined;
     readonly tsConfigInfo: Readonly<TsConfigInfo> | undefined;
     readonly emitDeclarationOnly: boolean | undefined;
     readonly declaration: boolean | undefined;
     readonly environmentTargets: readonly string[] | undefined;
     readonly bannerText: string | undefined;
+    readonly footerText: string | undefined;
     readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
     readonly preserveSymlinks: boolean | undefined;
     readonly dryRun: boolean;
@@ -35,8 +36,8 @@ export interface CompileOptions {
 }
 
 export interface CompileAsset {
-    path: string;
-    size: number | undefined;
+    readonly path: string;
+    readonly size: number | undefined;
 }
 
 export interface CompileResult {

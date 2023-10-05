@@ -1,27 +1,21 @@
 import { pathToFileURL } from 'node:url';
 
 import { ParsedBuildTaskConfig, ParsedCustomTaskConfig } from '../config-models/parsed/index.js';
-import { LogLevelStrings, Logger, LoggerBase, colors, dashCaseToCamelCase, exec, resolvePath } from '../utils/index.js';
+import { LogLevelStrings, Logger, colors, dashCaseToCamelCase, exec, resolvePath } from '../utils/index.js';
 
 import { CustomTaskHandlerFn } from './interfaces/index.js';
 
 export async function handleTask(
     task: ParsedBuildTaskConfig | ParsedCustomTaskConfig,
-    options?: {
-        logger?: LoggerBase;
-        logLevel?: LogLevelStrings;
-        dryRun?: boolean;
-        env?: string;
+    options: {
+        logger: Logger;
+        logLevel: LogLevelStrings;
+        dryRun: boolean;
+        env: string | undefined;
     }
 ): Promise<void> {
-    const logLevel = options?.logLevel ?? 'info';
-    const logger =
-        options?.logger ??
-        new Logger({
-            logLevel,
-            warnPrefix: colors.lightYellow('Warning:'),
-            groupIndentation: 4
-        });
+    const logLevel = options.logLevel;
+    const logger = options.logger;
 
     const taskPath = `${task._workspaceInfo.projectName ?? '0'}/${task._taskName}`;
 

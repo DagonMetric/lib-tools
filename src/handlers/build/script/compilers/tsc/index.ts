@@ -181,13 +181,16 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         if (file && isInFolder(projectRoot, filePath) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
             if (!compilerOptions.emitDeclarationOnly && options.substitutions) {
                 for (const substitution of options.substitutions.filter((s) => !s.bannerOnly)) {
-                    const m = file.match(substitution.searchRegExp);
+                    const escapedPattern = substitution.searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const searchRegExp = new RegExp(escapedPattern, 'g');
+
+                    const m = file.match(searchRegExp);
                     if (m != null && m.length > 0) {
                         const matchedText = m[0];
                         logger.debug(
                             `Substituting ${matchedText} with value '${substitution.value}' in file ${filePathRel}`
                         );
-                        file = file.replace(substitution.searchRegExp, substitution.value);
+                        file = file.replace(searchRegExp, substitution.value);
                     }
                 }
             }

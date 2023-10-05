@@ -1,6 +1,5 @@
 /* eslint-disable import/no-named-as-default-member */
 /* eslint-disable import/default */
-
 import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
@@ -22,25 +21,46 @@ import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/in
 
 const require = createRequire(process.cwd() + '/');
 
-// import { nodeResolve } from '@rollup/plugin-node-resolve';
 const rollupNodeResolve =
     require('@rollup/plugin-node-resolve') as typeof import('@rollup/plugin-node-resolve').default;
 const rollupJson = require('@rollup/plugin-json') as typeof import('@rollup/plugin-json').default;
-const rollupTypescript = require('@rollup/plugin-typescript') as typeof import('@rollup/plugin-typescript').default;
+
+// const rollupTypescript = require('@rollup/plugin-typescript') as typeof import('@rollup/plugin-typescript').default;
+const rollupTypescript = require('rollup-plugin-typescript2') as typeof import('rollup-plugin-typescript2').default;
+
 const rollupCommonjs = require('@rollup/plugin-commonjs') as typeof import('@rollup/plugin-commonjs').default;
 const rollupReplace = require('@rollup/plugin-replace') as typeof import('@rollup/plugin-replace').default;
 
-function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
+type ScriptTargetStrings = keyof typeof ts.ScriptTarget;
+type ModuleKindStrings = keyof typeof ts.ModuleKind;
+
+interface JsonTsCompilerOptions
+    extends Pick<
+        ts.CompilerOptions,
+        | 'outDir'
+        | 'rootDir'
+        | 'allowJs'
+        | 'declaration'
+        | 'sourceMap'
+        | 'inlineSourceMap'
+        | 'inlineSources'
+        | 'sourceRoot'
+        | 'preserveSymlinks'
+    > {
+    target?: ScriptTargetStrings;
+    module?: ModuleKindStrings;
+}
+
+function getTsCompilerOptionsOverride(options: CompileOptions): JsonTsCompilerOptions {
     const configFileCompilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
 
-    const compilerOptions: ts.CompilerOptions = {};
+    const compilerOptions: JsonTsCompilerOptions = {};
 
     compilerOptions.outDir = path.dirname(options.outFilePath);
     compilerOptions.rootDir = path.dirname(options.entryFilePath);
 
-    if (options.scriptTarget != null) {
-        compilerOptions.target = ts.ScriptTarget[options.scriptTarget];
-    }
+    const scriptTarget = ts.ScriptTarget[options.scriptTarget];
+    compilerOptions.target = ts.ScriptTarget[scriptTarget] as ScriptTargetStrings;
 
     if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
         compilerOptions.allowJs = true;
@@ -53,12 +73,12 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
                 configFileCompilerOptions.module !== ts.ModuleKind.Node16 &&
                 configFileCompilerOptions.module !== ts.ModuleKind.NodeNext)
         ) {
-            if ((compilerOptions.target as number) > 8) {
-                // TODO: To review
-                compilerOptions.module = ts.ModuleKind.NodeNext;
+            if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.NodeNext] as ModuleKindStrings;
+            } else if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.Node16] as ModuleKindStrings;
             } else {
-                // TODO: To review
-                compilerOptions.module = ts.ModuleKind.CommonJS;
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.CommonJS] as ModuleKindStrings;
             }
         }
     } else if (options.moduleFormat === 'esm') {
@@ -70,20 +90,24 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
             configFileCompilerOptions.module === ts.ModuleKind.System ||
             configFileCompilerOptions.module === ts.ModuleKind.UMD
         ) {
-            // TODO: To review
-            compilerOptions.module = ts.ModuleKind.ESNext;
+            if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.NodeNext] as ModuleKindStrings;
+            } else if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.Node16] as ModuleKindStrings;
+            } else if (scriptTarget > ts.ScriptTarget.ES2022) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ESNext] as ModuleKindStrings;
+            } else if (scriptTarget > ts.ScriptTarget.ES2020) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2022] as ModuleKindStrings;
+            } else if (scriptTarget > ts.ScriptTarget.ES2015) {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2020] as ModuleKindStrings;
+            } else {
+                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2015] as ModuleKindStrings;
+            }
         }
     } else if (options.moduleFormat === 'iife') {
-        if (
-            configFileCompilerOptions.module !== ts.ModuleKind.System &&
-            configFileCompilerOptions.module !== ts.ModuleKind.UMD
-        ) {
-            compilerOptions.module = ts.ModuleKind.UMD;
-        }
-
         // TODO: To review
-        if (configFileCompilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
-            compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
+        if (configFileCompilerOptions.module == null) {
+            compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2015] as ModuleKindStrings;
         }
     }
 
@@ -94,18 +118,21 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     }
 
     if (options.sourceMap) {
-        compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
         compilerOptions.sourceMap = true;
         compilerOptions.inlineSourceMap = false;
         compilerOptions.inlineSources = true;
+        compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
     } else {
         compilerOptions.sourceMap = false;
         compilerOptions.inlineSourceMap = false;
         compilerOptions.inlineSources = false;
-
         if (!configFileCompilerOptions.sourceRoot != null) {
             compilerOptions.sourceRoot = '';
         }
+    }
+
+    if (options.preserveSymlinks != null) {
+        compilerOptions.preserveSymlinks = options.preserveSymlinks;
     }
 
     return compilerOptions;
@@ -136,33 +163,42 @@ export function getGlobalVariable(moduleId: string, globalsRecord: Record<string
 
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     const moduleFormat: ModuleFormat = options.moduleFormat;
-    const tsCompilerOptions = getTsCompilerOptions(options);
     const externals = options.externals ?? [];
     let treeshake = options.treeshake;
     if (treeshake == null) {
-        treeshake = moduleFormat === 'iife' || moduleFormat === 'umd' ? true : false;
+        treeshake = moduleFormat === 'iife' && options.minify ? true : false;
     }
 
     const plugins: InputPluginOption[] = [
-        // Must be before rollup-plugin typescript in the plugin list,
-        rollupNodeResolve(),
-        rollupJson()
+        // Must be before rollup-plugin-typescript2 in the plugin list, especially when the browser: true option is used
+        rollupNodeResolve()
     ];
 
     if (options.tsConfigInfo) {
+        const compilerOptions = getTsCompilerOptionsOverride(options);
+
         plugins.push(
             rollupTypescript({
                 tsconfig: options.tsConfigInfo.configPath,
-                compilerOptions: tsCompilerOptions,
-                rootDir: path.dirname(options.entryFilePath),
-                filterRoot: options.tsConfigInfo.configPath ? path.dirname(options.tsConfigInfo.configPath) : undefined,
-                tslib: require.resolve('tslib')
+                tsconfigOverride: { compilerOptions }
                 // include: [],
                 // exclude: [],
-                // transformers
+
+                // For @rollup/plugin-typescript
+                // compilerOptions,
+                // rootDir: path.dirname(options.entryFilePath),
+                // filterRoot: options.tsConfigInfo.configPath ? path.dirname(options.tsConfigInfo.configPath) : undefined,
+                // tslib: require.resolve('tslib')
             })
         );
     }
+
+    plugins.push(
+        rollupJson({
+            preferConst: true,
+            include: ['a.js']
+        })
+    );
 
     if (moduleFormat === 'cjs') {
         plugins.push(
@@ -203,12 +239,13 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
             return externals.some((dep) => moduleId === dep || moduleId.startsWith(`${dep}/`));
         },
+        plugins,
         preserveSymlinks: options.preserveSymlinks,
         treeshake,
         logLevel: options.logLevel === 'debug' ? 'debug' : 'warn',
         onLog: (logLevel, log) => {
             if (typeof log === 'string') {
-                logger.warn(log);
+                logger.log(logLevel, log);
 
                 return;
             }
@@ -232,8 +269,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             } else {
                 logger.log(logLevel, log.message);
             }
-        },
-        plugins
+        }
     };
 
     const outputOptions: OutputOptions = {
@@ -244,9 +280,10 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         sourcemap: options.sourceMap,
         banner: options.bannerText,
         globals: (moduleid) => getGlobalVariable(moduleid, options.globals),
-        entryFileNames: '[name].mjs',
+        // entryFileNames: '[name].mjs',
         // inlineDynamicImports: moduleFormat === 'iife' || moduleFormat === 'umd' ? true : false, // Default:	false
-        generatedCode: options.scriptTarget === 'ES5' ? 'es5' : 'es2015'
+        generatedCode: options.scriptTarget === 'ES5' ? 'es5' : 'es2015',
+        externalImportAssertions: true
     };
 
     const dryRunSuffix = options.dryRun ? ' [dry run]' : '';

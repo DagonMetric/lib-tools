@@ -17,6 +17,7 @@ export interface StyleWebpackPluginOptions {
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
     readonly bannerText: string | undefined;
+    readonly footerText: string | undefined;
 }
 
 export class StyleWebpackPlugin {
@@ -24,15 +25,19 @@ export class StyleWebpackPlugin {
 
     private readonly logger: LoggerBase;
     private readonly banner: () => string;
+    private readonly footer: () => string;
 
     constructor(private readonly options: StyleWebpackPluginOptions) {
         this.logger = this.options.logger;
         this.banner = () => this.options.bannerText ?? '';
+        this.footer = () => this.options.footerText ?? '';
     }
 
     apply(compiler: Compiler): void {
         const banner = this.banner;
-        const bannerCache = new WeakMap<sources.Source>();
+        const footer = this.footer;
+
+        const bannerAndFooterCache = new WeakMap<sources.Source>();
 
         compiler.hooks.compilation.tap(this.name, (compilation) => {
             compilation.hooks.processAssets.tap(
@@ -41,8 +46,8 @@ export class StyleWebpackPlugin {
                     stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS
                 },
                 (assets) => {
-                    // Add banner
-                    if (this.options.bannerText) {
+                    // Add banner or footer
+                    if (this.options.bannerText ?? this.options.footerText) {
                         for (const chunk of compilation.chunks) {
                             // entryOnly
                             if (!chunk.canBeInitial()) {
@@ -50,21 +55,57 @@ export class StyleWebpackPlugin {
                             }
 
                             for (const file of chunk.files) {
-                                const comment = compilation.getPath(banner, {
-                                    chunk,
-                                    filename: file
-                                });
+                                const commentBanner = this.options.bannerText
+                                    ? compilation.getPath(banner, {
+                                          chunk,
+                                          filename: file
+                                      })
+                                    : '';
+
+                                const commentFooter = this.options.footerText
+                                    ? compilation.getPath(footer, {
+                                          chunk,
+                                          filename: file
+                                      })
+                                    : '';
 
                                 compilation.updateAsset(file, (old) => {
-                                    const cached = bannerCache.get(old) as {
+                                    const cached = bannerAndFooterCache.get(old) as {
                                         source: sources.ConcatSource;
-                                        comment: string;
+                                        commentBanner: string;
+                                        commentfooter: string;
                                     };
 
-                                    if (!cached || cached.comment !== comment) {
-                                        const source = new compiler.webpack.sources.ConcatSource(comment, '\n', old);
+                                    if (
+                                        !cached ||
+                                        cached.commentBanner !== commentBanner ||
+                                        cached.commentfooter !== commentFooter
+                                    ) {
+                                        let source: sources.Source;
 
-                                        bannerCache.set(old, { source, comment });
+                                        if (commentBanner && commentFooter) {
+                                            source = new compiler.webpack.sources.ConcatSource(
+                                                commentBanner,
+                                                '\n',
+                                                old,
+                                                '\n',
+                                                commentFooter
+                                            );
+                                        } else if (commentBanner) {
+                                            source = new compiler.webpack.sources.ConcatSource(
+                                                commentBanner,
+                                                '\n',
+                                                old
+                                            );
+                                        } else {
+                                            source = new compiler.webpack.sources.ConcatSource(
+                                                old,
+                                                '\n',
+                                                commentFooter
+                                            );
+                                        }
+
+                                        bannerAndFooterCache.set(old, { source, commentBanner, commentFooter });
 
                                         return source;
                                     }
