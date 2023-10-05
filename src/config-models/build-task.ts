@@ -149,7 +149,7 @@ export interface StyleOptions {
 /**
  * Script module format.
  */
-export type ScriptModuleFormat = 'cjs' | 'esm' | 'iife' | 'umd';
+export type ScriptModuleFormat = 'cjs' | 'esm' | 'iife';
 
 /**
  * Script target.
@@ -174,7 +174,7 @@ export interface TreeshakingOptions {
  */
 export interface ScriptCompilation {
     /**
-     * Preferred compiler / bundler tool for this compilation.
+     * Preferred compiler / bundler tool for this compilation. By default, it will be selected automatically.
      */
     compiler?: string;
     /**
@@ -198,27 +198,19 @@ export interface ScriptCompilation {
      */
     scriptTarget?: ScriptTargetStrings;
     /**
-     * Global name for iife moudle format.
+     * Global name for iife module format.
      */
     globalName?: string;
     /**
-     * Typescript configuration file for this compilation.
-     */
-    tsconfig?: string;
-    /**
-     * To override `declaration` options in tsconfig.
+     * If true, d.ts files will be generated. This will override `declaration` options in tsconfig.
      */
     declaration?: boolean;
     /**
-     * If true, only output d.ts files not javascript files.
+     * If true, only output d.ts files not javascript files. This will override `emitDeclarationOnly` options in tsconfig.
      */
     emitDeclarationOnly?: boolean;
     /**
-     * Target environments for this compilation.
-     */
-    environmentTargets?: string[];
-    /**
-     *  If true, sourcemap file will be generated.
+     *  If true, sourcemap file will be generated. This will override `sourceMap` and 'inlineSourceMap' options in tsconfig.
      */
     sourceMap?: boolean;
     /**
@@ -226,13 +218,26 @@ export interface ScriptCompilation {
      */
     minify?: boolean;
     /**
-     * Exclude list for externals for this compilation.
-     */
-    externalExclude?: string[];
-    /**
      * Treeshaking options.
      */
     treeshake?: boolean | TreeshakingOptions;
+
+    /**
+     * Typescript configuration file for this compilation.
+     */
+    tsconfig?: string;
+    /**
+     * Target environments for this compilation.
+     */
+    environmentTargets?: string[];
+    /**
+     * List of external modules for this compilation.
+     */
+    externals?: (Record<string, string> | string)[];
+    /**
+     * Exclude list for externals for this compilation.
+     */
+    externalExclude?: string[];
 }
 
 /**
