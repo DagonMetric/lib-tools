@@ -52,11 +52,11 @@ export interface SubstitutionInfo {
 
 export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _outDir: string;
-    readonly _bannerTextForCss: string | undefined;
-    readonly _bannerTextForJs: string | undefined;
-    readonly _footerTextForCss: string | undefined;
-    readonly _footerTextForJs: string | undefined;
-    readonly _substitutions: readonly Readonly<SubstitutionInfo>[] | null;
+    readonly _bannerTextForStyle: string | undefined;
+    readonly _bannerTextForScript: string | undefined;
+    readonly _footerTextForStyle: string | undefined;
+    readonly _footerTextForScript: string | undefined;
+    readonly _substitutions: readonly Readonly<SubstitutionInfo>[];
     readonly _packageJsonInfo: Readonly<PackageJsonInfo> | null;
 }
 

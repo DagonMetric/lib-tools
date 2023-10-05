@@ -296,11 +296,11 @@ export interface BannerFooterOptions {
     /**
      * For only style files.
      */
-    style?: string;
+    style?: string | boolean;
     /**
      * For only script files.
      */
-    script?: string;
+    script?: string | boolean;
 }
 
 /**
@@ -328,13 +328,13 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
-     * Set `auto` to search banner text file, or set banner file path, or object options to add banner content to the generated files.
+     * Set `true` value to search banner text file, or set banner file path, or object options to add banner content to the generated files.
      */
-    banner?: string | BannerFooterOptions;
+    banner?: string | boolean | BannerFooterOptions;
     /**
-     * Set `auto` to search footer text file, or set footer file path, or object options to add footer content to the generated files.
+     * Set `true` value to search footer text file, or set footer file path, or object options to add footer content to the generated files.
      */
-    footer?: string | BannerFooterOptions;
+    footer?: string | boolean | BannerFooterOptions;
     /**
      * Options for package.json file updating.
      */
