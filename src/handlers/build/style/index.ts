@@ -19,7 +19,6 @@ import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptio
 import {
     LogLevelStrings,
     Logger,
-    LoggerBase,
     colors,
     findUp,
     normalizePathToPOSIXStyle,
@@ -197,7 +196,7 @@ export interface StyleTaskRunnerOptions {
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
     readonly dryRun: boolean | undefined;
-    readonly logger: LoggerBase;
+    readonly logger: Logger;
     readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: PackageJsonInfo | null;
     readonly bannerText: string | undefined;
@@ -211,7 +210,7 @@ export interface StyleBundleResult {
 }
 
 export class StyleTaskRunner {
-    private readonly logger: LoggerBase;
+    private readonly logger: Logger;
 
     constructor(readonly options: StyleTaskRunnerOptions) {
         this.logger = this.options.logger;
@@ -722,14 +721,8 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         workspaceInfo: buildTask._workspaceInfo,
         outDir: buildTask._outDir,
         dryRun: context.dryRun,
-        logLevel: context.logLevel ?? 'info',
-        logger:
-            context.logger ??
-            new Logger({
-                logLevel: context.logLevel ?? 'info',
-                warnPrefix: colors.lightYellow('Warning:'),
-                groupIndentation: 4
-            }),
+        logLevel: context.logLevel,
+        logger: context.logger,
         env: context.env,
         packageJsonInfo: buildTask._packageJsonInfo,
         bannerText: buildTask._bannerTextForStyle,

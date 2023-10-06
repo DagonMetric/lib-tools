@@ -9,7 +9,7 @@ import ts from 'typescript';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 import {
-    LoggerBase,
+    Logger,
     colors,
     dashCaseToCamelCase,
     formatSizeInBytes,
@@ -161,7 +161,7 @@ export function getGlobalVariable(moduleId: string, globalsRecord: Record<string
     return globalName;
 }
 
-export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+export default async function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
     const moduleFormat: ModuleFormat = options.moduleFormat;
     const externals = options.externals ?? [];
     let treeshake = options.treeshake;

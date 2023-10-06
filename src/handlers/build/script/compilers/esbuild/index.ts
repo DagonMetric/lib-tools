@@ -5,7 +5,7 @@ import * as path from 'node:path';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 import {
-    LoggerBase,
+    Logger,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle,
@@ -44,7 +44,7 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     return undefined;
 }
 
-export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+export default async function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
     logger.info(
         `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
     );

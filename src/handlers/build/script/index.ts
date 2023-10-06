@@ -16,7 +16,7 @@ import { PackageJsonInfo, SubstitutionInfo, WorkspaceInfo } from '../../../confi
 import { CompilationError, InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    LoggerBase,
+    Logger,
     colors,
     dashCaseToCamelCase,
     findUp,
@@ -31,8 +31,6 @@ import { BuildTaskHandleContext } from '../../interfaces/index.js';
 
 import { CompileOptions, CompileResult, CompilerFn, TsConfigInfo } from './interfaces/index.js';
 
-const supportdEntryExtPattern = '\\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$';
-const supportdEntryExtRegExp = new RegExp(supportdEntryExtPattern, 'i');
 const tsConfigPathsCache = new Map<string, string>();
 const tsConfigInfoCache = new Map<string, { locationKey: string; tsConfigInfo: TsConfigInfo }>();
 const entryFilePathsCache = new Map<string, string>();
@@ -57,6 +55,8 @@ async function searchFileByExtensions(
     return null;
 }
 
+export * from './interfaces/index.js';
+
 interface ParsedScriptCompilation extends ScriptCompilation {
     readonly _entryFilePath: string;
     readonly _outFilePath: string;
@@ -65,23 +65,21 @@ interface ParsedScriptCompilation extends ScriptCompilation {
     readonly _bundle: boolean;
     readonly _sourceMap: boolean;
     readonly _minify: boolean;
-    readonly _environmentTargets: string[] | undefined;
-    readonly _externals: string[];
-    readonly _tsConfigInfo: TsConfigInfo | undefined;
+    readonly _environmentTargets: readonly string[] | undefined;
+    readonly _externals: readonly string[] | undefined;
+    readonly _tsConfigInfo: Readonly<TsConfigInfo> | undefined;
     readonly _declaration: boolean | undefined;
     readonly _emitDeclarationOnly: boolean | undefined;
-    readonly _globals: Record<string, string>;
+    readonly _globals: Readonly<Record<string, string>> | undefined;
     readonly _preserveSymlinks: boolean | undefined;
 }
-
-export * from './interfaces/index.js';
 
 export interface ScriptTaskRunnerOptions {
     readonly scriptOptions: Readonly<ScriptOptions>;
     readonly workspaceInfo: Readonly<WorkspaceInfo>;
     readonly outDir: string;
     readonly dryRun: boolean;
-    readonly logger: LoggerBase;
+    readonly logger: Logger;
     readonly logLevel: LogLevelStrings;
     readonly packageJsonInfo: Readonly<PackageJsonInfo> | null;
     readonly bannerText: string | undefined;
@@ -91,20 +89,18 @@ export interface ScriptTaskRunnerOptions {
 }
 
 export interface ScriptMainOutputAsset {
-    readonly scriptTarget: ScriptTargetStrings;
     readonly moduleFormat: ScriptModuleFormat;
     readonly outputFilePath: string;
     readonly size: number | undefined;
 }
 
 export interface ScriptResult {
-    readonly mainOutputAssets: ScriptMainOutputAsset[];
-    readonly emitted: boolean;
+    readonly mainOutputAssets: readonly ScriptMainOutputAsset[];
     readonly time: number;
 }
 
 export class ScriptTaskRunner {
-    private readonly logger: LoggerBase;
+    private readonly logger: Logger;
     private readonly configLocationPrefix: string;
 
     constructor(readonly options: ScriptTaskRunnerOptions) {
@@ -128,7 +124,7 @@ export class ScriptTaskRunner {
 
             const compileOptions: CompileOptions = {
                 workspaceInfo: this.options.workspaceInfo,
-                compilationIndex: i,
+                compilationIndex: this.options.scriptOptions.compilations === true ? undefined : i,
                 entryFilePath: compilation._entryFilePath,
                 outFilePath: compilation._outFilePath,
                 moduleFormat: compilation._moduleFormat,
@@ -151,7 +147,7 @@ export class ScriptTaskRunner {
                 logLevel: this.options.logLevel
             };
 
-            let compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
+            let compilerFn: (options: CompileOptions, logger: Logger) => Promise<CompileResult>;
 
             if (
                 compilation.compiler?.toLowerCase().trim() === 'tsc' ||
@@ -254,7 +250,6 @@ export class ScriptTaskRunner {
 
             mainOutputAssets.push({
                 moduleFormat: compileOptions.moduleFormat,
-                scriptTarget: compileOptions.scriptTarget,
                 outputFilePath: path.resolve(mainOuputAsset.path),
                 size: mainOuputAsset.size
             });
@@ -276,8 +271,7 @@ export class ScriptTaskRunner {
 
         const result: ScriptResult = {
             mainOutputAssets,
-            time: totalTime,
-            emitted: this.options.dryRun ? false : true
+            time: totalTime
         };
 
         this.logger.groupEnd();
@@ -375,10 +369,10 @@ export class ScriptTaskRunner {
                     _bundle: false,
                     _sourceMap: false,
                     _minify: false,
-                    _environmentTargets: [],
-                    _externals: [],
-                    _globals: {},
-                    _preserveSymlinks: preserveSymlinks
+                    _preserveSymlinks: preserveSymlinks,
+                    _environmentTargets: undefined,
+                    _externals: undefined,
+                    _globals: undefined
                 });
 
                 // esm
@@ -419,10 +413,10 @@ export class ScriptTaskRunner {
                     _bundle: false,
                     _sourceMap: true,
                     _minify: false,
-                    _environmentTargets: [],
-                    _externals: [],
-                    _globals: {},
-                    _preserveSymlinks: preserveSymlinks
+                    _preserveSymlinks: preserveSymlinks,
+                    _environmentTargets: undefined,
+                    _externals: undefined,
+                    _globals: undefined
                 });
 
                 // fesm
@@ -863,7 +857,11 @@ export class ScriptTaskRunner {
                 return cachedPath;
             }
 
-            if (!normalizedEntry || normalizedEntry.length < 4 || !supportdEntryExtRegExp.test(normalizedEntry)) {
+            if (
+                !normalizedEntry ||
+                normalizedEntry.length < 4 ||
+                !/\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$/i.test(normalizedEntry)
+            ) {
                 const errMsg = `Unsupported script entry file extension '${compilation.entry}'.`;
                 if (projectName) {
                     throw new InvalidConfigError(errMsg, configPath, configLocation);

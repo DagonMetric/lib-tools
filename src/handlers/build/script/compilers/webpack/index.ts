@@ -7,7 +7,7 @@ import ts from 'typescript';
 import webpackDefault, { Configuration, StatsAsset } from 'webpack';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
-import { LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
+import { Logger, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
 import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/index.js';
 
@@ -192,7 +192,7 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     return compilerOptions;
 }
 
-export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+export default async function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
     if (options.emitDeclarationOnly === true || options.tsConfigInfo?.compilerOptions.emitDeclarationOnly === true) {
         throw new CompilationError(
             `${colors.lightRed(

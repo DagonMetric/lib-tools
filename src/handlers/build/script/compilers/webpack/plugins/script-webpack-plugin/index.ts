@@ -5,7 +5,7 @@ import { Compiler, StatsAsset, sources } from 'webpack';
 import { CompilationError } from '../../../../../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    LoggerBase,
+    Logger,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle
@@ -13,7 +13,7 @@ import {
 
 export interface ScriptWebpackPluginOptions {
     readonly outDir: string;
-    readonly logger: LoggerBase;
+    readonly logger: Logger;
     readonly logLevel: LogLevelStrings | undefined;
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
@@ -24,7 +24,7 @@ export interface ScriptWebpackPluginOptions {
 export class ScriptWebpackPlugin {
     readonly name = 'script-webpack-plugin';
 
-    private readonly logger: LoggerBase;
+    private readonly logger: Logger;
     private readonly banner: () => string;
 
     constructor(private readonly options: ScriptWebpackPluginOptions) {

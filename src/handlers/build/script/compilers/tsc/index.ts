@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import ts from 'typescript';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
-import { LoggerBase, colors, isDirInDir, isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
+import { Logger, colors, isDirInDir, isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
 import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
@@ -102,7 +102,7 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     return compilerOptions;
 }
 
-export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+export default function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
     const projectRoot = options.workspaceInfo.projectRoot;
     const outFileName = path.basename(options.outFilePath);
     const outFileExt = path.extname(options.outFilePath);

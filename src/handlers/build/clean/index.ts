@@ -7,7 +7,6 @@ import { InvalidConfigError } from '../../../exceptions/index.js';
 import {
     AbsolutePathInfo,
     Logger,
-    LoggerBase,
     colors,
     getAbsolutePathInfoes,
     isDirInDir,
@@ -24,7 +23,7 @@ export interface CleanTaskRunnerOptions {
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
     readonly dryRun: boolean | undefined;
-    readonly logger: LoggerBase;
+    readonly logger: Logger;
 }
 
 export interface CleanTaskResult {
@@ -33,7 +32,7 @@ export interface CleanTaskResult {
 }
 
 export class CleanTaskRunner {
-    private readonly logger: LoggerBase;
+    private readonly logger: Logger;
     private readonly cleanOutDir: boolean;
     private readonly configLocationPrefix: string;
     private readonly configPath: string | null;
@@ -358,13 +357,7 @@ export function getCleanTaskRunner(
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
             dryRun: context.dryRun,
-            logger:
-                context.logger ??
-                new Logger({
-                    logLevel: context.logLevel ?? 'info',
-                    warnPrefix: colors.lightYellow('Warning:'),
-                    groupIndentation: 4
-                })
+            logger: context.logger
         });
 
         return cleanTaskRunner;
@@ -381,13 +374,7 @@ export function getCleanTaskRunner(
             workspaceInfo: buildTask._workspaceInfo,
             outDir: buildTask._outDir,
             dryRun: context.dryRun,
-            logger:
-                context.logger ??
-                new Logger({
-                    logLevel: context.logLevel ?? 'info',
-                    warnPrefix: colors.lightYellow('Warning:'),
-                    groupIndentation: 4
-                })
+            logger: context.logger
         });
 
         return cleanTaskRunner;

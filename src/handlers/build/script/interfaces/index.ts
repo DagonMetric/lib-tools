@@ -2,7 +2,7 @@ import { CompilerOptions } from 'typescript';
 
 import { ScriptModuleFormat, ScriptTargetStrings, TreeshakingOptions } from '../../../../config-models/index.js';
 import { SubstitutionInfo, WorkspaceInfo } from '../../../../config-models/parsed/index.js';
-import { LogLevelStrings, LoggerBase } from '../../../../utils/index.js';
+import { LogLevelStrings, Logger } from '../../../../utils/index.js';
 
 export interface TsConfigInfo {
     readonly compilerOptions: Readonly<CompilerOptions>;
@@ -12,25 +12,25 @@ export interface TsConfigInfo {
 
 export interface CompileOptions {
     readonly workspaceInfo: Readonly<WorkspaceInfo>;
-    readonly compilationIndex: number;
+    readonly compilationIndex: number | undefined;
     readonly entryFilePath: string;
     readonly outFilePath: string;
     readonly scriptTarget: ScriptTargetStrings;
     readonly moduleFormat: ScriptModuleFormat;
     readonly sourceMap: boolean;
-    readonly minify: boolean | undefined;
-    readonly externals: readonly string[] | undefined;
-    readonly globals: Record<string, string> | undefined;
-    readonly globalName: string | undefined;
+    readonly minify: boolean;
     readonly tsConfigInfo: Readonly<TsConfigInfo> | undefined;
     readonly emitDeclarationOnly: boolean | undefined;
     readonly declaration: boolean | undefined;
     readonly environmentTargets: readonly string[] | undefined;
+    readonly externals: readonly string[] | undefined;
+    readonly globals: Readonly<Record<string, string>> | undefined;
+    readonly preserveSymlinks: boolean | undefined;
+    readonly globalName: string | undefined;
+    readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
     readonly bannerText: string | undefined;
     readonly footerText: string | undefined;
     readonly substitutions: readonly Readonly<SubstitutionInfo>[];
-    readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
-    readonly preserveSymlinks: boolean | undefined;
     readonly dryRun: boolean;
     readonly logLevel: LogLevelStrings;
 }
@@ -45,4 +45,4 @@ export interface CompileResult {
     readonly time: number;
 }
 
-export type CompilerFn = (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
+export type CompilerFn = (options: CompileOptions, logger: Logger) => Promise<CompileResult>;

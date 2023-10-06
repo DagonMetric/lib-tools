@@ -3,7 +3,7 @@ import { Compiler, sources } from 'webpack';
 import { CompilationError } from '../../../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    LoggerBase,
+    Logger,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle
@@ -11,7 +11,7 @@ import {
 
 export interface StyleWebpackPluginOptions {
     readonly outDir: string;
-    readonly logger: LoggerBase;
+    readonly logger: Logger;
     readonly logLevel: LogLevelStrings;
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
@@ -23,7 +23,7 @@ export interface StyleWebpackPluginOptions {
 export class StyleWebpackPlugin {
     readonly name = 'style-webpack-plugin';
 
-    private readonly logger: LoggerBase;
+    private readonly logger: Logger;
     private readonly banner: () => string;
     private readonly footer: () => string;
 

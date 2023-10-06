@@ -9,7 +9,6 @@ import { WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import {
     AbsolutePathInfo,
     Logger,
-    LoggerBase,
     colors,
     getAbsolutePathInfoes,
     isDirInDir,
@@ -27,7 +26,7 @@ export interface CopyFileInfo {
 }
 
 export interface CopyTaskRunnerOptions {
-    readonly logger: LoggerBase;
+    readonly logger: Logger;
     readonly copyEntries: CopyEntry[];
     readonly workspaceInfo: WorkspaceInfo;
     readonly outDir: string;
@@ -79,7 +78,7 @@ async function globFiles(globPattern: string, cwd: string): Promise<string[]> {
 }
 
 export class CopyTaskRunner {
-    private readonly logger: LoggerBase;
+    private readonly logger: Logger;
     private startTime = Date.now();
 
     constructor(readonly options: CopyTaskRunnerOptions) {
@@ -339,13 +338,7 @@ export function getCopyTaskRunner(context: BuildTaskHandleContext): CopyTaskRunn
         workspaceInfo: buildTask._workspaceInfo,
         dryRun: context.dryRun,
         outDir: buildTask._outDir,
-        logger:
-            context.logger ??
-            new Logger({
-                logLevel: context.logLevel ?? 'info',
-                warnPrefix: colors.lightYellow('Warning:'),
-                groupIndentation: 4
-            })
+        logger: context.logger
     });
 
     return copyTaskRunner;
