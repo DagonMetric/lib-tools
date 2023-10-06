@@ -4,24 +4,28 @@ import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+const normalizePathToPOSIXStyleCache = new Map<string, string>();
 export function normalizePathToPOSIXStyle(p: string): string {
     if (!p?.trim().length) {
         return '';
     }
 
+    p = p.trim();
+
+    const cacheKey = p;
+    const cached = normalizePathToPOSIXStyleCache.get(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
     const backToForwardSlash: [RegExp, string] = [/\\/g, '/'];
+
     const replaces: [RegExp, string][] = [
-        // [...backToForwardSlash],
-        // [/(\w):/, '/$1'],
-        // [/(\w+)\/\.\.\/?/g, ''], // already in path.posix.normalize(p)
         [/^\.\//, ''],
-        // [/\/\.\//, '/'], // already in path.posix.normalize(p)
-        // [/\/\.$/, ''], // already in path.posix.normalize(p)
         [/\/$/, ''],
         [/^\.$/, '']
     ];
 
-    p = p.trim();
     p = p.replace(backToForwardSlash[0], backToForwardSlash[1]);
 
     let startingSlashes = '';
@@ -51,6 +55,8 @@ export function normalizePathToPOSIXStyle(p: string): string {
         p = startingSlashes + p;
     }
 
+    normalizePathToPOSIXStyleCache.set(cacheKey, p);
+
     return p;
 }
 
@@ -64,7 +70,7 @@ export function isWindowsStyleAbsolute(p: string): boolean {
     return path.win32.isAbsolute(p);
 }
 
-export function isSamePaths(p1: string, p2: string, ignoreCase = false): boolean {
+export function isSamePath(p1: string, p2: string, ignoreCase = false): boolean {
     if (p1 === p2) {
         return true;
     }
@@ -84,7 +90,7 @@ export function isSamePaths(p1: string, p2: string, ignoreCase = false): boolean
     return path.relative(normalizedP1, normalizedP2) === '';
 }
 
-export function isInFolder(parentDir: string, checkDir: string, ignoreCase = false): boolean {
+export function isDirInDir(parentDir: string, checkDir: string, ignoreCase = false): boolean {
     parentDir = normalizePathToPOSIXStyle(parentDir);
     checkDir = normalizePathToPOSIXStyle(checkDir);
 
@@ -120,7 +126,7 @@ export function isInFolder(parentDir: string, checkDir: string, ignoreCase = fal
 }
 
 export function resolvePath(rootPath: string, currentPath: string): string {
-    return isWindowsStyleAbsolute(currentPath) && process.platform === 'win32'
+    return process.platform === 'win32' && isWindowsStyleAbsolute(currentPath)
         ? path.resolve(normalizePathToPOSIXStyle(currentPath))
         : path.resolve(rootPath, normalizePathToPOSIXStyle(currentPath));
 }
@@ -191,7 +197,7 @@ export async function findUp(
         } while (
             currentDir &&
             currentDir !== rootPath &&
-            (isSamePaths(endDir, currentDir) || isInFolder(endDir, currentDir))
+            (isSamePath(endDir, currentDir) || isDirInDir(endDir, currentDir))
         );
     }
 
@@ -283,7 +289,7 @@ export async function getAbsolutePathInfoes(
                     continue;
                 }
 
-                const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+                const isSystemRoot = isSamePath(path.parse(absolutePath).root, absolutePath);
                 let isDirectory: boolean | null = isSystemRoot ? true : null;
                 let isFile: boolean | null = isSystemRoot ? false : null;
                 let isSymbolicLink: boolean | null = null;
@@ -309,7 +315,7 @@ export async function getAbsolutePathInfoes(
                 continue;
             }
 
-            const isSystemRoot = isSamePaths(path.parse(absolutePath).root, absolutePath);
+            const isSystemRoot = isSamePath(path.parse(absolutePath).root, absolutePath);
             let isDirectory: boolean | null = isSystemRoot ? true : null;
             let isFile: boolean | null = isSystemRoot ? false : null;
             let isSymbolicLink: boolean | null = null;
