@@ -149,7 +149,7 @@ export interface StyleOptions {
 /**
  * Script module format.
  */
-export type ScriptModuleFormat = 'cjs' | 'esm' | 'iife';
+export type ScriptModuleFormat = 'cjs' | 'esm' | 'iife' | 'umd';
 
 /**
  * Script target.
@@ -241,9 +241,9 @@ export interface ScriptCompilation {
  */
 export interface ScriptOptions {
     /**
-     * Specify list of script compilation / bundle options. Set `auto` for automatic compilations based on project structure.
+     * Specify list of script compilation / bundle options. Set true for automatic compilations based on project structure.
      */
-    compilations: ScriptCompilation[] | 'auto';
+    compilations: ScriptCompilation[] | boolean;
     /**
      * Specify typescript configuration file.
      */
