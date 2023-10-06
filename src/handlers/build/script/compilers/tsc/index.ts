@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import ts from 'typescript';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
-import { LoggerBase, colors, isInFolder, isSamePaths, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
+import { LoggerBase, colors, isDirInDir, isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
 import { CompileOptions, CompileResult } from '../../interfaces/index.js';
 
@@ -150,7 +150,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         let newOutFilePath = filePath;
 
         if (
-            isSamePaths(filePath.substring(0, filePath.length - path.extname(filePath).length), entryOutFileWithoutExt)
+            isSamePath(filePath.substring(0, filePath.length - path.extname(filePath).length), entryOutFileWithoutExt)
         ) {
             newOutFilePath = filePath.substring(0, filePath.length - path.basename(filePath).length) + outFileName;
         } else if (!compilerOptions.emitDeclarationOnly && outFileExt !== '.js') {
@@ -178,7 +178,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     host.readFile = function (filePath: string) {
         let file: string | undefined = baseReadFile.call(host, filePath);
         const filePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), filePath));
-        if (file && isInFolder(projectRoot, filePath) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
+        if (file && isDirInDir(projectRoot, path.dirname(filePath)) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
             if (!compilerOptions.emitDeclarationOnly && options.substitutions) {
                 for (const substitution of options.substitutions.filter((s) => !s.bannerOnly)) {
                     const escapedPattern = substitution.searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

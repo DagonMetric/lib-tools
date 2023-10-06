@@ -20,8 +20,8 @@ import {
     colors,
     dashCaseToCamelCase,
     findUp,
-    isInFolder,
-    isSamePaths,
+    isDirInDir,
+    isSamePath,
     normalizePathToPOSIXStyle,
     pathExists,
     resolvePath
@@ -33,11 +33,29 @@ import { CompileOptions, CompileResult, CompilerFn, TsConfigInfo } from './inter
 
 const supportdEntryExtPattern = '\\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$';
 const supportdEntryExtRegExp = new RegExp(supportdEntryExtPattern, 'i');
-const supportedOutExtRegExp = /\.(d\.[cm]?ts|mjs|cjs|json|jsx?)$/i;
 const tsConfigPathsCache = new Map<string, string>();
 const tsConfigInfoCache = new Map<string, { locationKey: string; tsConfigInfo: TsConfigInfo }>();
 const entryFilePathsCache = new Map<string, string>();
 const compilerCache = new Map<string, CompilerFn>();
+
+async function searchFileByExtensions(
+    fileNames: string[],
+    extNames: string[],
+    rootDir: string
+): Promise<string | null> {
+    for (const extName of extNames) {
+        for (const fileName of fileNames) {
+            const fileNameWithExt = fileName + extName;
+
+            const found = await findUp(fileNameWithExt, null, rootDir, true);
+            if (found) {
+                return found;
+            }
+        }
+    }
+
+    return null;
+}
 
 interface ParsedScriptCompilation extends ScriptCompilation {
     readonly _entryFilePath: string;
@@ -219,7 +237,7 @@ export class ScriptTaskRunner {
 
             totalTime += compileResult.time;
             const mainOuputAsset = compileResult.builtAssets.find((a) =>
-                isSamePaths(a.path, compileOptions.outFilePath)
+                isSamePath(a.path, compileOptions.outFilePath)
             );
 
             if (!mainOuputAsset) {
@@ -271,14 +289,22 @@ export class ScriptTaskRunner {
     private async getParsedCompilations(): Promise<ParsedScriptCompilation[]> {
         this.logger.debug('Preparing compilations...');
 
-        if (this.options.scriptOptions.compilations === 'auto') {
+        if (typeof this.options.scriptOptions.compilations === 'boolean') {
+            if (!this.options.scriptOptions.compilations) {
+                throw new InvalidConfigError(
+                    `No compilation options. Specify 'compilations' values in script options.`,
+                    this.options.workspaceInfo.configPath,
+                    `${this.configLocationPrefix}/scriptOptions/compilations`
+                );
+            }
+
             const tsConfigPath = await this.detectTsConfigPath();
             const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, null, null) : undefined;
             const entryFilePath = await this.detectEntryFilePath(tsConfigInfo);
 
             if (!entryFilePath) {
                 throw new InvalidConfigError(
-                    `Could not detect compilations automatically. Specify 'compilations' in script options.`,
+                    `Could not detect compilations automatically. Specify 'compilations' values in script options manually.`,
                     this.options.workspaceInfo.configPath,
                     `${this.configLocationPrefix}/compilations`
                 );
@@ -301,11 +327,12 @@ export class ScriptTaskRunner {
             if (
                 this.options.packageJsonInfo &&
                 this.options.packageJsonInfo.packageJson.private !== false &&
-                tsConfigInfo != null &&
-                (tsConfigInfo.compilerOptions.module as number) > 3 &&
-                (tsConfigInfo.compilerOptions.module as number) < 100 &&
-                (tsConfigInfo.compilerOptions.target as number) > 1 &&
-                (tsConfigInfo.compilerOptions.target as number) < 100
+                tsConfigInfo?.compilerOptions.module != null &&
+                tsConfigInfo.compilerOptions.module >= ts.ModuleKind.ES2015 &&
+                tsConfigInfo.compilerOptions.module <= ts.ModuleKind.ESNext &&
+                tsConfigInfo.compilerOptions.target != null &&
+                tsConfigInfo.compilerOptions.target >= ts.ScriptTarget.ES2015 &&
+                tsConfigInfo.compilerOptions.target <= ts.ScriptTarget.ESNext
             ) {
                 const moduleFormat: ScriptModuleFormat = 'esm';
                 const scriptTarget = this.getScriptTarget(null, tsConfigInfo) ?? 'ESNext';
@@ -321,24 +348,23 @@ export class ScriptTaskRunner {
                     moduleFormat,
                     emitDeclarationOnly: true,
                     declaration: true,
-                    sourceMap: false,
-                    minify: false,
                     out: 'types'
                 };
 
-                const typesOutFilePath = this.getOutputFilePath(
-                    typesCompilation,
-                    0,
+                const typesOutFilePath = await this.getOutputFilePath({
+                    compilation: typesCompilation,
+                    compilationIndex: undefined,
                     entryFilePath,
-                    true,
                     tsConfigInfo,
-                    typesCompilation.moduleFormat,
-                    typesCompilation.scriptTarget
-                );
+                    forTypesOutput: true,
+                    bundle: false,
+                    multiOutputsFormat: true,
+                    moduleFormat,
+                    scriptTarget
+                });
 
                 parsedScriptCompilations.push({
                     ...typesCompilation,
-
                     _entryFilePath: entryFilePath,
                     _outFilePath: typesOutFilePath,
                     _moduleFormat: moduleFormat,
@@ -366,23 +392,23 @@ export class ScriptTaskRunner {
                     emitDeclarationOnly: false,
                     declaration: false,
                     sourceMap: true,
-                    minify: false,
                     out: `esm${year}`
                 };
 
-                const esmOutFilePath = this.getOutputFilePath(
-                    esmCompilation,
-                    1,
+                const esmOutFilePath = await this.getOutputFilePath({
+                    compilation: esmCompilation,
+                    compilationIndex: undefined,
                     entryFilePath,
-                    false,
                     tsConfigInfo,
-                    esmCompilation.moduleFormat,
-                    esmCompilation.scriptTarget
-                );
+                    forTypesOutput: false,
+                    bundle: false,
+                    multiOutputsFormat: true,
+                    moduleFormat,
+                    scriptTarget
+                });
 
                 parsedScriptCompilations.push({
                     ...esmCompilation,
-
                     _entryFilePath: entryFilePath,
                     _outFilePath: esmOutFilePath,
                     _moduleFormat: moduleFormat,
@@ -401,6 +427,12 @@ export class ScriptTaskRunner {
 
                 // fesm
                 //
+                // environmentTargets
+                const environmentTargets: string[] = this.options.scriptOptions.environmentTargets ?? [];
+
+                // externals and globals
+                const { externals, globals } = this.getExternalsAndGlobals(null);
+
                 const fesmCompilation: ScriptCompilation = {
                     bundle: true,
                     entry,
@@ -414,19 +446,20 @@ export class ScriptTaskRunner {
                     out: `fesm${year}`
                 };
 
-                const fesmOutFilePath = this.getOutputFilePath(
-                    fesmCompilation,
-                    2,
+                const fesmOutFilePath = await this.getOutputFilePath({
+                    compilation: fesmCompilation,
+                    compilationIndex: 2,
                     entryFilePath,
-                    false,
+                    forTypesOutput: false,
+                    bundle: true,
+                    multiOutputsFormat: true,
                     tsConfigInfo,
-                    fesmCompilation.moduleFormat,
-                    fesmCompilation.scriptTarget
-                );
+                    moduleFormat,
+                    scriptTarget
+                });
 
                 parsedScriptCompilations.push({
                     ...fesmCompilation,
-
                     _entryFilePath: entryFilePath,
                     _outFilePath: fesmOutFilePath,
                     _moduleFormat: moduleFormat,
@@ -437,9 +470,9 @@ export class ScriptTaskRunner {
                     _bundle: true,
                     _minify: false,
                     _sourceMap: true,
-                    _environmentTargets: [],
-                    _externals: [],
-                    _globals: {},
+                    _environmentTargets: [...environmentTargets],
+                    _externals: [...externals],
+                    _globals: globals,
                     _preserveSymlinks: preserveSymlinks
                 });
             } else {
@@ -465,7 +498,8 @@ export class ScriptTaskRunner {
 
                 let scriptTarget = this.getScriptTarget(null, tsConfigInfo);
                 if (!scriptTarget) {
-                    scriptTarget = moduleFormat === 'iife' && !emitDeclarationOnly ? 'ES5' : 'ESNext';
+                    scriptTarget =
+                        (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? 'ES5' : 'ESNext';
                 }
 
                 const compilation: ScriptCompilation = {
@@ -478,38 +512,40 @@ export class ScriptTaskRunner {
                     scriptTarget
                 };
 
-                const outFilePath = this.getOutputFilePath(
+                const outFilePath = await this.getOutputFilePath({
                     compilation,
-                    0,
+                    compilationIndex: undefined,
                     entryFilePath,
-                    emitDeclarationOnly,
                     tsConfigInfo,
+                    forTypesOutput: emitDeclarationOnly,
+                    bundle: true,
+                    multiOutputsFormat: false,
                     moduleFormat,
                     scriptTarget
-                );
+                });
 
                 // environmentTargets
                 const environmentTargets: string[] = this.options.scriptOptions.environmentTargets ?? [];
 
                 // minify
-                const minify = moduleFormat === 'iife' && !emitDeclarationOnly ? true : false;
+                const minify =
+                    (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? true : false;
 
                 // sourceMap
                 let sourceMap = true;
                 if (emitDeclarationOnly) {
                     sourceMap = false;
-                } else if (tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
-                    sourceMap = tsConfigInfo?.compilerOptions.inlineSourceMap;
                 } else if (tsConfigInfo?.compilerOptions.sourceMap != null) {
                     sourceMap = tsConfigInfo?.compilerOptions.sourceMap;
+                } else if (tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
+                    sourceMap = tsConfigInfo?.compilerOptions.inlineSourceMap;
                 }
 
                 // externals
-                const { externals, globals } = this.getExternalsAndGlobals(compilation);
+                const { externals, globals } = this.getExternalsAndGlobals(null);
 
                 parsedScriptCompilations.push({
                     ...compilation,
-
                     _entryFilePath: entryFilePath,
                     _outFilePath: outFilePath,
                     _moduleFormat: moduleFormat,
@@ -520,8 +556,8 @@ export class ScriptTaskRunner {
                     _bundle: true,
                     _sourceMap: sourceMap,
                     _minify: minify,
-                    _environmentTargets: environmentTargets,
-                    _externals: externals,
+                    _environmentTargets: [...environmentTargets],
+                    _externals: [...externals],
                     _globals: globals,
                     _preserveSymlinks: preserveSymlinks
                 });
@@ -529,22 +565,23 @@ export class ScriptTaskRunner {
 
             return parsedScriptCompilations;
         } else {
-            if (!this.options.scriptOptions.compilations.length) {
+            if (this.options.scriptOptions.compilations.length === 0) {
                 throw new InvalidConfigError(
-                    'No compilation options.',
+                    `No compilation options. Specify 'compilations' values in script options.`,
                     this.options.workspaceInfo.configPath,
                     `${this.configLocationPrefix}/scriptOptions/compilations`
                 );
             }
 
             const parsedScriptCompilations: ParsedScriptCompilation[] = [];
+            const multiOutputsFormat = this.options.scriptOptions.compilations.length > 0 ? true : false;
 
             for (let i = 0; i < this.options.scriptOptions.compilations.length; i++) {
                 const compilation = this.options.scriptOptions.compilations[i];
 
-                if (!Object.keys(compilation).length) {
+                if (Object.keys(compilation).length === 0) {
                     throw new InvalidConfigError(
-                        'Invalid empty compilation options.',
+                        'Empty compilation options found.',
                         this.options.workspaceInfo.configPath,
                         `${this.configLocationPrefix}/compilations/${i}`
                     );
@@ -555,8 +592,20 @@ export class ScriptTaskRunner {
                     ? await this.getTsConfigInfo(tsConfigPath, compilation, i)
                     : undefined;
                 const entryFilePath = await this.getEntryFilePath(compilation, i);
-                const scriptTarget = this.getScriptTarget(compilation, tsConfigInfo);
-                const moduleFormat = this.getModuleFormat(compilation, tsConfigInfo, entryFilePath);
+                const scriptTarget = this.getScriptTarget(compilation, tsConfigInfo) ?? 'ES2015';
+                let moduleFormat = this.getModuleFormat(compilation, tsConfigInfo, entryFilePath);
+
+                if (!moduleFormat) {
+                    if (!multiOutputsFormat) {
+                        moduleFormat = 'umd';
+                    } else {
+                        throw new InvalidConfigError(
+                            `Could not detect module format automatically. Specify 'moduleFormat' value in script compilations.`,
+                            this.options.workspaceInfo.configPath,
+                            `${this.configLocationPrefix}/compilations/${i}/moduleFormat`
+                        );
+                    }
+                }
 
                 // emitDeclarationOnly
                 let emitDeclarationOnly = false;
@@ -576,56 +625,40 @@ export class ScriptTaskRunner {
                     declaration = tsConfigInfo.compilerOptions.declaration;
                 }
 
-                const outFilePath = this.getOutputFilePath(
+                // bundle
+                let bundle = emitDeclarationOnly ? false : true;
+                if (compilation.bundle != null) {
+                    bundle = compilation.bundle;
+                }
+
+                const outFilePath = await this.getOutputFilePath({
                     compilation,
-                    i,
+                    compilationIndex: i,
                     entryFilePath,
-                    emitDeclarationOnly,
                     tsConfigInfo,
+                    forTypesOutput: emitDeclarationOnly,
+                    bundle,
+                    multiOutputsFormat: this.options.scriptOptions.compilations.length > 0 ? true : false,
                     moduleFormat,
                     scriptTarget
-                );
-
-                if (!moduleFormat) {
-                    throw new InvalidConfigError(
-                        `Could not detect module format automatically. Specify 'moduleFormat' value in script compilations.`,
-                        this.options.workspaceInfo.configPath,
-                        `${this.configLocationPrefix}/compilations/${i}/moduleFormat`
-                    );
-                }
-
-                if (!scriptTarget) {
-                    throw new InvalidConfigError(
-                        `Could not detect script target automatically. Specify 'scriptTarget' value in script compilations.`,
-                        this.options.workspaceInfo.configPath,
-                        `${this.configLocationPrefix}/compilations/${i}/scriptTarget`
-                    );
-                }
+                });
 
                 // environmentTargets
                 const environmentTargets: string[] =
                     compilation.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
-
-                // bundle
-                let bundle = true;
-                if (compilation.bundle != null) {
-                    bundle = compilation.bundle;
-                } else if (emitDeclarationOnly) {
-                    bundle = false;
-                }
 
                 // minify
                 let minify = false;
                 if (compilation.minify != null) {
                     minify = compilation.minify;
                 } else {
-                    if (bundle && moduleFormat === 'iife' && !emitDeclarationOnly) {
+                    if (bundle && (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly) {
                         minify = true;
                     }
                 }
 
                 // sourceMap
-                let sourceMap = true;
+                let sourceMap = emitDeclarationOnly ? false : true;
                 if (compilation.sourceMap != null) {
                     sourceMap = compilation.sourceMap;
                 } else if (!emitDeclarationOnly && tsConfigInfo?.compilerOptions.inlineSourceMap != null) {
@@ -643,7 +676,6 @@ export class ScriptTaskRunner {
 
                 parsedScriptCompilations.push({
                     ...compilation,
-
                     _entryFilePath: entryFilePath,
                     _outFilePath: outFilePath,
                     _moduleFormat: moduleFormat,
@@ -654,8 +686,8 @@ export class ScriptTaskRunner {
                     _bundle: bundle,
                     _minify: minify,
                     _sourceMap: sourceMap,
-                    _environmentTargets: environmentTargets,
-                    _externals: externals,
+                    _environmentTargets: [...environmentTargets],
+                    _externals: [...externals],
                     _globals: globals,
                     _preserveSymlinks: preserveSymlinks
                 });
@@ -875,186 +907,140 @@ export class ScriptTaskRunner {
     }
 
     private async detectEntryFilePath(tsConfigInfo: TsConfigInfo | undefined): Promise<string | null> {
+        if (tsConfigInfo?.fileNames.length && tsConfigInfo.configPath) {
+            const foundPath = tsConfigInfo.fileNames[0];
+
+            return foundPath;
+        }
+
+        const projectRoot = this.options.workspaceInfo.projectRoot;
+        const cacheKey = projectRoot;
+        const cached = entryFilePathsCache.get(cacheKey);
+        if (cached !== null) {
+            return cached?.length ? cached : null;
+        }
+
         const lastPartPackageName = this.getLastPartPackageName();
 
-        if (tsConfigInfo?.fileNames.length && tsConfigInfo.configPath) {
-            const cacheKey = tsConfigInfo.configPath;
-            const cached = entryFilePathsCache.get(cacheKey);
-            if (cached) {
-                return cached;
-            }
+        const searchFileNames = ['public_api', 'public-api', 'index'];
+        if (lastPartPackageName) {
+            searchFileNames.push(lastPartPackageName);
+        }
+        searchFileNames.push('main');
 
-            let foundPath = tsConfigInfo.fileNames[0];
+        const tsExtNames = ['.mts', '.cts', '.tsx', '.ts'];
+        const jsExtNames = ['.mjs', '.cjs', '.jsx', '.js'];
 
-            if (lastPartPackageName) {
-                const fileNameTestRegExp = new RegExp('[\\/]' + lastPartPackageName + supportdEntryExtPattern, 'i');
-                for (const filePath of tsConfigInfo.fileNames) {
-                    if (fileNameTestRegExp.test(filePath)) {
-                        foundPath = filePath;
-                        break;
-                    }
-                }
-            }
+        // Search ts files
+        //
+        let foundPath = await searchFileByExtensions(searchFileNames, tsExtNames, projectRoot);
 
+        if (!foundPath) {
+            foundPath = await searchFileByExtensions(searchFileNames, tsExtNames, path.resolve(projectRoot, 'src'));
+        }
+
+        if (!foundPath) {
+            foundPath = await searchFileByExtensions(searchFileNames, tsExtNames, path.resolve(projectRoot, 'lib'));
+        }
+
+        // Search ts files
+        //
+        if (!foundPath) {
+            foundPath = await searchFileByExtensions(searchFileNames, jsExtNames, projectRoot);
+        }
+
+        if (!foundPath) {
+            foundPath = await searchFileByExtensions(searchFileNames, jsExtNames, path.resolve(projectRoot, 'src'));
+        }
+
+        if (!foundPath) {
+            foundPath = await searchFileByExtensions(searchFileNames, jsExtNames, path.resolve(projectRoot, 'lib'));
+        }
+
+        if (foundPath) {
             entryFilePathsCache.set(cacheKey, foundPath);
 
             return foundPath;
         } else {
-            const projectRoot = this.options.workspaceInfo.projectRoot;
-            const cacheKey = projectRoot;
-            const cached = entryFilePathsCache.get(cacheKey);
-            if (cached !== null) {
-                return cached?.length ? cached : null;
-            }
+            entryFilePathsCache.set(cacheKey, '');
 
-            const packageNameEntryNames: string[] = [];
-            const commonEntryNames = [
-                // public_api - ts
-                'public_api.mts',
-                'public_api.cts',
-                'public_api.tsx',
-                'public_api.ts',
-
-                // public-api - ts
-                'public-api.mts',
-                'public-api.cts',
-                'public-api.tsx',
-                'public-api.ts',
-
-                // index - ts
-                'index.mts',
-                'index.cts',
-                'index.tsx',
-                'index.ts',
-
-                // public_api - js
-                'public_api.mjs',
-                'public_api.cjs',
-                'public_api.jsx',
-                'public_api.js',
-
-                // public-api - js
-                'public-api.mjs',
-                'public-api.cjs',
-                'public-api.jsx',
-                'public-api.js',
-
-                // index - js
-                'index.mjs',
-                'index.cjs',
-                'index.jsx',
-                'index.js'
-            ];
-
-            if (lastPartPackageName) {
-                // ts
-                packageNameEntryNames.push(`${lastPartPackageName}.mts`);
-                packageNameEntryNames.push(`${lastPartPackageName}.cts`);
-                packageNameEntryNames.push(`${lastPartPackageName}.tsx`);
-                packageNameEntryNames.push(`${lastPartPackageName}.ts`);
-
-                // js
-                packageNameEntryNames.push(`${lastPartPackageName}.mjs`);
-                packageNameEntryNames.push(`${lastPartPackageName}.cjs`);
-                packageNameEntryNames.push(`${lastPartPackageName}.jsx`);
-                packageNameEntryNames.push(`${lastPartPackageName}.js`);
-            }
-
-            let foundPath: string | null = null;
-            const entryFiles: string[] = [...packageNameEntryNames, ...commonEntryNames];
-
-            for (const entryFile of entryFiles) {
-                foundPath = await findUp(entryFile, null, projectRoot, true);
-
-                if (!foundPath && (await pathExists(path.resolve(projectRoot, 'src'), true))) {
-                    foundPath = await findUp(entryFile, null, path.resolve(projectRoot, 'src'), true);
-                }
-
-                if (!foundPath && (await pathExists(path.resolve(projectRoot, 'lib'), true))) {
-                    foundPath = await findUp(
-                        entryFile,
-                        null,
-                        path.resolve(this.options.workspaceInfo.projectRoot, 'lib'),
-                        true
-                    );
-                }
-
-                if (foundPath) {
-                    break;
-                }
-            }
-
-            if (foundPath) {
-                entryFilePathsCache.set(cacheKey, foundPath);
-
-                return foundPath;
-            } else {
-                entryFilePathsCache.set(cacheKey, '');
-
-                return null;
-            }
+            return null;
         }
     }
 
-    private getOutputFilePath(
-        compilation: ScriptCompilation,
-        compilationIndex: number,
-        entryFilePath: string,
-        forTypesOutput: boolean | undefined,
-        tsConfigInfo: TsConfigInfo | undefined,
-        moduleFormat: ScriptModuleFormat | undefined,
-        scriptTarget: ScriptTargetStrings | undefined
-    ): string {
+    private async getOutputFilePath(options: {
+        compilation: ScriptCompilation;
+        compilationIndex: number | undefined;
+        entryFilePath: string;
+        forTypesOutput: boolean;
+        bundle: boolean;
+        multiOutputsFormat: boolean;
+        moduleFormat: ScriptModuleFormat;
+        tsConfigInfo: TsConfigInfo | undefined;
+        scriptTarget: ScriptTargetStrings | undefined;
+    }): Promise<string> {
+        const {
+            compilation,
+            compilationIndex,
+            entryFilePath,
+            tsConfigInfo,
+            forTypesOutput,
+            bundle,
+            multiOutputsFormat,
+            moduleFormat,
+            scriptTarget
+        } = options;
+
+        const lastPartPackageName = this.getLastPartPackageName();
         const entryFileName = path.basename(entryFilePath);
         const entryFileExt = path.extname(entryFileName);
-        let suggestedOutFileExt = '.js';
-        if (forTypesOutput) {
-            suggestedOutFileExt = '.d.ts';
-        } else if (moduleFormat === 'esm' && scriptTarget !== 'ES5' && /\.m(t|j)s$/i.test(entryFileExt)) {
-            suggestedOutFileExt = '.mjs';
-        } else if (moduleFormat === 'cjs' && scriptTarget !== 'ES5' && /\.c(t|j)s$/i.test(entryFileExt)) {
-            suggestedOutFileExt = '.cjs';
-        } else if (/\.(t|j)sx$/i.test(entryFileExt)) {
-            suggestedOutFileExt = '.jsx';
-        }
+        const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
 
         if (compilation.out?.trim().length) {
             const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/out`;
 
             let outFilePath: string;
-            const normalziedOut = normalizePathToPOSIXStyle(compilation.out);
+
+            let normalziedOut = normalizePathToPOSIXStyle(compilation.out);
             const normalziedOutExt = path.extname(normalziedOut);
+
+            normalziedOut = normalziedOut.replace(/\[name\]/gi, entryFileNameWithoutExt);
+            if (lastPartPackageName) {
+                normalziedOut = normalziedOut.replace(/\[package_?name\]/gi, lastPartPackageName);
+            }
+
             if (
+                !compilation.out?.trim().endsWith('/') &&
                 normalziedOutExt &&
-                supportedOutExtRegExp.test(normalziedOutExt) &&
-                !compilation.out?.trim().endsWith('/')
+                /^\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(normalziedOutExt)
             ) {
                 // Validation
                 //
-                if (forTypesOutput && !/\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
-                    throw new InvalidConfigError(
-                        'Invalid file extension to emit declarations.',
-                        this.options.workspaceInfo.configPath,
-                        configLocation
-                    );
+                if (forTypesOutput) {
+                    if (!/^\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
+                        throw new InvalidConfigError(
+                            'Invalid file extension for declaration output.',
+                            this.options.workspaceInfo.configPath,
+                            configLocation
+                        );
+                    }
+                } else {
+                    if (/^\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
+                        throw new InvalidConfigError(
+                            'Invalid file extension for non-declaration output.',
+                            this.options.workspaceInfo.configPath,
+                            configLocation
+                        );
+                    }
                 }
 
-                const outFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
-                const lastPartPackageName = this.getLastPartPackageName();
-
-                let outFileName = normalziedOut.replace(/\[name\]/g, outFileNameWithoutExt);
-                if (lastPartPackageName) {
-                    outFileName = outFileName.replace(/\[package_?name\]/g, lastPartPackageName);
-                }
-
-                outFilePath = resolvePath(this.options.outDir, outFileName);
+                outFilePath = resolvePath(this.options.outDir, normalziedOut);
             } else {
-                const outFileName =
-                    entryFileName.substring(0, entryFileName.length - entryFileExt.length) + suggestedOutFileExt;
+                const outFileName = await this.getOutputFileName(options);
                 outFilePath = resolvePath(this.options.outDir, path.join(normalziedOut, outFileName));
             }
 
-            if (isSamePaths(outFilePath, entryFilePath)) {
+            if (isSamePath(outFilePath, entryFilePath)) {
                 throw new InvalidConfigError(
                     'The compilation output path must not be the same as entry file path.',
                     this.options.workspaceInfo.configPath,
@@ -1062,7 +1048,10 @@ export class ScriptTaskRunner {
                 );
             }
 
-            if (!isInFolder(this.options.outDir, outFilePath) && !isSamePaths(this.options.outDir, outFilePath)) {
+            if (
+                !isDirInDir(this.options.outDir, path.dirname(outFilePath)) &&
+                !isSamePath(this.options.outDir, path.dirname(outFilePath))
+            ) {
                 throw new InvalidConfigError(
                     'The compilation output path must not be outside of project outDir.',
                     this.options.workspaceInfo.configPath,
@@ -1072,59 +1061,225 @@ export class ScriptTaskRunner {
 
             return outFilePath;
         } else {
+            const outFileName = await this.getOutputFileName(options);
             let customOutDir = this.options.outDir;
-            let outFileName =
-                entryFileName.substring(0, entryFileName.length - entryFileExt.length) + suggestedOutFileExt;
+            const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+            const projectRoot = this.options.workspaceInfo.projectRoot;
 
             if (
-                tsConfigInfo?.compilerOptions.outFile != null &&
-                (compilation.moduleFormat === 'iife' ||
-                    tsConfigInfo?.compilerOptions.module === ts.ModuleKind.None ||
-                    tsConfigInfo?.compilerOptions.module === ts.ModuleKind.AMD ||
-                    tsConfigInfo?.compilerOptions.module === ts.ModuleKind.System)
+                tsConfigInfo?.configPath &&
+                tsConfigInfo?.compilerOptions.outDir != null &&
+                (isDirInDir(projectRoot, path.dirname(tsConfigInfo.configPath)) ||
+                    isSamePath(projectRoot, path.dirname(tsConfigInfo.configPath))) &&
+                (isDirInDir(this.options.outDir, tsConfigInfo.compilerOptions.outDir) ||
+                    isSamePath(this.options.outDir, tsConfigInfo.compilerOptions.outDir))
             ) {
-                const tsOutFileName = path.basename(tsConfigInfo.compilerOptions.outFile);
-                const tsOutFileExt = path.extname(tsOutFileName);
-                outFileName =
-                    tsOutFileName.substring(0, tsOutFileName.length - tsOutFileExt.length) + suggestedOutFileExt;
+                customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);
+            } else if (!isSamePath(projectRoot, workspaceRoot)) {
+                const relToWorkspaceRoot = normalizePathToPOSIXStyle(path.relative(workspaceRoot, projectRoot));
+                if (relToWorkspaceRoot.split('/').length > 1) {
+                    customOutDir = resolvePath(this.options.outDir, relToWorkspaceRoot);
+                }
             }
 
-            if (tsConfigInfo?.compilerOptions.outDir != null) {
-                customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);
-            } else {
-                const projectRoot = this.options.workspaceInfo.projectRoot;
-                const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
-                if (!isSamePaths(projectRoot, workspaceRoot)) {
-                    const relToWorkspaceRoot = normalizePathToPOSIXStyle(path.relative(workspaceRoot, projectRoot));
-                    if (relToWorkspaceRoot.split('/').length > 1) {
-                        customOutDir = resolvePath(this.options.outDir, relToWorkspaceRoot);
-                    }
-                }
-
+            if (multiOutputsFormat) {
                 if (forTypesOutput) {
                     customOutDir = path.resolve(customOutDir, `types`);
-                } else if (moduleFormat === 'esm' && scriptTarget && scriptTarget !== 'ES5') {
-                    const year = this.getYearFromScriptTarget(scriptTarget);
+                } else {
+                    if (moduleFormat === 'esm') {
+                        if (scriptTarget && scriptTarget !== 'ES5') {
+                            const year = this.getYearFromScriptTarget(scriptTarget);
 
-                    if (year > 2014) {
-                        customOutDir =
-                            compilation.bundle !== false
-                                ? path.resolve(customOutDir, `fesm${year}`)
-                                : path.resolve(customOutDir, `esm${year}`);
+                            if (year > 2014) {
+                                customOutDir = bundle
+                                    ? path.resolve(customOutDir, `fesm${year}`)
+                                    : path.resolve(customOutDir, `esm${year}`);
+                            } else {
+                                customOutDir = bundle
+                                    ? path.resolve(customOutDir, 'fesm')
+                                    : path.resolve(customOutDir, 'esm');
+                            }
+                        } else {
+                            customOutDir = bundle
+                                ? path.resolve(customOutDir, 'fesm5')
+                                : path.resolve(customOutDir, 'esm5');
+                        }
+                    } else if (moduleFormat === 'cjs') {
+                        customOutDir = bundle
+                            ? path.resolve(customOutDir, `bundles`)
+                            : path.resolve(customOutDir, `cjs`);
+                    } else {
+                        customOutDir = bundle
+                            ? path.resolve(customOutDir, `bundles`)
+                            : moduleFormat === 'umd'
+                            ? path.resolve(customOutDir, `umd`)
+                            : path.resolve(customOutDir, `iife`);
                     }
-                } else if (compilation.bundle !== false && moduleFormat === 'iife') {
-                    customOutDir = path.resolve(customOutDir, `bundle`);
                 }
-            }
-
-            if (!isInFolder(this.options.outDir, customOutDir) && !isSamePaths(this.options.outDir, customOutDir)) {
-                customOutDir = this.options.outDir;
             }
 
             const outputPath = resolvePath(customOutDir, outFileName);
 
             return outputPath;
         }
+    }
+
+    private async getOutputFileName(options: {
+        entryFilePath: string;
+        forTypesOutput: boolean;
+        bundle: boolean;
+        moduleFormat: ScriptModuleFormat;
+    }): Promise<string> {
+        const { entryFilePath, forTypesOutput, moduleFormat, bundle } = options;
+
+        const packageJson = this.options.packageJsonInfo?.packageJson;
+        if (packageJson) {
+            let entryFromPackageJson: string | undefined;
+
+            if (forTypesOutput) {
+                if (packageJson.exports && typeof packageJson.exports === 'object') {
+                    const exports = packageJson.exports as Record<
+                        string,
+                        | {
+                              types?: unknown;
+                              import?: string | { types?: unknown };
+                              require?: string | { types?: unknown };
+                          }
+                        | undefined
+                    >;
+
+                    if (
+                        moduleFormat === 'esm' &&
+                        exports['.']?.import &&
+                        typeof exports['.'].import === 'object' &&
+                        exports['.'].import.types &&
+                        typeof exports['.'].import.types === 'string'
+                    ) {
+                        entryFromPackageJson = exports['.'].import.types.trim();
+                    } else if (
+                        moduleFormat === 'cjs' &&
+                        exports['.']?.require &&
+                        typeof exports['.'].require === 'object' &&
+                        exports['.'].require.types &&
+                        typeof exports['.'].require.types === 'string'
+                    ) {
+                        entryFromPackageJson = exports['.'].require.types.trim();
+                    } else if (exports['.']?.types && typeof exports['.'].types === 'string') {
+                        entryFromPackageJson = exports['.']?.types.trim();
+                    }
+                }
+
+                if (!entryFromPackageJson && packageJson.types && typeof packageJson.types === 'string') {
+                    entryFromPackageJson = packageJson.types.trim();
+                }
+            } else {
+                if (packageJson.exports && typeof packageJson.exports === 'object') {
+                    const exports = packageJson.exports as Record<
+                        string,
+                        | {
+                              import?: string | { default?: unknown };
+                              require?: string | { default?: unknown };
+                              esm?: unknown;
+                              default?: unknown;
+                          }
+                        | undefined
+                    >;
+
+                    if (
+                        moduleFormat === 'esm' &&
+                        !bundle &&
+                        exports['.']?.esm &&
+                        typeof exports['.'].esm === 'string'
+                    ) {
+                        entryFromPackageJson = exports['.']?.esm.trim();
+                    } else if (
+                        moduleFormat === 'esm' &&
+                        exports['.']?.import &&
+                        typeof exports['.'].import === 'object' &&
+                        exports['.'].import.default &&
+                        typeof exports['.'].import.default === 'string'
+                    ) {
+                        entryFromPackageJson = exports['.'].import.default.trim();
+                    } else if (
+                        moduleFormat === 'cjs' &&
+                        exports['.']?.require &&
+                        typeof exports['.'].require === 'object' &&
+                        exports['.'].require.default &&
+                        typeof exports['.'].require.default === 'string'
+                    ) {
+                        entryFromPackageJson = exports['.'].require.default.trim();
+                    }
+
+                    if (!entryFromPackageJson && exports['.']?.default && typeof exports['.'].default === 'string') {
+                        entryFromPackageJson = exports['.']?.default.trim();
+                    }
+                }
+
+                if (!entryFromPackageJson && packageJson.module && typeof packageJson.module === 'string') {
+                    entryFromPackageJson = packageJson.module.trim();
+                }
+
+                if (!entryFromPackageJson && packageJson.main && typeof packageJson.main === 'string') {
+                    entryFromPackageJson = packageJson.main.trim();
+                }
+            }
+
+            if (entryFromPackageJson) {
+                const baseFileName = path.basename(normalizePathToPOSIXStyle(entryFromPackageJson));
+                if (baseFileName && /\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(baseFileName)) {
+                    return baseFileName;
+                }
+            }
+        }
+
+        const lastPartPackageName = this.getLastPartPackageName();
+
+        const entryFileName = path.basename(entryFilePath);
+        const entryFileExt = path.extname(entryFileName);
+        const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
+
+        let suggestedOutFileExt = '.js';
+        if (forTypesOutput) {
+            if (/^\.mts$/i.test(entryFileExt)) {
+                suggestedOutFileExt = '.d.mts';
+            } else if (/^\.cts$/i.test(entryFileExt)) {
+                suggestedOutFileExt = '.d.cts';
+            } else {
+                suggestedOutFileExt = '.d.ts';
+            }
+        } else if (moduleFormat === 'esm' && /^\.m(t|j)s$/i.test(entryFileExt)) {
+            suggestedOutFileExt = '.mjs';
+        } else if (moduleFormat === 'cjs' && /^\.c(t|j)s$/i.test(entryFileExt)) {
+            suggestedOutFileExt = '.cjs';
+        } else if (/^\.(t|j)sx$/i.test(entryFileExt)) {
+            suggestedOutFileExt = '.jsx';
+        }
+
+        if (
+            lastPartPackageName &&
+            bundle &&
+            lastPartPackageName.toLowerCase() !== entryFileNameWithoutExt.toLowerCase() &&
+            entryFileNameWithoutExt.toLocaleLowerCase() !== 'index'
+        ) {
+            const searchExtNames = ['.mts', '.cts', '.ts', '.tsx', '.mjs', '.cjs', '.js', '.jsx'];
+            const entryRoot = path.dirname(entryFilePath);
+
+            for (const extName of searchExtNames) {
+                const fileNameWithExt = lastPartPackageName + extName;
+                const found = await findUp(
+                    fileNameWithExt,
+                    [path.resolve(entryRoot, 'src'), path.resolve(entryRoot, 'lib')],
+                    entryRoot,
+                    true
+                );
+
+                if (found) {
+                    return lastPartPackageName + suggestedOutFileExt;
+                }
+            }
+        }
+
+        return entryFileNameWithoutExt + suggestedOutFileExt;
     }
 
     private getLastPartPackageName(): string | null {
@@ -1203,11 +1358,11 @@ export class ScriptTaskRunner {
                 return 'cjs';
             }
 
-            if (
-                moduleKind === ts.ModuleKind.UMD ||
-                moduleKind === ts.ModuleKind.System ||
-                (moduleKind as number) === 0
-            ) {
+            if (moduleKind === ts.ModuleKind.UMD || moduleKind === ts.ModuleKind.AMD) {
+                return 'umd';
+            }
+
+            if (moduleKind == null || moduleKind === ts.ModuleKind.None || moduleKind === ts.ModuleKind.System) {
                 return 'iife';
             }
 
@@ -1224,10 +1379,12 @@ export class ScriptTaskRunner {
             compilation?.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
 
         if (
-            (entryFilePath && /\.c[tj]s$/i.test(entryFilePath)) ??
+            (entryFilePath != null && /\.c[tj]s$/i.test(entryFilePath)) ||
             (!environmentTargets.includes('web') &&
                 !environmentTargets.includes('browser') &&
-                environmentTargets.find((e) => e.startsWith('node')) != null &&
+                environmentTargets.some((e) => e.startsWith('node')) &&
+                tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.NodeNext &&
+                tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node16 &&
                 (!entryFilePath || (entryFilePath && !/\.m[tj]s$/i.test(entryFilePath))))
         ) {
             return 'cjs';
@@ -1237,11 +1394,18 @@ export class ScriptTaskRunner {
             (environmentTargets.includes('web') ||
                 environmentTargets.includes('browser') ||
                 this.options.packageJsonInfo == null) &&
-            environmentTargets.find((e) => e.startsWith('node')) == null &&
+            !environmentTargets.some((e) => e.startsWith('node')) &&
             tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.NodeNext &&
             tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node16
         ) {
             return 'iife';
+        }
+
+        if (
+            tsConfigInfo?.compilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext ||
+            tsConfigInfo?.compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16
+        ) {
+            return 'esm';
         }
 
         return undefined;
@@ -1375,9 +1539,8 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
     }
 
     if (
-        scriptOptions.compilations !== 'auto' &&
-        Array.isArray(scriptOptions.compilations) &&
-        !scriptOptions.compilations.length
+        !scriptOptions.compilations ||
+        (Array.isArray(scriptOptions.compilations) && scriptOptions.compilations.length === 0)
     ) {
         return null;
     }

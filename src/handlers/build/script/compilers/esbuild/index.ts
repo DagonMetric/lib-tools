@@ -34,10 +34,10 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     } else if (
         options.moduleFormat === 'cjs' ||
         path.extname(options.outFilePath).toLowerCase() === '.cjs' ||
-        options.environmentTargets?.find((t) => t.startsWith('node') || t.startsWith('deno')) != null
+        options.environmentTargets?.some((t) => t.startsWith('node') || t.startsWith('deno'))
     ) {
         return 'node';
-    } else if (options.moduleFormat === 'iife' || options.environmentTargets?.find((t) => t === 'web') != null) {
+    } else if (options.moduleFormat === 'iife' || options.environmentTargets?.some((t) => t === 'web')) {
         return 'browser';
     }
 
@@ -59,7 +59,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             banner: options.bannerText ? { js: options.bannerText } : undefined,
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
-            format: options.moduleFormat,
+            format: options.moduleFormat === 'umd' ? 'iife' : options.moduleFormat,
             target: getEsBuildTargets(options),
             platform: getEsBuildPlatform(options),
             tsconfig: options.tsConfigInfo?.configPath,

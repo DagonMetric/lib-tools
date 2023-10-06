@@ -193,12 +193,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         );
     }
 
-    plugins.push(
-        rollupJson({
-            preferConst: true,
-            include: ['a.js']
-        })
-    );
+    plugins.push(rollupJson());
 
     if (moduleFormat === 'cjs') {
         plugins.push(
@@ -276,9 +271,10 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         file: options.outFilePath,
         format: moduleFormat,
         name: options.globalName,
-        // extend: true,
+        extend: true,
         sourcemap: options.sourceMap,
         banner: options.bannerText,
+        footer: options.footerText,
         globals: (moduleid) => getGlobalVariable(moduleid, options.globals),
         // entryFileNames: '[name].mjs',
         // inlineDynamicImports: moduleFormat === 'iife' || moduleFormat === 'umd' ? true : false, // Default:	false
@@ -297,7 +293,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
         logger.info(`With tsconfig file: ${tsConfigPathRel}`);
     }
-    logger.info(`With module format: '${moduleFormat}', script target: '${options.scriptTarget}'`);
 
     let bundle: RollupBuild | undefined;
 
@@ -305,6 +300,8 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         const startTime = Date.now();
 
         bundle = await rollup(inputOptions);
+
+        logger.info(`With output module format: '${moduleFormat}', script target: '${options.scriptTarget}'`);
 
         const { output } = await bundle.generate(outputOptions);
 

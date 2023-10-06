@@ -12,8 +12,8 @@ import {
     LoggerBase,
     colors,
     getAbsolutePathInfoes,
-    isInFolder,
-    isSamePaths,
+    isDirInDir,
+    isSamePath,
     normalizePathToPOSIXStyle,
     pathExists,
     resolvePath
@@ -49,7 +49,7 @@ async function globFiles(globPattern: string, cwd: string): Promise<string[]> {
     });
 
     for (const foundPath of foundPaths) {
-        const isSystemRoot = isSamePaths(path.parse(foundPath).root, foundPath);
+        const isSystemRoot = isSamePath(path.parse(foundPath).root, foundPath);
         let stats: Stats | null = null;
         if (!isSystemRoot) {
             stats = await fs.stat(foundPath);
@@ -156,8 +156,8 @@ export class CopyTaskRunner {
                     const toFilePath = path.resolve(toBasePath, toPathRel);
 
                     if (
-                        !copyResult.copiedFileInfoes.find(
-                            (f) => isSamePaths(f.from, foundFilePath) && isSamePaths(f.to, toFilePath)
+                        !copyResult.copiedFileInfoes.some(
+                            (f) => isSamePath(f.from, foundFilePath) && isSamePath(f.to, toFilePath)
                         )
                     ) {
                         copyResult.copiedFileInfoes.push({
@@ -202,15 +202,15 @@ export class CopyTaskRunner {
                     if (
                         !copyEntry.to?.trim().length ||
                         copyEntry.to.trim().endsWith('/') ||
-                        isSamePaths(outDir, toBasePath) ||
+                        isSamePath(outDir, toBasePath) ||
                         (fromExt && !toExt)
                     ) {
                         toFilePath = path.resolve(toBasePath, path.basename(foundFromPath));
                     }
 
                     if (
-                        !copyResult.copiedFileInfoes.find(
-                            (f) => isSamePaths(f.from, foundFromPath) && isSamePaths(f.to, toFilePath)
+                        !copyResult.copiedFileInfoes.some(
+                            (f) => isSamePath(f.from, foundFromPath) && isSamePath(f.to, toFilePath)
                         )
                     ) {
                         copyResult.copiedFileInfoes.push({
@@ -245,8 +245,8 @@ export class CopyTaskRunner {
                         const toFilePath = resolvePath(toBasePath, path.relative(fromPath, foundFilePath));
 
                         if (
-                            !copyResult.copiedFileInfoes.find(
-                                (f) => isSamePaths(f.from, foundFilePath) && isSamePaths(f.to, toFilePath)
+                            !copyResult.copiedFileInfoes.some(
+                                (f) => isSamePath(f.from, foundFilePath) && isSamePath(f.to, toFilePath)
                             )
                         ) {
                             copyResult.copiedFileInfoes.push({
@@ -268,12 +268,12 @@ export class CopyTaskRunner {
 
     private checkFileForExclude(filePathToCheck: string, excludePathInfoes: AbsolutePathInfo[]): boolean {
         // if check file/directory is same as exclude file/directory
-        if (excludePathInfoes.find((i) => isSamePaths(i.path, filePathToCheck))) {
+        if (excludePathInfoes.some((i) => isSamePath(i.path, filePathToCheck))) {
             return true;
         }
 
         // if check file/directory is in exclude directory
-        if (excludePathInfoes.find((i) => i.isDirectory && isInFolder(i.path, filePathToCheck))) {
+        if (excludePathInfoes.some((i) => i.isDirectory && isDirInDir(i.path, filePathToCheck))) {
             return true;
         }
 
