@@ -285,7 +285,7 @@ export async function getAbsolutePathInfoes(
             const foundPaths = await globSearch(normalizedPathOrPattern, cwd, useCache);
 
             for (const absolutePath of foundPaths) {
-                if (pathInfoes.find((i) => i.path === absolutePath)) {
+                if (pathInfoes.some((i) => i.path === absolutePath)) {
                     continue;
                 }
 
@@ -311,7 +311,7 @@ export async function getAbsolutePathInfoes(
         } else {
             // We allow absolute path on Windows only.
             const absolutePath = resolvePath(cwd, normalizedPathOrPattern);
-            if (pathInfoes.find((i) => i.path === absolutePath)) {
+            if (pathInfoes.some((i) => i.path === absolutePath)) {
                 continue;
             }
 
