@@ -90,34 +90,39 @@ export function isSamePath(p1: string, p2: string, ignoreCase = false): boolean 
     return path.relative(normalizedP1, normalizedP2) === '';
 }
 
-export function isDirInDir(parentDir: string, checkDir: string, ignoreCase = false): boolean {
+export function isInFolder(parentDir: string, checkPath: string, ignoreCase = false): boolean {
     parentDir = normalizePathToPOSIXStyle(parentDir);
-    checkDir = normalizePathToPOSIXStyle(checkDir);
+    checkPath = normalizePathToPOSIXStyle(checkPath);
 
     if (ignoreCase || process.platform === 'win32') {
         parentDir = parentDir.toLowerCase();
-        checkDir = checkDir.toLowerCase();
+        checkPath = checkPath.toLowerCase();
     }
 
-    const checkDirRoot = normalizePathToPOSIXStyle(path.parse(checkDir).root);
+    const checkPathRoot = normalizePathToPOSIXStyle(path.parse(checkPath).root);
 
-    if (!checkDir || parentDir === checkDir || checkDir === checkDirRoot || path.relative(parentDir, checkDir) === '') {
+    if (
+        !checkPath ||
+        parentDir === checkPath ||
+        checkPath === checkPathRoot ||
+        path.relative(parentDir, checkPath) === ''
+    ) {
         return false;
     }
 
-    let tempCheckDir = checkDir;
-    let prevTempCheckDir = '';
+    let tempCheckPath = checkPath;
+    let prevTempCheckPath = '';
     while (
-        tempCheckDir &&
-        tempCheckDir !== checkDirRoot &&
-        tempCheckDir !== prevTempCheckDir &&
-        tempCheckDir !== '.' &&
-        tempCheckDir !== '/'
+        tempCheckPath &&
+        tempCheckPath !== checkPathRoot &&
+        tempCheckPath !== prevTempCheckPath &&
+        tempCheckPath !== '.' &&
+        tempCheckPath !== '/'
     ) {
-        prevTempCheckDir = tempCheckDir;
-        tempCheckDir = normalizePathToPOSIXStyle(path.dirname(tempCheckDir));
+        prevTempCheckPath = tempCheckPath;
+        tempCheckPath = normalizePathToPOSIXStyle(path.dirname(tempCheckPath));
 
-        if (tempCheckDir === parentDir || path.relative(parentDir, tempCheckDir) === '') {
+        if (tempCheckPath === parentDir || path.relative(parentDir, tempCheckPath) === '') {
             return true;
         }
     }
@@ -197,7 +202,7 @@ export async function findUp(
         } while (
             currentDir &&
             currentDir !== rootPath &&
-            (isSamePath(endDir, currentDir) || isDirInDir(endDir, currentDir))
+            (isSamePath(endDir, currentDir) || isInFolder(endDir, currentDir))
         );
     }
 
