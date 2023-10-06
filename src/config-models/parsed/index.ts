@@ -39,18 +39,18 @@ export interface WorkspaceInfo {
     readonly nodeModulePath: string | null;
 }
 
-export interface ParsedTaskConfig extends Task {
+export interface ParsedTaskConfig extends Readonly<Task> {
     readonly _taskName: string;
     readonly _workspaceInfo: Readonly<WorkspaceInfo>;
 }
 
 export interface SubstitutionInfo {
-    searchString: string;
-    value: string;
-    bannerOnly: boolean;
+    readonly searchString: string;
+    readonly value: string;
+    readonly bannerOnly: boolean;
 }
 
-export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
+export interface ParsedBuildTaskConfig extends Readonly<BuildTask>, ParsedTaskConfig {
     readonly _outDir: string;
     readonly _bannerTextForStyle: string | undefined;
     readonly _bannerTextForScript: string | undefined;
@@ -60,4 +60,4 @@ export interface ParsedBuildTaskConfig extends BuildTask, ParsedTaskConfig {
     readonly _packageJsonInfo: Readonly<PackageJsonInfo> | null;
 }
 
-export interface ParsedCustomTaskConfig extends CustomTask, ParsedTaskConfig {}
+export interface ParsedCustomTaskConfig extends Readonly<CustomTask>, ParsedTaskConfig {}
