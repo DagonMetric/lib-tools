@@ -9,7 +9,7 @@ import {
     WorkspaceInfo
 } from '../config-models/parsed/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
-import { findUp, isDirInDir, isSamePath, pathExists, resolvePath } from '../utils/index.js';
+import { findUp, isInFolder, isSamePath, pathExists, resolvePath } from '../utils/index.js';
 
 function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
     const workspaceRoot = workspaceInfo.workspaceRoot;
@@ -30,7 +30,7 @@ function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
         );
     }
 
-    if (isDirInDir(outDir, workspaceRoot) || isDirInDir(outDir, process.cwd())) {
+    if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
         throw new InvalidConfigError(
             `The 'outDir' must not be parent of worksapce root or current working directory.`,
             configPath,
@@ -38,7 +38,7 @@ function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
         );
     }
 
-    if (isDirInDir(outDir, projectRoot)) {
+    if (isInFolder(outDir, projectRoot)) {
         throw new InvalidConfigError(
             `The 'outDir' must not be parent of project root directory.`,
             configPath,

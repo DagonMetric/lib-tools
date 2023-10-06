@@ -10,7 +10,7 @@ import {
     WorkspaceInfo
 } from '../config-models/parsed/index.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
-import { findUp, isDirInDir, isSamePath, pathExists, readJsonWithComments, resolvePath } from '../utils/index.js';
+import { findUp, isInFolder, isSamePath, pathExists, readJsonWithComments, resolvePath } from '../utils/index.js';
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
@@ -65,10 +65,7 @@ async function getPackageJsonInfo(
 
     let rootPackageJson: { [key: string]: unknown; version?: string } | null = null;
     let rootPackageJsonPath: string | null = null;
-    if (
-        !isSamePath(path.dirname(packageJsonPath), workspaceRoot) &&
-        isDirInDir(workspaceRoot, path.dirname(packageJsonPath))
-    ) {
+    if (!isSamePath(path.dirname(packageJsonPath), workspaceRoot) && isInFolder(workspaceRoot, packageJsonPath)) {
         rootPackageJsonPath = await findUp('package.json', null, workspaceRoot);
         rootPackageJson = rootPackageJsonPath ? await readPackageJsonFile(rootPackageJsonPath) : null;
     }
@@ -250,7 +247,7 @@ export async function getTasks(
 
             const projectRoot = project.root ? resolvePath(workspaceRoot, project.root) : workspaceRoot;
 
-            if (!isSamePath(workspaceRoot, projectRoot) && !isDirInDir(workspaceRoot, projectRoot)) {
+            if (!isSamePath(workspaceRoot, projectRoot) && !isInFolder(workspaceRoot, projectRoot)) {
                 throw new InvalidConfigError(
                     `The project 'root' must not be parent of workspace root.`,
                     configPath,
