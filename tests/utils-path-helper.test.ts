@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import {
     findUp,
     getAbsolutePathInfoes,
-    isDirInDir,
+    isInFolder,
     isSamePath,
     isWindowsStyleAbsolute,
     normalizePathToPOSIXStyle,
@@ -183,37 +183,37 @@ void describe('utils/path-helpers', () => {
         });
     });
 
-    void describe('isDirInDir', () => {
+    void describe('isInFolder', () => {
         void it(`should be 'C:/abc/def' in 'C:/abc'  folder`, () => {
-            assert.equal(isDirInDir('C:/abc', 'C:/abc/def'), true);
+            assert.equal(isInFolder('C:/abc', 'C:/abc/def'), true);
         });
 
         void it(`should be 'C:/ABC/def' in 'C:/abc'  folder`, () => {
-            assert.equal(isDirInDir('C:/abc', 'C:/ABC/def', true), true);
+            assert.equal(isInFolder('C:/abc', 'C:/ABC/def', true), true);
         });
 
         void it(`should be '//server/abc/def' in '//server/abc'  folder`, () => {
-            assert.equal(isDirInDir('//server/abc', '//server/abc/def'), true);
+            assert.equal(isInFolder('//server/abc', '//server/abc/def'), true);
         });
 
         void it(`should be 'foo/bar' in 'foo'  folder`, () => {
-            assert.equal(isDirInDir('foo', 'foo/bar'), true);
+            assert.equal(isInFolder('foo', 'foo/bar'), true);
         });
 
         void it(`should be '/foo/bar' in '/foo'  folder`, () => {
-            assert.equal(isDirInDir('/foo', '/foo/bar'), true);
+            assert.equal(isInFolder('/foo', '/foo/bar'), true);
         });
 
         void it(`should be '/foo//' in '/'  folder`, () => {
-            assert.equal(isDirInDir('/', '/foo//'), true);
+            assert.equal(isInFolder('/', '/foo//'), true);
         });
 
         void it(`should not be '/' in '/foo/bar'  folder`, () => {
-            assert.equal(isDirInDir('/foo/bar', '/'), false);
+            assert.equal(isInFolder('/foo/bar', '/'), false);
         });
 
         void it(`should not be 'c:/' in 'c:/foo/bar'  folder`, () => {
-            assert.equal(isDirInDir('c:/foo/bar', 'c:/'), false);
+            assert.equal(isInFolder('c:/foo/bar', 'c:/'), false);
         });
     });
 
