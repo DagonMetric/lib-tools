@@ -5,8 +5,8 @@ import { describe, it } from 'node:test';
 import {
     findUp,
     getAbsolutePathInfoes,
-    isInFolder,
-    isSamePaths,
+    isDirInDir,
+    isSamePath,
     isWindowsStyleAbsolute,
     normalizePathToPOSIXStyle,
     pathExists
@@ -161,59 +161,59 @@ void describe('utils/path-helpers', () => {
         });
     });
 
-    void describe('isSamePaths', () => {
+    void describe('isSamePath', () => {
         void it(`should be same path: 'C:\\' and 'C:/'`, () => {
-            assert.equal(isSamePaths('C:\\', 'C:/'), true);
+            assert.equal(isSamePath('C:\\', 'C:/'), true);
         });
 
         void it(`should be same path: 'C:\\\\' and 'C:/'`, () => {
-            assert.equal(isSamePaths('C:\\\\', 'C:/'), true);
+            assert.equal(isSamePath('C:\\\\', 'C:/'), true);
         });
 
         void it(`should be same path: 'C:' and 'C:/'`, () => {
-            assert.equal(isSamePaths('C:', 'C:/'), true);
+            assert.equal(isSamePath('C:', 'C:/'), true);
         });
 
         void it(`should be same path: 'c:' and 'C:/'`, () => {
-            assert.equal(isSamePaths('c:', 'C:/', true), true);
+            assert.equal(isSamePath('c:', 'C:/', true), true);
         });
 
         void it(`should be same path: 'foo\\\\bar\\baz' and 'foo/bar/baz'`, () => {
-            assert.equal(isSamePaths('foo\\\\bar\\baz', 'foo/bar/baz'), true);
+            assert.equal(isSamePath('foo\\\\bar\\baz', 'foo/bar/baz'), true);
         });
     });
 
-    void describe('isInFolder', () => {
+    void describe('isDirInDir', () => {
         void it(`should be 'C:/abc/def' in 'C:/abc'  folder`, () => {
-            assert.equal(isInFolder('C:/abc', 'C:/abc/def'), true);
+            assert.equal(isDirInDir('C:/abc', 'C:/abc/def'), true);
         });
 
         void it(`should be 'C:/ABC/def' in 'C:/abc'  folder`, () => {
-            assert.equal(isInFolder('C:/abc', 'C:/ABC/def', true), true);
+            assert.equal(isDirInDir('C:/abc', 'C:/ABC/def', true), true);
         });
 
         void it(`should be '//server/abc/def' in '//server/abc'  folder`, () => {
-            assert.equal(isInFolder('//server/abc', '//server/abc/def'), true);
+            assert.equal(isDirInDir('//server/abc', '//server/abc/def'), true);
         });
 
         void it(`should be 'foo/bar' in 'foo'  folder`, () => {
-            assert.equal(isInFolder('foo', 'foo/bar'), true);
+            assert.equal(isDirInDir('foo', 'foo/bar'), true);
         });
 
         void it(`should be '/foo/bar' in '/foo'  folder`, () => {
-            assert.equal(isInFolder('/foo', '/foo/bar'), true);
+            assert.equal(isDirInDir('/foo', '/foo/bar'), true);
         });
 
         void it(`should be '/foo//' in '/'  folder`, () => {
-            assert.equal(isInFolder('/', '/foo//'), true);
+            assert.equal(isDirInDir('/', '/foo//'), true);
         });
 
         void it(`should not be '/' in '/foo/bar'  folder`, () => {
-            assert.equal(isInFolder('/foo/bar', '/'), false);
+            assert.equal(isDirInDir('/foo/bar', '/'), false);
         });
 
         void it(`should not be 'c:/' in 'c:/foo/bar'  folder`, () => {
-            assert.equal(isInFolder('c:/foo/bar', 'c:/'), false);
+            assert.equal(isDirInDir('c:/foo/bar', 'c:/'), false);
         });
     });
 
