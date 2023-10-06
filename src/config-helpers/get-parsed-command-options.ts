@@ -6,7 +6,7 @@ import * as path from 'node:path';
 import { CommandOptions } from '../config-models/index.js';
 import { ParsedCommandOptions } from '../config-models/parsed/index.js';
 import { InvalidCommandOptionError } from '../exceptions/invalid-command-option-error.js';
-import { isInFolder, isSamePaths, normalizePathToPOSIXStyle, pathExists, resolvePath } from '../utils/index.js';
+import { isDirInDir, isSamePath, normalizePathToPOSIXStyle, pathExists, resolvePath } from '../utils/index.js';
 
 async function checkPaths(
     globPatternsOrRelativePaths: readonly string[],
@@ -77,7 +77,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
 
     if (cmdOptions._outDir) {
         const outDir = cmdOptions._outDir;
-        if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
+        if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePath(outDir, path.parse(outDir).root)) {
             throw new InvalidCommandOptionError(
                 'outDir',
                 cmdOptions.outDir,
@@ -85,7 +85,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
             );
         }
 
-        if (isInFolder(outDir, process.cwd())) {
+        if (isDirInDir(outDir, process.cwd())) {
             throw new InvalidCommandOptionError(
                 'outDir',
                 cmdOptions.outDir,
@@ -93,7 +93,7 @@ async function validateParsedCommandOptions(cmdOptions: ParsedCommandOptions): P
             );
         }
 
-        if (cmdOptions.workspace && isInFolder(outDir, cmdOptions._workspaceRoot)) {
+        if (cmdOptions.workspace && isDirInDir(outDir, cmdOptions._workspaceRoot)) {
             throw new InvalidCommandOptionError(
                 'outDir',
                 cmdOptions.outDir,

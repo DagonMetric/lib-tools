@@ -9,7 +9,7 @@ import {
     WorkspaceInfo
 } from '../config-models/parsed/index.js';
 import { InvalidConfigError } from '../exceptions/index.js';
-import { findUp, isInFolder, isSamePaths, pathExists, resolvePath } from '../utils/index.js';
+import { findUp, isDirInDir, isSamePath, pathExists, resolvePath } from '../utils/index.js';
 
 function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
     const workspaceRoot = workspaceInfo.workspaceRoot;
@@ -22,7 +22,7 @@ function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
         throw new InvalidConfigError(`The 'outDir' must not be empty.`, configPath, `${configLocationPrefix}/outDir`);
     }
 
-    if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePaths(outDir, path.parse(outDir).root)) {
+    if (outDir.trim() === '/' || outDir.trim() === '\\' || isSamePath(outDir, path.parse(outDir).root)) {
         throw new InvalidConfigError(
             `The 'outDir' must not be system root directory.`,
             configPath,
@@ -30,7 +30,7 @@ function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
         );
     }
 
-    if (isInFolder(outDir, workspaceRoot) || isInFolder(outDir, process.cwd())) {
+    if (isDirInDir(outDir, workspaceRoot) || isDirInDir(outDir, process.cwd())) {
         throw new InvalidConfigError(
             `The 'outDir' must not be parent of worksapce root or current working directory.`,
             configPath,
@@ -38,7 +38,7 @@ function validateOutDir(outDir: string, workspaceInfo: WorkspaceInfo): void {
         );
     }
 
-    if (isInFolder(outDir, projectRoot)) {
+    if (isDirInDir(outDir, projectRoot)) {
         throw new InvalidConfigError(
             `The 'outDir' must not be parent of project root directory.`,
             configPath,
