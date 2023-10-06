@@ -47,7 +47,7 @@ export class StyleWebpackPlugin {
                 },
                 (assets) => {
                     // Add banner or footer
-                    if (this.options.bannerText ?? this.options.footerText) {
+                    if (this.options.bannerText != null || this.options.footerText != null) {
                         for (const chunk of compilation.chunks) {
                             // entryOnly
                             if (!chunk.canBeInitial()) {

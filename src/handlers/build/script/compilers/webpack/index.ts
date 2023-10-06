@@ -193,7 +193,7 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
 }
 
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    if (options.emitDeclarationOnly ?? options.tsConfigInfo?.compilerOptions.emitDeclarationOnly) {
+    if (options.emitDeclarationOnly === true || options.tsConfigInfo?.compilerOptions.emitDeclarationOnly === true) {
         throw new CompilationError(
             `${colors.lightRed(
                 'Error:'

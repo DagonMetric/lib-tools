@@ -85,7 +85,7 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
             compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
 
             if (
-                (compilerOptions.sourceMap && compilerOptions.inlineSourceMap) ??
+                (compilerOptions.sourceMap != null && compilerOptions.inlineSourceMap != null) ||
                 (!compilerOptions.sourceMap && !compilerOptions.inlineSourceMap)
             ) {
                 compilerOptions.sourceMap = true;
