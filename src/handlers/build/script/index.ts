@@ -20,7 +20,7 @@ import {
     colors,
     dashCaseToCamelCase,
     findUp,
-    isDirInDir,
+    isInFolder,
     isSamePath,
     normalizePathToPOSIXStyle,
     pathExists,
@@ -1046,10 +1046,7 @@ export class ScriptTaskRunner {
                 );
             }
 
-            if (
-                !isDirInDir(this.options.outDir, path.dirname(outFilePath)) &&
-                !isSamePath(this.options.outDir, path.dirname(outFilePath))
-            ) {
+            if (!isInFolder(this.options.outDir, outFilePath)) {
                 throw new InvalidConfigError(
                     'The compilation output path must not be outside of project outDir.',
                     this.options.workspaceInfo.configPath,
@@ -1067,9 +1064,8 @@ export class ScriptTaskRunner {
             if (
                 tsConfigInfo?.configPath &&
                 tsConfigInfo?.compilerOptions.outDir != null &&
-                (isDirInDir(projectRoot, path.dirname(tsConfigInfo.configPath)) ||
-                    isSamePath(projectRoot, path.dirname(tsConfigInfo.configPath))) &&
-                (isDirInDir(this.options.outDir, tsConfigInfo.compilerOptions.outDir) ||
+                isInFolder(projectRoot, tsConfigInfo.configPath) &&
+                (isInFolder(this.options.outDir, tsConfigInfo.compilerOptions.outDir) ||
                     isSamePath(this.options.outDir, tsConfigInfo.compilerOptions.outDir))
             ) {
                 customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);

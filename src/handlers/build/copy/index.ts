@@ -11,7 +11,7 @@ import {
     Logger,
     colors,
     getAbsolutePathInfoes,
-    isDirInDir,
+    isInFolder,
     isSamePath,
     normalizePathToPOSIXStyle,
     pathExists,
@@ -272,7 +272,7 @@ export class CopyTaskRunner {
         }
 
         // if check file/directory is in exclude directory
-        if (excludePathInfoes.some((i) => i.isDirectory && isDirInDir(i.path, filePathToCheck))) {
+        if (excludePathInfoes.some((i) => i.isDirectory && isInFolder(i.path, filePathToCheck))) {
             return true;
         }
 
