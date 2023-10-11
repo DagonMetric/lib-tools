@@ -1,6 +1,6 @@
 import { ScriptTarget } from 'typescript';
 
-import { OverridableTaskOptions, Task } from './task.js';
+import { OverridableTaskOptions, TaskBaseOptions } from './task-options.js';
 
 /**
  * Before build clean options.
@@ -67,9 +67,79 @@ export interface CopyEntry {
 }
 
 /**
- * Style bundle entry options.
+ * Substitution entry.
  */
-export interface StyleBundle {
+export interface SubstitutionEntry {
+    /**
+     * Search text.
+     */
+    searchValue: string;
+    /**
+     * Replace value.
+     */
+    replaceValue: string;
+    /**
+     * Start boundary delimiter. Default: `\\b`.
+     */
+    startDelimiter?: string;
+    /**
+     * End boundary delimiter. Default: `\\b(?!\\.)`.
+     */
+    endDelimiter?: string;
+    /**
+     * If true only apply to banner.
+     */
+    bannerOnly?: boolean;
+    /**
+     * List of files or glob magic paths to exclude from substitution.
+     */
+    exclude?: string[];
+    /**
+     * List of files or glob magic paths to include in substitution.
+     */
+    include?: string[];
+}
+
+/**
+ * Banner options.
+ */
+export interface BannerOptions {
+    /**
+     * Set `true` value to search banner file automatically or set file path to add banner content to the generated files.
+     */
+    entry?: string | boolean;
+    /**
+     * List of files or glob magic paths to exclude.
+     */
+    exclude?: string[];
+    /**
+     * List of files or glob magic paths to include.
+     */
+    include?: string[];
+}
+
+/**
+ * Footer options.
+ */
+export interface FooterOptions {
+    /**
+     * Set `true` value to search footer file automatically or set file path to add footer content to the generated files.
+     */
+    footer?: string | boolean;
+    /**
+     * List of files or glob magic paths to exclude.
+     */
+    exclude?: string[];
+    /**
+     * List of files or glob magic paths to include.
+     */
+    include?: string[];
+}
+
+/**
+ * Style compilation / bundle options.
+ */
+export interface StyleCompilation {
     /**
      * The entry style file. Supported formats are .scss, .sass, .less or .css.
      */
@@ -78,6 +148,24 @@ export interface StyleBundle {
      * The output bundle name for generated .css file. It can be a bundle name or a directory path relative to project `outDir`.
      */
     out?: string;
+    /**
+     * If true, enable the outputing of sourcemap. Default is `true`.
+     * @default true
+     */
+    sourceMap?: boolean;
+    /**
+     * Paths in which to look for stylesheets loaded by rules like @use and @import.
+     */
+    includePaths?: string[];
+    /**
+     * Boolean value or minify object options to generate minify file. Default is `true`.
+     * @default true
+     */
+    minify?: boolean | StyleMinifyOptions;
+    /**
+     * Css bundle target options.
+     */
+    target?: CssTargetOptions;
 }
 
 /**
@@ -123,9 +211,9 @@ export interface CssTargetOptions {
  */
 export interface StyleOptions {
     /**
-     * List of style bundle entries.
+     * List of style compilations / bundle entries.
      */
-    bundles: StyleBundle[];
+    compilations: StyleCompilation[];
     /**
      * If true, enable the outputing of sourcemap. Default is `true`.
      * @default true
@@ -144,6 +232,18 @@ export interface StyleOptions {
      * Css bundle target options.
      */
     target?: CssTargetOptions;
+    /**
+     * Substitution entries.
+     */
+    substitutions?: SubstitutionEntry[];
+    /**
+     * Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated style files.
+     */
+    banner?: string | boolean | BannerOptions;
+    /**
+     * Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated style files.
+     */
+    footer?: string | boolean | FooterOptions;
 }
 
 /**
@@ -269,6 +369,18 @@ export interface ScriptOptions {
      * Enable or disable resolving symlinks to their realpaths.
      */
     preserveSymlinks?: boolean;
+    /**
+     * Substitution entries.
+     */
+    substitutions?: SubstitutionEntry[];
+    /**
+     * Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated script files.
+     */
+    banner?: string | boolean | BannerOptions;
+    /**
+     * Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated script files.
+     */
+    footer?: string | boolean | FooterOptions;
 }
 
 /**
@@ -290,25 +402,11 @@ export interface PackageJsonOptions {
 }
 
 /**
- * Banner and footer options.
- */
-export interface BannerFooterOptions {
-    /**
-     * For only style files.
-     */
-    style?: string | boolean;
-    /**
-     * For only script files.
-     */
-    script?: string | boolean;
-}
-
-/**
  * Build task options.
  */
-export interface BuildTaskOptions extends Task {
+export interface BuildTaskOptions extends TaskBaseOptions {
     /**
-     * The output directory for build results.
+     * The output directory for build results. Default: `dist`.
      */
     outDir?: string;
     /**
@@ -328,20 +426,12 @@ export interface BuildTaskOptions extends Task {
      */
     script?: string[] | ScriptOptions;
     /**
-     * Set `true` value to search banner text file, or set banner file path, or object options to add banner content to the generated files.
-     */
-    banner?: string | boolean | BannerFooterOptions;
-    /**
-     * Set `true` value to search footer text file, or set footer file path, or object options to add footer content to the generated files.
-     */
-    footer?: string | boolean | BannerFooterOptions;
-    /**
      * Options for package.json file updating.
      */
     packageJson?: PackageJsonOptions | boolean;
 }
 
 /**
- * Build task options.
+ * Build task configuration.
  */
-export interface BuildTask extends BuildTaskOptions, OverridableTaskOptions<BuildTaskOptions> {}
+export interface BuildTaskConfig extends BuildTaskOptions, OverridableTaskOptions<BuildTaskOptions> {}

@@ -1,7 +1,11 @@
 /**
  * Base task options.
  */
-export interface Task {
+export interface TaskBaseOptions {
+    /**
+     * Priority order to run.
+     */
+    priority?: number;
     /**
      * If true, this task will be ignored to run.
      */
@@ -11,7 +15,7 @@ export interface Task {
 /**
  * Overridable task options.
  */
-export interface OverridableTaskOptions<TTaskOptions extends Task> {
+export interface OverridableTaskOptions<TTaskOptions extends TaskBaseOptions> {
     /**
      * To override task options based on env value passed in command line.
      */

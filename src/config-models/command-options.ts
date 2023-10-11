@@ -1,6 +1,5 @@
 /**
  * Build command options.
- * Important: To sync with command builder options in cli/commands/run.ts
  */
 export interface BuildCommandOptions {
     outDir?: string;
@@ -12,13 +11,13 @@ export interface BuildCommandOptions {
 }
 
 /**
- * Command options.
- * Important: To sync with command builder options in cli/commands/run.ts
+ * Command options. *
  */
+// Important Note: To sync with command builder options in cli/commands/run.ts
 export interface CommandOptions extends BuildCommandOptions {
-    logLevel?: 'debug' | 'info' | 'warn' | 'error';
     workspace?: string;
     project?: string;
-    env?: string;
+    logLevel?: 'debug' | 'info' | 'warn' | 'error';
     dryRun?: boolean;
+    env?: string;
 }
