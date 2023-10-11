@@ -1,5 +1,7 @@
 import { Console } from 'node:console';
 
+import { colors } from './colors.js';
+
 export enum LogLevel {
     None = 0,
     Error = 2,
@@ -30,6 +32,23 @@ export interface LoggerBase {
     groupEnd(): void;
 }
 
+function toLogLevel(logLevelString: LogLevelStrings): LogLevel {
+    switch (logLevelString) {
+        case 'debug':
+            return LogLevel.Debug;
+        case 'info':
+            return LogLevel.Info;
+        case 'warn':
+            return LogLevel.Warn;
+        case 'error':
+            return LogLevel.Error;
+        case 'none':
+            return LogLevel.None;
+        default:
+            return LogLevel.None;
+    }
+}
+
 export class Logger implements LoggerBase {
     private readonly _console: Console;
     private _minLogLevel: LogLevel = LogLevel.Info;
@@ -37,9 +56,7 @@ export class Logger implements LoggerBase {
     constructor(private readonly options: LoggerOptions) {
         if (this.options.logLevel != null) {
             this._minLogLevel =
-                typeof this.options.logLevel === 'string'
-                    ? this.toLogLevel(this.options.logLevel)
-                    : this.options.logLevel;
+                typeof this.options.logLevel === 'string' ? toLogLevel(this.options.logLevel) : this.options.logLevel;
         }
 
         this._console = new Console({
@@ -50,19 +67,17 @@ export class Logger implements LoggerBase {
     }
 
     set minLogLevel(minLogLevel: LogLevel | LogLevelStrings) {
-        this._minLogLevel = typeof minLogLevel === 'string' ? this.toLogLevel(minLogLevel) : minLogLevel;
+        this._minLogLevel = typeof minLogLevel === 'string' ? toLogLevel(minLogLevel) : minLogLevel;
     }
 
     log(level: LogLevel | LogLevelStrings, message: string, optionalParams?: unknown): void {
-        const logLevel = typeof level === 'string' ? this.toLogLevel(level) : level;
+        const logLevel = typeof level === 'string' ? toLogLevel(level) : level;
 
         if (this._minLogLevel < logLevel || !message) {
             return;
         }
 
-        const prefix = this.getPrefix(logLevel);
-
-        const logMsg = `${prefix}${message.trimStart()}`;
+        const logMsg = this.getMessageWithPrefix(logLevel, message);
 
         if (optionalParams) {
             if (logLevel === LogLevel.Warn) {
@@ -103,39 +118,52 @@ export class Logger implements LoggerBase {
         this._console.groupEnd();
     }
 
-    private toLogLevel(logLevelString: LogLevelStrings): LogLevel {
-        switch (logLevelString) {
-            case 'debug':
-                return LogLevel.Debug;
-            case 'info':
-                return LogLevel.Info;
-            case 'warn':
-                return LogLevel.Warn;
-            case 'error':
-                return LogLevel.Error;
-            case 'none':
-                return LogLevel.None;
-            default:
-                return LogLevel.None;
-        }
-    }
-
-    private getPrefix(logLevel: LogLevel): string {
+    private getMessageWithPrefix(logLevel: LogLevel, message: string): string {
         let prefix = '';
-        if (this.options.name) {
-            prefix += `${this.options.name} `;
-        }
 
         if (logLevel === LogLevel.Debug && this.options.debugPrefix) {
-            prefix += `${this.options.debugPrefix} `;
+            prefix = this.options.debugPrefix;
         } else if (logLevel === LogLevel.Info && this.options.infoPrefix) {
-            prefix += `${this.options.infoPrefix} `;
+            prefix = this.options.infoPrefix;
         } else if (logLevel === LogLevel.Warn && this.options.warnPrefix) {
-            prefix += `${this.options.warnPrefix} `;
+            prefix = this.options.warnPrefix;
         } else if (logLevel === LogLevel.Error && this.options.errorPrefix) {
-            prefix += `${this.options.errorPrefix} `;
+            prefix = this.options.errorPrefix;
         }
 
-        return prefix;
+        if (prefix) {
+            if (message.startsWith(prefix)) {
+                prefix = '';
+            } else {
+                let strippedPrefix = colors.stripColor(prefix, true);
+
+                if (strippedPrefix.endsWith(':')) {
+                    strippedPrefix = strippedPrefix.substring(0, strippedPrefix.length - 1);
+                }
+
+                if (strippedPrefix.toLowerCase().startsWith('warn')) {
+                    // normalize warning and warn
+                    strippedPrefix = 'warn';
+                } else if (strippedPrefix.toLowerCase().startsWith('debug')) {
+                    // normalize debugging and debug
+                    strippedPrefix = 'debug';
+                }
+
+                if (strippedPrefix) {
+                    const startsWithRegExp = new RegExp(`^${strippedPrefix}`, 'i');
+                    const strippedMessage = colors.stripColor(message, true);
+
+                    if (startsWithRegExp.test(strippedMessage)) {
+                        prefix = '';
+                    }
+                }
+            }
+        }
+
+        const messageWithPrefix = `${this.options.name ? `${this.options.name} ` : ''}${
+            prefix ? `${prefix} ` : ''
+        }${message.trimStart()}`;
+
+        return messageWithPrefix;
     }
 }

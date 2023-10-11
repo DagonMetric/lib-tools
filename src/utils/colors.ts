@@ -27,7 +27,21 @@ function supportColor(): boolean {
     return false;
 }
 
-const openTags: Record<string, string> = {
+type ColorKeys =
+    | 'red'
+    | 'green'
+    | 'yellow'
+    | 'blue'
+    | 'magenta'
+    | 'cyan'
+    | 'lightRed'
+    | 'lightGreen'
+    | 'lightYellow'
+    | 'lightBlue'
+    | 'lightMagenta'
+    | 'lightCyan';
+
+const ansiColorOpenTags: Record<ColorKeys, string> = {
     red: '\u001b[31m',
     green: '\u001b[32m',
     yellow: '\u001b[33m',
@@ -42,27 +56,37 @@ const openTags: Record<string, string> = {
     lightCyan: '\u001b[96m'
 };
 
-const closeTag = '\u001b[39m';
+const ansiColorCloseTag = '\u001b[39m';
 
-function colorize(str: string, colorKey: string): string {
+function colorize(str: string, colorKey: ColorKeys): string {
     if (!supportColor()) {
         return str;
     }
 
-    if (!colorKey || !(colorKey in openTags)) {
+    if (!colorKey || !(colorKey in ansiColorOpenTags)) {
         return str;
     }
 
     const buf: string[] = [];
 
     // Open tag
-    buf.push(openTags[colorKey]);
+    buf.push(ansiColorOpenTags[colorKey]);
     // Input
     buf.push(str);
     // Close tag
-    buf.push(closeTag);
+    buf.push(ansiColorCloseTag);
 
     return buf.join('');
+}
+
+// Copy from https://github.com/chalk/ansi-regex/blob/main/index.js
+function ansiRegex(onlyFirst = false): RegExp {
+    const pattern = [
+        '[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)',
+        '(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))'
+    ].join('|');
+
+    return new RegExp(pattern, onlyFirst ? undefined : 'g');
 }
 
 export const colors = {
@@ -77,5 +101,7 @@ export const colors = {
     lightYellow: (str: string) => colorize(str, 'lightYellow'),
     lightBlue: (str: string) => colorize(str, 'lightBlue'),
     lightMagenta: (str: string) => colorize(str, 'lightMagenta'),
-    lightCyan: (str: string) => colorize(str, 'lightCyan')
+    lightCyan: (str: string) => colorize(str, 'lightCyan'),
+    stripColor: (str: string, onlyFirst = false) => str.replace(ansiRegex(onlyFirst), ''),
+    supportColor
 };

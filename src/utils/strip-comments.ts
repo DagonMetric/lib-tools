@@ -1,13 +1,14 @@
+/**
+ * 1. Matches double quoted string
+ * 2. Matches single quotes string
+ * 3. Matches block comments
+ * 4. Matches line comments
+ */
+const stripCommentsRegExp =
+    /("(?:[^\\"]*(?:\\.)?)*")|('(?:[^\\']*(?:\\.)?)*')|(\/\*(?:\r?\n|.)*?\*\/)|(\/{2,}.*?(?:(?:\r?\n)|$))/g;
+
 export function stripComments(content: string): string {
-    /**
-     * First capturing group matches double quoted string
-     * Second matches single quotes string
-     * Third matches block comments
-     * Fourth matches line comments
-     */
-    const regexp =
-        /("(?:[^\\"]*(?:\\.)?)*")|('(?:[^\\']*(?:\\.)?)*')|(\/\*(?:\r?\n|.)*?\*\/)|(\/{2,}.*?(?:(?:\r?\n)|$))/g;
-    const result = content.replace(regexp, (match, _0, _1, m3: string, m4: string) => {
+    const result = content.replace(stripCommentsRegExp, (match, _0, _1, m3: string, m4: string) => {
         // Only one of m1, m2, m3, m4 matches
         if (m3) {
             // A block comment. Replace with nothing

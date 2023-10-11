@@ -5,6 +5,50 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 const normalizePathToPOSIXStyleCache = new Map<string, string>();
+const pathExistsCache = new Map<string, boolean>();
+const findUpCache = new Map<string, string>();
+const globSearchCache = new Map<string, string[]>();
+const fsStatCache = new Map<string, Stats>();
+const getAbsolutePathInfoesCache = new Map<string, AbsolutePathInfo[]>();
+
+async function globSearch(normalizedPathOrPattern: string, cwd: string, useCache = false): Promise<string[]> {
+    const cacheKey = `${cwd}!${normalizedPathOrPattern}`;
+    if (useCache) {
+        const cached = globSearchCache.get(cacheKey);
+        if (cached) {
+            return JSON.parse(JSON.stringify(cached)) as string[];
+        }
+    }
+
+    const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
+    globSearchCache.set(cacheKey, foundPaths);
+
+    return foundPaths;
+}
+
+async function getStats(absolutePath: string, useCache = false): Promise<Stats> {
+    if (useCache) {
+        const cached = fsStatCache.get(absolutePath);
+        if (cached) {
+            return cached;
+        }
+    }
+
+    const stats = await fs.stat(absolutePath);
+
+    fsStatCache.set(absolutePath, stats);
+
+    return stats;
+}
+
+export interface AbsolutePathInfo {
+    readonly path: string;
+    readonly isSystemRoot: boolean;
+    readonly isFile: boolean | null;
+    readonly isDirectory: boolean | null;
+    readonly isSymbolicLink: boolean | null;
+}
+
 export function normalizePathToPOSIXStyle(p: string): string {
     if (!p?.trim().length) {
         return '';
@@ -136,7 +180,6 @@ export function resolvePath(rootPath: string, currentPath: string): string {
         : path.resolve(rootPath, normalizePathToPOSIXStyle(currentPath));
 }
 
-const pathExistsCache = new Map<string, boolean>();
 export async function pathExists(p: string, useCache = false): Promise<boolean> {
     if (useCache) {
         const cached = pathExistsCache.get(p);
@@ -159,7 +202,6 @@ export async function pathExists(p: string, useCache = false): Promise<boolean> 
         });
 }
 
-const findUpCache = new Map<string, string>();
 export async function findUp(
     pathToFind: string,
     startDir: string | string[] | null,
@@ -211,47 +253,6 @@ export async function findUp(
     return null;
 }
 
-export interface AbsolutePathInfo {
-    readonly path: string;
-    readonly isSystemRoot: boolean;
-    readonly isFile: boolean | null;
-    readonly isDirectory: boolean | null;
-    readonly isSymbolicLink: boolean | null;
-}
-
-const globCache = new Map<string, string[]>();
-async function globSearch(normalizedPathOrPattern: string, cwd: string, useCache = false): Promise<string[]> {
-    const cacheKey = `${cwd}!${normalizedPathOrPattern}`;
-    if (useCache) {
-        const cached = globCache.get(cacheKey);
-        if (cached) {
-            return JSON.parse(JSON.stringify(cached)) as string[];
-        }
-    }
-
-    const foundPaths = await glob(normalizedPathOrPattern, { cwd, dot: true, absolute: true });
-    globCache.set(cacheKey, foundPaths);
-
-    return foundPaths;
-}
-
-const fsStatCache = new Map<string, Stats>();
-async function getStats(absolutePath: string, useCache = false): Promise<Stats> {
-    if (useCache) {
-        const cached = fsStatCache.get(absolutePath);
-        if (cached) {
-            return cached;
-        }
-    }
-
-    const stats = await fs.stat(absolutePath);
-
-    fsStatCache.set(absolutePath, stats);
-
-    return stats;
-}
-
-const getAbsolutePathInfoesCache = new Map<string, AbsolutePathInfo[]>();
 export async function getAbsolutePathInfoes(
     globPatternsOrRelativePaths: string[],
     cwd: string,
