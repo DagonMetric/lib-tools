@@ -4,8 +4,13 @@ import { colors } from '../utils/index.js';
 
 const seeMoreWikiLink = 'https://github.com/DagonMetric/lib-tools/wiki/Lib-Tools-Workspace-Configuration';
 
-function formatMessage(errors: ErrorObject[], configPath: string): string {
-    let formattedMessage = colors.lightCyan(configPath) + ' - ' + colors.lightRed('Configuration validation errors:');
+function formatMessage(errors: ErrorObject[], configPath: string | null | undefined): string {
+    let formattedMessage = '';
+    if (configPath) {
+        formattedMessage += colors.lightCyan(configPath) + ' - ';
+    }
+
+    formattedMessage += colors.lightRed('Configuration validation errors:');
     const anyOfFinishedGroups: string[] = [];
 
     for (const error of errors) {
@@ -68,7 +73,7 @@ function formatMessage(errors: ErrorObject[], configPath: string): string {
 }
 
 export class ConfigSchemaValidationError extends Error {
-    constructor(errors: ErrorObject[], configPath: string) {
+    constructor(errors: ErrorObject[], configPath: string | null | undefined) {
         super(formatMessage(errors, configPath));
     }
 }
