@@ -5,13 +5,13 @@ import { OverridableTaskOptions, TaskBaseOptions } from './task-options.js';
  */
 export interface CustomTaskOptions extends TaskBaseOptions {
     /**
+     * Options for this task.
+     */
+    [option: string]: unknown;
+    /**
      * Handler script or module to run this task.
      */
     handler: string;
-    /**
-     * Options for custom task.
-     */
-    options?: Record<string, unknown>;
 }
 
 /**
