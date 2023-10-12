@@ -121,19 +121,11 @@ export interface BannerOptions {
 /**
  * Footer options.
  */
-export interface FooterOptions {
+export interface FooterOptions extends BannerOptions {
     /**
      * Set `true` value to search footer file automatically or set file path to add footer content to the generated files.
      */
-    footer?: string | boolean;
-    /**
-     * List of files or glob magic paths to exclude.
-     */
-    exclude?: string[];
-    /**
-     * List of files or glob magic paths to include.
-     */
-    include?: string[];
+    entry?: string | boolean;
 }
 
 /**
