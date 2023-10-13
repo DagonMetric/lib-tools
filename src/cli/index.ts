@@ -10,10 +10,16 @@ import * as runCommand from './commands/run.js';
 
 const thisPackageName = 'lib-tools';
 
+/**
+ * @internal
+ */
 export interface CliInfo {
     version?: string;
 }
 
+/**
+ * @internal
+ */
 export default async function (cliInfo?: Readonly<CliInfo>): Promise<void> {
     let packageVersion = cliInfo?.version && typeof cliInfo.version === 'string' ? cliInfo.version : null;
 

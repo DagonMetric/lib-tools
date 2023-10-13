@@ -15,10 +15,19 @@ function validateNonBuildCommandOptions(argv: CommandOptions): void {
     }
 }
 
+/**
+ * @internal
+ */
 export const command = 'run <task> [options..]';
 
+/**
+ * @internal
+ */
 export const describe = 'Run by task name';
 
+/**
+ * @internal
+ */
 export function builder(argv: Argv): Argv<CommandOptions> {
     return (
         argv
@@ -88,6 +97,9 @@ export function builder(argv: Argv): Argv<CommandOptions> {
     );
 }
 
+/**
+ * @internal
+ */
 export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: string }>): Promise<void> {
     const logLevel = argv.logLevel ?? 'info';
     const logger = new Logger({
