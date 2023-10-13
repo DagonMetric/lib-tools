@@ -84,9 +84,9 @@ async function getBannerOptionsCore(
     buildTask: Readonly<BuildTask>,
     substitutions: readonly SubstitutionEntry[],
     configLocationSuffix?: string
-): Promise<ParsedBannerOptions | null> {
+): Promise<ParsedBannerOptions | undefined> {
     if (!banner) {
-        return null;
+        return undefined;
     }
 
     const { workspaceRoot, projectRoot, projectName, taskName, configPath } = buildTask;
@@ -153,7 +153,7 @@ async function getBannerOptionsCore(
     }
 
     if (!bannerText) {
-        return null;
+        return undefined;
     }
 
     bannerText = wrapComment(bannerText, location);
@@ -175,9 +175,9 @@ export async function getBannerOptions(
     banner: boolean | string | Readonly<BannerOptions> | undefined,
     buildTask: Readonly<BuildTask>,
     substitutions: readonly SubstitutionEntry[]
-): Promise<ParsedBannerOptions | null> {
+): Promise<ParsedBannerOptions | undefined> {
     if (!banner) {
-        return null;
+        return undefined;
     }
 
     if (typeof banner === 'object') {
@@ -195,7 +195,7 @@ export async function getBannerOptions(
                 'entry'
             );
         } else {
-            return null;
+            return undefined;
         }
     } else {
         return getBannerOptionsCore(
