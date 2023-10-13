@@ -1,18 +1,5 @@
-import { OverridableTaskOptions, TaskBaseOptions } from './task-options.js';
-
-/**
- * Custom task options.
- */
-export interface CustomTaskOptions extends TaskBaseOptions {
-    /**
-     * Options for this task.
-     */
-    [option: string]: unknown;
-    /**
-     * Handler script or module to run this task.
-     */
-    handler: string;
-}
+import { CustomTaskOptions } from './custom-task-options.js';
+import { OverridableTaskOptions } from './overridable-task-options.js';
 
 /**
  * Custom task configuration.
