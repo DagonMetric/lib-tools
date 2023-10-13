@@ -1,3 +1,6 @@
+/**
+ * @internal
+ */
 export function formatSizeInBytes(size: number): string {
     if (size < 1024) {
         return `${size.toLocaleString('en-US', { maximumFractionDigits: 2 })} bytes`;

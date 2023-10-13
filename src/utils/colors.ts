@@ -89,6 +89,9 @@ function ansiRegex(onlyFirst = false): RegExp {
     return new RegExp(pattern, onlyFirst ? undefined : 'g');
 }
 
+/**
+ * @internal
+ */
 export const colors = {
     red: (str: string) => colorize(str, 'red'),
     green: (str: string) => colorize(str, 'green'),
