@@ -12,6 +12,8 @@ import webpackDefault, { Configuration, LoaderContext, RuleSetUseItem, StatsAsse
 import { StyleMinifyOptions, StyleOptions } from '../../../config-models/index.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
+    LogLevelStrings,
+    LoggerBase,
     colors,
     findUp,
     normalizePathToPOSIXStyle,
@@ -191,8 +193,11 @@ function getSassUnderscoreImporter(loaderContext: LoaderContext<{}>, workspaceRo
 export interface StyleTaskRunnerOptions {
     readonly styleOptions: Readonly<StyleOptions>;
     readonly outDir: string;
-    readonly context: Readonly<HandlerContext>;
     readonly buildTask: Readonly<BuildTask>;
+    readonly logger: LoggerBase;
+    readonly logLevel: LogLevelStrings;
+    readonly dryRun: boolean;
+    readonly env: string | undefined;
 }
 
 /**
@@ -207,14 +212,14 @@ export interface StyleBundleResult {
  * @internal
  */
 export class StyleTaskRunner {
-    private readonly context: HandlerContext;
+    private readonly logger: LoggerBase;
 
     constructor(readonly options: StyleTaskRunnerOptions) {
-        this.context = this.options.context;
+        this.logger = this.options.logger;
     }
 
     async run(): Promise<StyleBundleResult> {
-        this.context.logger.group('\u25B7 style');
+        this.logger.group('\u25B7 style');
 
         const styleOptions = this.options.styleOptions;
 
@@ -301,9 +306,9 @@ export class StyleTaskRunner {
                     filename: '[name].css'
                 }),
                 new StyleWebpackPlugin({
-                    logger: this.context.logger,
-                    logLevel: this.context.logLevel,
-                    dryRun: this.context.dryRun,
+                    logger: this.logger,
+                    logLevel: this.options.logLevel,
+                    dryRun: this.options.dryRun,
                     outDir: this.options.outDir,
                     separateMinifyFile,
                     sourceMapInMinifyFile,
@@ -352,8 +357,8 @@ export class StyleTaskRunner {
                                         // Ex: /* autoprefixer grid: autoplace */
                                         // See: https://github.com/webpack-contrib/sass-loader/blob/45ad0be17264ceada5f0b4fb87e9357abe85c4ff/src/getSassOptions.js#L68-L70
                                         style: 'expanded',
-                                        quietDeps: this.context.logLevel === 'debug' ? false : true,
-                                        verbose: this.context.logLevel === 'debug' ? true : false,
+                                        quietDeps: this.options.logLevel === 'debug' ? false : true,
+                                        verbose: this.options.logLevel === 'debug' ? true : false,
                                         // syntax: SassSyntax ? 'indented' : 'scss',
                                         sourceMapIncludeSources: true
                                     })
@@ -385,7 +390,7 @@ export class StyleTaskRunner {
                           new CssMinimizerPlugin({
                               test: separateMinifyFile ? /\.min\.css(\?.*)?$/i : /\.css(\?.*)?$/i,
                               warningsFilter: () => {
-                                  return this.context.logLevel === 'error' ? false : true;
+                                  return this.options.logLevel === 'error' ? false : true;
                               },
                               minimizerOptions: minimizerOptions ?? { preset: 'default' }
                           })
@@ -396,8 +401,8 @@ export class StyleTaskRunner {
 
         const result = await runWebpack(webpackConfig, this.options.outDir);
 
-        this.context.logger.groupEnd();
-        this.context.logger.info(`${colors.lightGreen('\u25B6')} style [${colors.lightGreen(`${result.time} ms`)}]`);
+        this.logger.groupEnd();
+        this.logger.info(`${colors.lightGreen('\u25B6')} style [${colors.lightGreen(`${result.time} ms`)}]`);
 
         return result;
     }
@@ -522,17 +527,17 @@ export class StyleTaskRunner {
             const cssTargetOptions = this.options.styleOptions.target;
             const presetEnvOptions: PostcssPresetEnvOptions = {
                 ...cssTargetOptions,
-                debug: this.context.logLevel === 'debug' ? true : false
+                debug: this.options.logLevel === 'debug' ? true : false
             };
 
             if (cssTargetOptions.stage == null) {
                 presetEnvOptions.stage = defaultStage;
             }
 
-            if (this.context.env) {
-                presetEnvOptions.env = this.context.env;
+            if (this.options.env) {
+                presetEnvOptions.env = this.options.env;
                 presetEnvOptions.autoprefixer = presetEnvOptions.autoprefixer ?? {};
-                presetEnvOptions.autoprefixer.env = this.context.env;
+                presetEnvOptions.autoprefixer.env = this.options.env;
             }
 
             if (cssTargetOptions.browers != null) {
@@ -576,8 +581,8 @@ export class StyleTaskRunner {
                     require.resolve('postcss-preset-env'),
                     {
                         stage: defaultStage,
-                        env: this.context.env,
-                        debug: this.context.logLevel === 'debug' ? true : false
+                        env: this.options.env,
+                        debug: this.options.logLevel === 'debug' ? true : false
                     } as PostcssPresetEnvOptions
                 ]
             ]
@@ -616,7 +621,7 @@ export class StyleTaskRunner {
         }
 
         if (foundPath) {
-            this.context.logger.debug(
+            this.logger.debug(
                 `Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
                     path.relative(process.cwd(), foundPath)
                 )}.`
@@ -635,9 +640,9 @@ export class StyleTaskRunner {
                     if (optionsModule.default) {
                         if (typeof optionsModule.default === 'function') {
                             const options = optionsModule.default({
-                                env: this.context.env,
-                                logLevel: this.context.logLevel,
-                                logger: this.context.logger
+                                env: this.options.env,
+                                logLevel: this.options.logLevel,
+                                logger: this.logger
                             });
 
                             return options;
@@ -645,7 +650,7 @@ export class StyleTaskRunner {
                             return optionsModule.default;
                         }
                     } else {
-                        this.context.logger.debug(
+                        this.logger.debug(
                             `${colors.lightYellow(
                                 'Failed:'
                             )} Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
@@ -657,7 +662,7 @@ export class StyleTaskRunner {
                     }
                 }
             } catch (err) {
-                this.context.logger.debug(
+                this.logger.debug(
                     `${colors.lightYellow(
                         'Failed:'
                     )} Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
@@ -675,7 +680,7 @@ export class StyleTaskRunner {
             packageJsonInfo.rootPackageJsonConfig?.[optionName] &&
             typeof packageJsonInfo.rootPackageJsonConfig[optionName] === 'object'
         ) {
-            this.context.logger.debug(
+            this.logger.debug(
                 `Reading ${optionName} options from package.json file ${normalizePathToPOSIXStyle(
                     path.relative(process.cwd(), packageJsonInfo.rootPackageJsonPath)
                 )}.`
@@ -720,8 +725,11 @@ export function getStyleTaskRunner(
     const taskRunner = new StyleTaskRunner({
         styleOptions,
         outDir: buildTask.outDir,
-        context,
-        buildTask
+        buildTask,
+        logger: context.logger,
+        logLevel: context.logLevel,
+        dryRun: context.dryRun,
+        env: context.env
     });
 
     return taskRunner;

@@ -9,6 +9,7 @@ import { BuildTask, CustomTask, ParsedCommandOptions, TaskConfigInfo } from '../
 
 import { applyEnvOverrides } from './apply-env-overrides.js';
 import { applyProjectExtends } from './apply-project-extends.js';
+import { getParsedCommandOptions } from './get-parsed-command-options.js';
 import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
 import { validateBuildTask } from './validate-build-task.js';
 import { validateCustomTask } from './validate-custom-task.js';
@@ -20,97 +21,6 @@ export interface ConfigFilter {
 }
 
 const libConfigValidationStatusCache = new Map<string, true>();
-
-async function getParsedCommandOptions(cmdOptions: Readonly<CommandOptions>): Promise<ParsedCommandOptions> {
-    let workspaceRoot = process.cwd();
-    let configPath: string | null = null;
-
-    if (cmdOptions.workspace?.trim().length) {
-        const pathAbs = resolvePath(process.cwd(), cmdOptions.workspace);
-
-        if (path.extname(pathAbs) && /\.json$/i.test(pathAbs)) {
-            configPath = pathAbs;
-            workspaceRoot = path.dirname(configPath);
-        } else {
-            workspaceRoot = pathAbs;
-        }
-    }
-
-    // Validations
-    if (configPath) {
-        if (!(await pathExists(configPath, true))) {
-            throw new InvalidCommandOptionError(
-                'workspace',
-                cmdOptions.workspace,
-                `The workspace config file doesn't exist.`
-            );
-        } else {
-            const configFileStats = await fs.stat(configPath);
-            if (!configFileStats.isFile()) {
-                throw new InvalidCommandOptionError(
-                    'workspace',
-                    cmdOptions.workspace,
-                    `Config path ${configPath} must be a file.`
-                );
-            }
-        }
-    }
-
-    if (cmdOptions.workspace) {
-        if (!(await pathExists(workspaceRoot, true))) {
-            throw new InvalidCommandOptionError(
-                'workspace',
-                cmdOptions.workspace,
-                `The workspace directory doesn't exist.`
-            );
-        }
-    }
-
-    const projects =
-        cmdOptions.project
-            ?.split(',')
-            .filter((projectName) => projectName && projectName.trim().length > 0)
-            .map((projectName) => projectName.trim())
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
-    // For build task
-    //
-    const outDir = cmdOptions.outDir?.trim().length ? resolvePath(workspaceRoot, cmdOptions.outDir) : null;
-
-    const copy =
-        cmdOptions.copy
-            ?.split(',')
-            .filter((p) => p && p.trim().length > 0)
-            .map((p) => p.trim())
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
-    const style =
-        cmdOptions.style
-            ?.split(',')
-            .filter((p) => p && p.trim().length > 0)
-            .map((p) => p.trim())
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
-    const script =
-        cmdOptions.script
-            ?.split(',')
-            .filter((p) => p && p.trim().length > 0)
-            .map((p) => p.trim())
-            .filter((value, index, array) => array.indexOf(value) === index) ?? [];
-
-    const parsedCommandOptions: ParsedCommandOptions = {
-        ...cmdOptions,
-        projects,
-        workspaceRoot,
-        configPath,
-        outDir,
-        copy,
-        script,
-        style
-    };
-
-    return parsedCommandOptions;
-}
 
 async function toBuildTask(
     buildTaskConfig: BuildTaskConfig,
