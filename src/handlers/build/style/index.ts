@@ -1,24 +1,17 @@
 import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+
 import { pluginOptions as PostcssPresetEnvOptions } from 'postcss-preset-env';
 import type { FileImporter } from 'sass';
-import webpackDefault, {
-    Configuration,
-    LoaderContext,
-    RuleSetUseItem,
-    StatsAsset,
-    WebpackPluginInstance
-} from 'webpack';
+import webpackDefault, { Configuration, LoaderContext, RuleSetUseItem, StatsAsset } from 'webpack';
 
 import { StyleMinifyOptions, StyleOptions } from '../../../config-models/index.js';
-import { PackageJsonInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
-    LogLevelStrings,
-    Logger,
     colors,
     findUp,
     normalizePathToPOSIXStyle,
@@ -27,7 +20,8 @@ import {
     resolvePath
 } from '../../../utils/index.js';
 
-import { BuildTaskHandleContext } from '../../interfaces/index.js';
+import { getBannerOptions, getPackageJsonInfo, getSubstitutions } from '../../config-helpers/index.js';
+import { BuildTask, HandlerContext } from '../../interfaces/index.js';
 
 import { StyleWebpackPlugin } from './plugins/index.js';
 
@@ -192,16 +186,10 @@ function getSassUnderscoreImporter(loaderContext: LoaderContext<{}>, workspaceRo
 }
 
 export interface StyleTaskRunnerOptions {
-    readonly styleOptions: StyleOptions;
-    readonly workspaceInfo: WorkspaceInfo;
+    readonly styleOptions: Readonly<StyleOptions>;
     readonly outDir: string;
-    readonly dryRun: boolean | undefined;
-    readonly logger: Logger;
-    readonly logLevel: LogLevelStrings;
-    readonly packageJsonInfo: PackageJsonInfo | null;
-    readonly bannerText: string | undefined;
-    readonly footerText: string | undefined;
-    readonly env: string | undefined;
+    readonly context: Readonly<HandlerContext>;
+    readonly buildTask: Readonly<BuildTask>;
 }
 
 export interface StyleBundleResult {
@@ -210,19 +198,33 @@ export interface StyleBundleResult {
 }
 
 export class StyleTaskRunner {
-    private readonly logger: Logger;
+    private readonly context: HandlerContext;
 
     constructor(readonly options: StyleTaskRunnerOptions) {
-        this.logger = this.options.logger;
+        this.context = this.options.context;
     }
 
     async run(): Promise<StyleBundleResult> {
-        const workspaceInfo = this.options.workspaceInfo;
-
-        const logLevel = this.options.logLevel;
         const styleOptions = this.options.styleOptions;
 
-        this.logger.group('\u25B7 style');
+        const { workspaceRoot } = this.options.buildTask;
+        const substitutions = await getSubstitutions(styleOptions.substitutions ?? [], this.options.buildTask);
+        const bannerOptions = await getBannerOptions(
+            'banner',
+            'style',
+            styleOptions.banner,
+            this.options.buildTask,
+            substitutions
+        );
+        const footerOptions = await getBannerOptions(
+            'footer',
+            'style',
+            styleOptions.banner,
+            this.options.buildTask,
+            substitutions
+        );
+
+        this.context.logger.group('\u25B7 style');
 
         // entryPoints
         const entryPoints = await this.getEntryPoints();
@@ -278,17 +280,6 @@ export class StyleTaskRunner {
             ];
         };
 
-        // banner
-        const extraPlugins: WebpackPluginInstance[] = [];
-        if (this.options.bannerText) {
-            extraPlugins.push(
-                new webpackDefault.BannerPlugin({
-                    banner: this.options.bannerText,
-                    raw: true
-                })
-            );
-        }
-
         const webpackConfig: Configuration = {
             devtool: sourceMap ? 'source-map' : false,
             mode: 'production',
@@ -301,14 +292,14 @@ export class StyleTaskRunner {
                     filename: '[name].css'
                 }),
                 new StyleWebpackPlugin({
-                    logger: this.logger,
-                    logLevel: this.options.logLevel,
-                    dryRun: this.options.dryRun,
+                    logger: this.context.logger,
+                    logLevel: this.context.logLevel,
+                    dryRun: this.context.dryRun,
                     outDir: this.options.outDir,
                     separateMinifyFile,
                     sourceMapInMinifyFile,
-                    bannerText: this.options.bannerText,
-                    footerText: this.options.footerText
+                    banner: bannerOptions,
+                    footer: footerOptions
                 })
             ],
             module: {
@@ -346,16 +337,14 @@ export class StyleTaskRunner {
                                     api: 'modern',
 
                                     sassOptions: (loaderContext: LoaderContext<{}>) => ({
-                                        importers: [
-                                            getSassUnderscoreImporter(loaderContext, workspaceInfo.workspaceRoot)
-                                        ],
+                                        importers: [getSassUnderscoreImporter(loaderContext, workspaceRoot)],
                                         loadPaths: absoluteIncludePaths,
                                         // Use expanded as otherwise sass will remove comments that are needed for autoprefixer
                                         // Ex: /* autoprefixer grid: autoplace */
                                         // See: https://github.com/webpack-contrib/sass-loader/blob/45ad0be17264ceada5f0b4fb87e9357abe85c4ff/src/getSassOptions.js#L68-L70
                                         style: 'expanded',
-                                        quietDeps: logLevel === 'debug' ? false : true,
-                                        verbose: logLevel === 'debug' ? true : false,
+                                        quietDeps: this.context.logLevel === 'debug' ? false : true,
+                                        verbose: this.context.logLevel === 'debug' ? true : false,
                                         // syntax: SassSyntax ? 'indented' : 'scss',
                                         sourceMapIncludeSources: true
                                     })
@@ -387,7 +376,7 @@ export class StyleTaskRunner {
                           new CssMinimizerPlugin({
                               test: separateMinifyFile ? /\.min\.css(\?.*)?$/i : /\.css(\?.*)?$/i,
                               warningsFilter: () => {
-                                  return logLevel === 'error' ? false : true;
+                                  return this.context.logLevel === 'error' ? false : true;
                               },
                               minimizerOptions: minimizerOptions ?? { preset: 'default' }
                           })
@@ -398,22 +387,20 @@ export class StyleTaskRunner {
 
         const result = await runWebpack(webpackConfig, this.options.outDir);
 
-        this.logger.groupEnd();
-        this.logger.info(`${colors.lightGreen('\u25B6')} style [${colors.lightGreen(`${result.time} ms`)}]`);
+        this.context.logger.groupEnd();
+        this.context.logger.info(`${colors.lightGreen('\u25B6')} style [${colors.lightGreen(`${result.time} ms`)}]`);
 
         return result;
     }
 
     private async getEntryPoints(): Promise<Record<string, string[]>> {
-        const projectRoot = this.options.workspaceInfo.projectRoot;
-        const projectName = this.options.workspaceInfo.projectName;
-        const configPath = this.options.workspaceInfo.configPath;
+        const { projectRoot, projectName, taskName, configPath } = this.options.buildTask;
         const styleOptions = this.options.styleOptions;
         const supportdStyleExtRegExp = /\.(sa|sc|le|c)ss$/i;
 
         const entryPoints: Record<string, string[]> = {};
-        for (let i = 0; i < styleOptions.bundles.length; i++) {
-            const bundle = styleOptions.bundles[i];
+        for (let i = 0; i < styleOptions.compilations.length; i++) {
+            const bundle = styleOptions.compilations[i];
 
             // entry
             const normalizedEntry = normalizePathToPOSIXStyle(bundle.entry);
@@ -427,7 +414,7 @@ export class StyleTaskRunner {
                     throw new InvalidConfigError(
                         errMsg,
                         configPath,
-                        `projects/${projectName}/tasks/build/style/bundles/[${i}]/entry`
+                        `projects/${projectName}/tasks/${taskName}/style/compilations/[${i}]/entry`
                     );
                 } else {
                     throw new InvalidCommandOptionError('style', bundle.entry, errMsg);
@@ -440,7 +427,7 @@ export class StyleTaskRunner {
                     throw new InvalidConfigError(
                         errMsg,
                         configPath,
-                        `projects/${projectName}/tasks/build/style/bundles/[${i}]/entry`
+                        `projects/${projectName}/tasks/${taskName}/style/compilations/[${i}]/entry`
                     );
                 } else {
                     throw new InvalidCommandOptionError('style', bundle.entry, errMsg);
@@ -481,33 +468,33 @@ export class StyleTaskRunner {
             return undefined;
         }
 
+        const { workspaceRoot, projectRoot, projectName, taskName, configPath } = this.options.buildTask;
+
         const includePaths: string[] = [];
         const node_modules = 'node_modules';
+
+        const nodeModulePath = await findUp(node_modules, workspaceRoot, path.parse(workspaceRoot).root);
 
         for (const p of this.options.styleOptions.includePaths) {
             const normalizedPath = normalizePathToPOSIXStyle(p);
 
             let foundPath: string | null = null;
 
-            foundPath = await findUp(normalizedPath, null, this.options.workspaceInfo.projectRoot);
+            foundPath = await findUp(normalizedPath, null, projectRoot);
 
-            if (!foundPath && this.options.workspaceInfo.nodeModulePath && normalizedPath.startsWith(node_modules)) {
-                foundPath = await findUp(
-                    normalizedPath.substring(node_modules.length),
-                    null,
-                    this.options.workspaceInfo.nodeModulePath
-                );
+            if (!foundPath && nodeModulePath && normalizedPath.startsWith(node_modules)) {
+                foundPath = await findUp(normalizedPath.substring(node_modules.length), null, nodeModulePath);
             }
 
-            if (!foundPath && this.options.workspaceInfo.nodeModulePath && p.startsWith('~')) {
-                foundPath = await findUp(p.substring(1), null, this.options.workspaceInfo.nodeModulePath);
+            if (!foundPath && nodeModulePath && p.startsWith('~')) {
+                foundPath = await findUp(p.substring(1), null, nodeModulePath);
             }
 
             if (!foundPath) {
                 throw new InvalidConfigError(
                     `IncludePath '${p}' doesn't exist.`,
-                    this.options.workspaceInfo.configPath,
-                    `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build/style/includePaths`
+                    configPath,
+                    `projects/${projectName ?? '0'}/tasks/${taskName}/style/includePaths`
                 );
             }
 
@@ -526,17 +513,17 @@ export class StyleTaskRunner {
             const cssTargetOptions = this.options.styleOptions.target;
             const presetEnvOptions: PostcssPresetEnvOptions = {
                 ...cssTargetOptions,
-                debug: this.options.logLevel === 'debug' ? true : false
+                debug: this.context.logLevel === 'debug' ? true : false
             };
 
             if (cssTargetOptions.stage == null) {
                 presetEnvOptions.stage = defaultStage;
             }
 
-            if (this.options.env) {
-                presetEnvOptions.env = this.options.env;
+            if (this.context.env) {
+                presetEnvOptions.env = this.context.env;
                 presetEnvOptions.autoprefixer = presetEnvOptions.autoprefixer ?? {};
-                presetEnvOptions.autoprefixer.env = this.options.env;
+                presetEnvOptions.autoprefixer.env = this.context.env;
             }
 
             if (cssTargetOptions.browers != null) {
@@ -580,8 +567,8 @@ export class StyleTaskRunner {
                     require.resolve('postcss-preset-env'),
                     {
                         stage: defaultStage,
-                        env: this.options.env,
-                        debug: this.options.logLevel === 'debug' ? true : false
+                        env: this.context.env,
+                        debug: this.context.logLevel === 'debug' ? true : false
                     } as PostcssPresetEnvOptions
                 ]
             ]
@@ -608,7 +595,7 @@ export class StyleTaskRunner {
         optionName: string,
         testConfigPaths: string[]
     ): Promise<Record<string, unknown> | null> {
-        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+        const { workspaceRoot } = this.options.buildTask;
 
         let foundPath: string | null = null;
         for (const p of testConfigPaths) {
@@ -620,7 +607,7 @@ export class StyleTaskRunner {
         }
 
         if (foundPath) {
-            this.logger.debug(
+            this.context.logger.debug(
                 `Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
                     path.relative(process.cwd(), foundPath)
                 )}.`
@@ -639,9 +626,9 @@ export class StyleTaskRunner {
                     if (optionsModule.default) {
                         if (typeof optionsModule.default === 'function') {
                             const options = optionsModule.default({
-                                env: this.options.env,
-                                logLevel: this.options.logLevel,
-                                logger: this.logger
+                                env: this.context.env,
+                                logLevel: this.context.logLevel,
+                                logger: this.context.logger
                             });
 
                             return options;
@@ -649,7 +636,7 @@ export class StyleTaskRunner {
                             return optionsModule.default;
                         }
                     } else {
-                        this.logger.debug(
+                        this.context.logger.debug(
                             `${colors.lightYellow(
                                 'Failed:'
                             )} Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
@@ -661,7 +648,7 @@ export class StyleTaskRunner {
                     }
                 }
             } catch (err) {
-                this.logger.debug(
+                this.context.logger.debug(
                     `${colors.lightYellow(
                         'Failed:'
                     )} Reading ${optionName} options from configuration file ${normalizePathToPOSIXStyle(
@@ -673,38 +660,40 @@ export class StyleTaskRunner {
             }
         }
 
+        const packageJsonInfo = await getPackageJsonInfo(this.options.buildTask);
         if (
-            this.options.packageJsonInfo?.rootPackageJsonPath &&
-            this.options.packageJsonInfo.rootPackageJson?.[optionName] &&
-            typeof this.options.packageJsonInfo.rootPackageJson[optionName] === 'object'
+            packageJsonInfo?.rootPackageJsonPath &&
+            packageJsonInfo.rootPackageJsonConfig?.[optionName] &&
+            typeof packageJsonInfo.rootPackageJsonConfig[optionName] === 'object'
         ) {
-            this.logger.debug(
+            this.context.logger.debug(
                 `Reading ${optionName} options from package.json file ${normalizePathToPOSIXStyle(
-                    path.relative(process.cwd(), this.options.packageJsonInfo.rootPackageJsonPath)
+                    path.relative(process.cwd(), packageJsonInfo.rootPackageJsonPath)
                 )}.`
             );
 
-            return this.options.packageJsonInfo.rootPackageJson[optionName] as Record<string, unknown>;
+            return packageJsonInfo.rootPackageJsonConfig[optionName] as Record<string, unknown>;
         }
 
         return null;
     }
 }
 
-export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRunner | null {
-    const buildTask = context.taskOptions;
-
+export function getStyleTaskRunner(
+    buildTask: Readonly<BuildTask>,
+    context: Readonly<HandlerContext>
+): StyleTaskRunner | null {
     if (!buildTask.style) {
         return null;
     }
 
     let styleOptions: StyleOptions = {
-        bundles: []
+        compilations: []
     };
 
     if (Array.isArray(buildTask.style)) {
         for (const styleFile of buildTask.style) {
-            styleOptions.bundles.push({
+            styleOptions.compilations.push({
                 entry: styleFile
             });
         }
@@ -712,21 +701,15 @@ export function getStyleTaskRunner(context: BuildTaskHandleContext): StyleTaskRu
         styleOptions = buildTask.style;
     }
 
-    if (!styleOptions.bundles.filter((b) => b.entry?.trim().length).length) {
+    if (!styleOptions.compilations.filter((b) => b.entry?.trim().length).length) {
         return null;
     }
 
     const taskRunner = new StyleTaskRunner({
         styleOptions,
-        workspaceInfo: buildTask._workspaceInfo,
-        outDir: buildTask._outDir,
-        dryRun: context.dryRun,
-        logLevel: context.logLevel,
-        logger: context.logger,
-        env: context.env,
-        packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerTextForStyle,
-        footerText: buildTask._footerTextForStyle
+        outDir: buildTask.outDir,
+        context,
+        buildTask
     });
 
     return taskRunner;

@@ -3,34 +3,36 @@ import { Compiler, sources } from 'webpack';
 import { CompilationError } from '../../../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    Logger,
+    LoggerBase,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle
 } from '../../../../../utils/index.js';
 
+import { ParsedBannerOptions } from '../../../../interfaces/index.js';
+
 export interface StyleWebpackPluginOptions {
     readonly outDir: string;
-    readonly logger: Logger;
+    readonly logger: LoggerBase;
     readonly logLevel: LogLevelStrings;
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
-    readonly bannerText: string | undefined;
-    readonly footerText: string | undefined;
+    readonly banner: ParsedBannerOptions | null | undefined;
+    readonly footer: ParsedBannerOptions | null | undefined;
 }
 
 export class StyleWebpackPlugin {
     readonly name = 'style-webpack-plugin';
 
-    private readonly logger: Logger;
+    private readonly logger: LoggerBase;
     private readonly banner: () => string;
     private readonly footer: () => string;
 
     constructor(private readonly options: StyleWebpackPluginOptions) {
         this.logger = this.options.logger;
-        this.banner = () => this.options.bannerText ?? '';
-        this.footer = () => this.options.footerText ?? '';
+        this.banner = () => this.options.banner?.text ?? '';
+        this.footer = () => this.options.footer?.text ?? '';
     }
 
     apply(compiler: Compiler): void {
@@ -47,7 +49,7 @@ export class StyleWebpackPlugin {
                 },
                 (assets) => {
                     // Add banner or footer
-                    if (this.options.bannerText != null || this.options.footerText != null) {
+                    if (this.options.banner?.text != null || this.options.footer?.text != null) {
                         for (const chunk of compilation.chunks) {
                             // entryOnly
                             if (!chunk.canBeInitial()) {
@@ -55,14 +57,14 @@ export class StyleWebpackPlugin {
                             }
 
                             for (const file of chunk.files) {
-                                const commentBanner = this.options.bannerText
+                                const commentBanner = this.options.banner?.text
                                     ? compilation.getPath(banner, {
                                           chunk,
                                           filename: file
                                       })
                                     : '';
 
-                                const commentFooter = this.options.footerText
+                                const commentFooter = this.options.footer?.text
                                     ? compilation.getPath(footer, {
                                           chunk,
                                           filename: file
