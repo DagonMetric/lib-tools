@@ -5,26 +5,24 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const thisPackageName = 'lib-tools';
 
 const getCliInfo = async () => {
-    const packageName = 'lib-tools';
     let packageJsonPath = '';
 
     try {
         // TODO: experimental
-        // resolvedPath = await import.meta.resolve(`${packageName}`);
+        // import.meta.resolve(...);
 
         // const require = createRequire(import.meta.url);
         const require = createRequire(process.cwd() + '/');
-        packageJsonPath = require.resolve(`${packageName}/package.json`);
+        packageJsonPath = require.resolve(`${thisPackageName}/package.json`);
     } catch (err) {
         // console.error(err);
     }
 
     if (!packageJsonPath) {
-        packageJsonPath = path.resolve(__dirname, '../package.json');
+        packageJsonPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json');
     }
 
     const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
@@ -37,7 +35,6 @@ const getCliInfo = async () => {
     );
 
     return {
-        packageName,
         version,
         cliPath
     };
@@ -45,10 +42,10 @@ const getCliInfo = async () => {
 
 const runCli = async () => {
     const cliInfo = await getCliInfo();
-    process.title = `${cliInfo.packageName} v${cliInfo.version}`;
+    process.title = `${thisPackageName} v${cliInfo.version}`;
     const cliModule = await import(pathToFileURL(cliInfo.cliPath).toString());
 
-    await cliModule.default(cliInfo);
+    await cliModule.default({ version: cliInfo.version });
 };
 
-await runCli();
+void runCli();
