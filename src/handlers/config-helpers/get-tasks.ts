@@ -468,9 +468,5 @@ export async function getTasksFromLibConfigFile(
         filter
     });
 
-    if (!tasks.length) {
-        throw new InvalidConfigError('No active task to run.', configPath, null);
-    }
-
     return tasks;
 }

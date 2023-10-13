@@ -1,4 +1,4 @@
-import { OverridableTaskOptions, TaskBaseOptions } from '../../config-models/index.js';
+import { OverridableTaskOptions, TaskOptions } from '../../config-models/index.js';
 
 function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>) {
     Object.keys(newConfig).forEach((key: string) => {
@@ -9,7 +9,7 @@ function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<st
 /**
  * @internal
  */
-export function applyEnvOverrides<TTaskOptions extends TaskBaseOptions>(
+export function applyEnvOverrides<TTaskOptions extends TaskOptions>(
     taskConfig: OverridableTaskOptions<TTaskOptions>,
     envNames: readonly string[]
 ): void {
