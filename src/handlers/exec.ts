@@ -3,6 +3,9 @@ import { spawn } from 'node:child_process';
 import { ExitCodeError } from '../exceptions/index.js';
 import { LoggerBase } from '../utils/index.js';
 
+/**
+ * @internal
+ */
 export async function exec(cmd: string, logger?: LoggerBase, env?: Record<string, string | undefined>): Promise<void> {
     return new Promise((resolve, reject) => {
         // const proc = spawn(cmd, { stdio: 'inherit', shell: true });
