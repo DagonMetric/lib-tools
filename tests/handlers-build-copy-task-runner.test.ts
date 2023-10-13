@@ -4,48 +4,28 @@ import * as path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
 import { CopyEntry } from '../src/config-models/index.js';
-import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
+import { BuildTask } from '../src/handlers/interfaces/index.js';
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/copy', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
-    const workspaceInfo: WorkspaceInfo = {
-        workspaceRoot,
-        projectRoot: workspaceRoot,
-        projectName: 'copy-project',
-        configPath: null,
-        nodeModulePath: null
-    };
 
     void describe('getCopyTaskRunner', () => {
         void it('should not get runner when empty copy entry', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: { ...workspaceInfo },
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'copy-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                taskName: 'build',
+                taskCategory: 'build',
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'copy-project',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 copy: []
             };
 
-            const runner = getCopyTaskRunner({
-                taskOptions: buildTask,
+            const runner = getCopyTaskRunner(buildTask, {
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -56,32 +36,19 @@ void describe('handlers/build/copy', () => {
         });
 
         void it('should not get runner when no valid copy entry', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: { ...workspaceInfo },
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'copy-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                taskName: 'build',
+                taskCategory: 'build',
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'copy-project',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 copy: [' ', { from: ' ' }]
             };
 
-            const runner = getCopyTaskRunner({
-                taskOptions: buildTask,
+            const runner = getCopyTaskRunner(buildTask, {
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -92,32 +59,19 @@ void describe('handlers/build/copy', () => {
         });
 
         void it('should get runner with string entry array', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: { ...workspaceInfo },
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'copy-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                taskName: 'build',
+                taskCategory: 'build',
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'copy-project',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 copy: ['a.txt', 'b.txt', '**/*.md']
             };
 
-            const runner = getCopyTaskRunner({
-                taskOptions: buildTask,
+            const runner = getCopyTaskRunner(buildTask, {
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -142,27 +96,15 @@ void describe('handlers/build/copy', () => {
         });
 
         void it('should get runner with object entry array', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: { ...workspaceInfo },
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'copy-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                taskName: 'build',
+                taskCategory: 'build',
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'copy-project',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 copy: [
                     {
                         from: 'a.txt'
@@ -179,8 +121,7 @@ void describe('handlers/build/copy', () => {
                 ]
             };
 
-            const runner = getCopyTaskRunner({
-                taskOptions: buildTask,
+            const runner = getCopyTaskRunner(buildTask, {
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -208,27 +149,15 @@ void describe('handlers/build/copy', () => {
         });
 
         void it('should get runner with string and object mixed entry array', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: { ...workspaceInfo },
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'copy-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                taskName: 'build',
+                taskCategory: 'build',
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'copy-project',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 copy: [
                     'a.txt',
                     {
@@ -243,14 +172,12 @@ void describe('handlers/build/copy', () => {
                 ]
             };
 
-            const runner = getCopyTaskRunner({
-                taskOptions: buildTask,
+            const runner = getCopyTaskRunner(buildTask, {
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
                 env: undefined
             });
-
             const expectedCopyEntries: CopyEntry[] = [
                 {
                     from: 'a.txt'
@@ -284,10 +211,20 @@ void describe('handlers/build/copy', () => {
                             from: 'README.md'
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -307,10 +244,20 @@ void describe('handlers/build/copy', () => {
                             from: 'src/path-2/path-3'
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -330,10 +277,20 @@ void describe('handlers/build/copy', () => {
                             from: 'src/path-2/**/*'
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -358,10 +315,20 @@ void describe('handlers/build/copy', () => {
                             to: 'p1'
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -382,10 +349,20 @@ void describe('handlers/build/copy', () => {
                             exclude: ['src']
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -410,10 +387,20 @@ void describe('handlers/build/copy', () => {
                             exclude: ['src']
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -438,10 +425,20 @@ void describe('handlers/build/copy', () => {
                             exclude: ['src']
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -466,10 +463,20 @@ void describe('handlers/build/copy', () => {
                             exclude: ['**/*.md']
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -494,10 +501,20 @@ void describe('handlers/build/copy', () => {
                             exclude: ['**/path-*']
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -523,10 +540,20 @@ void describe('handlers/build/copy', () => {
                             exclude: ['/']
                         }
                     ],
-                    dryRun,
-                    workspaceInfo,
+                    buildTask: {
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'copy-project',
+                        configPath: null,
+                        outDir
+                    },
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun,
+                    logger: new Logger({ logLevel: 'error' }),
+                    logLevel: 'error',
+                    env: undefined
                 });
 
                 const copyResult = await runner.run();
@@ -561,10 +588,20 @@ void describe('handlers/build/copy', () => {
                         from: 'README.md'
                     }
                 ],
-                dryRun,
-                workspaceInfo,
+                buildTask: {
+                    taskName: 'build',
+                    taskCategory: 'build',
+                    workspaceRoot,
+                    projectRoot: workspaceRoot,
+                    projectName: 'copy-project',
+                    configPath: null,
+                    outDir
+                },
                 outDir,
-                logger: new Logger({ logLevel: 'error' })
+                dryRun,
+                logger: new Logger({ logLevel: 'error' }),
+                logLevel: 'error',
+                env: undefined
             });
 
             const copyResult = await runner.run();

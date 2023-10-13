@@ -1,101 +1,109 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { applyProjectExtends } from '../src/config-helpers/apply-project-extends.js';
-
-import { BuildTask, CustomTask, Project } from '../src/config-models/index.js';
+import { BuildTaskConfig, CustomTaskConfig, ProjectConfig } from '../src/config-models/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
+import { applyProjectExtends } from '../src/handlers/config-helpers/apply-project-extends.js';
 
 void describe('config-helpers/apply-project-extends', () => {
     void describe('applyProjectExtends', () => {
         void it('should extend', () => {
-            const projects: Record<string, Project> = {
-                a: {
+            const buildTaskProjectA: BuildTaskConfig = {
+                clean: true,
+                copy: ['a.txt', 'b.txt']
+            };
+
+            const buildTaskProjectB: BuildTaskConfig = {
+                clean: false,
+                style: ['a.css']
+            };
+
+            const buildTaskProjectC: BuildTaskConfig = {
+                script: ['a.js']
+            };
+
+            const projects: (ProjectConfig & { name: string })[] = [
+                {
+                    name: 'a',
                     root: './package-a',
                     tasks: {
-                        build: {
-                            banner: 'a',
-                            clean: true,
-                            copy: ['a.txt', 'b.txt']
-                        },
+                        build: buildTaskProjectA,
                         lint: {
                             handler: './handler.mjs',
-                            options: {
-                                config: '.eslintrc.json'
-                            }
+                            config: '.eslintrc.json'
                         }
-                    } as unknown as Record<string, CustomTask & BuildTask>
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
                 },
-                b: {
+                {
+                    name: 'b',
                     extends: 'a',
                     tasks: {
-                        build: {
-                            clean: false,
-                            style: ['a.css']
-                        },
+                        build: buildTaskProjectB,
                         test: {
                             handler: './handler.mjs'
                         }
-                    } as unknown as Record<string, CustomTask & BuildTask>
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
                 },
-                c: {
+                {
+                    name: 'c',
                     extends: 'b',
                     tasks: {
-                        build: {
-                            banner: 'c',
-                            script: ['a.js']
-                        }
-                    } as unknown as Record<string, CustomTask & BuildTask>
+                        build: buildTaskProjectC
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
                 }
-            };
+            ];
 
-            const projectC = projects.c;
+            const projectC = projects[2];
+            applyProjectExtends(projectC, projects, null);
 
-            applyProjectExtends('c', projectC, projects, null);
-
-            const expectedConfig: Project = {
+            const expectedProjectConfig: ProjectConfig & { name: string } = {
+                name: 'c',
                 extends: 'b',
                 root: './package-a',
                 tasks: {
                     build: {
-                        banner: 'c',
-                        clean: false,
-                        copy: ['a.txt', 'b.txt'],
-                        style: ['a.css'],
-                        script: ['a.js']
+                        ...buildTaskProjectA,
+                        ...buildTaskProjectB,
+                        ...buildTaskProjectC
                     },
                     lint: {
                         handler: './handler.mjs',
-                        options: {
-                            config: '.eslintrc.json'
-                        }
+                        config: '.eslintrc.json'
                     },
                     test: {
                         handler: './handler.mjs'
                     }
-                } as unknown as Record<string, CustomTask & BuildTask>
+                } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
             };
 
-            assert.deepStrictEqual(projectC, expectedConfig);
+            assert.deepStrictEqual(projectC, expectedProjectConfig);
         });
 
         void it('should throw if cross extends found', () => {
-            const projects: Record<string, Project> = {
-                a: {
+            const projects: (ProjectConfig & { name: string })[] = [
+                {
+                    name: 'a',
                     extends: 'c',
-                    tasks: {}
+                    root: './package-a',
+                    tasks: {
+                        lint: {}
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
                 },
-                b: {
+                {
+                    name: 'b',
                     extends: 'a',
-                    tasks: {}
+                    tasks: {
+                        test: {}
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
                 },
-                c: {
+                {
+                    name: 'c',
                     extends: 'b',
                     tasks: {}
                 }
-            };
+            ];
 
-            const projectC = projects.c;
+            const projectC = projects[2];
 
             const expectedError = new InvalidConfigError(
                 'Cross referencing extend occours.',
@@ -103,23 +111,36 @@ void describe('config-helpers/apply-project-extends', () => {
                 'projects/c/extends'
             );
 
-            assert.throws(() => applyProjectExtends('c', projectC, projects, null), expectedError);
+            assert.throws(() => applyProjectExtends(projectC, projects, null), expectedError);
         });
 
         void it('should throw if no base project to extend', () => {
-            const projects: Record<string, Project> = {
-                a: {
-                    tasks: {}
-                },
-                b: {
+            const projects: (ProjectConfig & { name: string })[] = [
+                {
+                    name: 'a',
                     extends: 'c',
+                    root: './package-a',
+                    tasks: {
+                        lint: {}
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
+                },
+                {
+                    name: 'b',
+                    extends: 'a',
+                    tasks: {
+                        test: {}
+                    } as unknown as Record<string, CustomTaskConfig & BuildTaskConfig>
+                },
+                {
+                    name: 'c',
+                    extends: 'd',
                     tasks: {}
                 }
-            };
+            ];
 
-            const projectB = projects.b;
+            const projectC = projects[2];
 
-            assert.throws(() => applyProjectExtends('b', projectB, projects, null), {
+            assert.throws(() => applyProjectExtends(projectC, projects, null), {
                 message: 'Configuration error: No base project to extend.\n  config location: projects/b/extends'
             });
         });

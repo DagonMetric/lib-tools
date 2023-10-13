@@ -4,48 +4,28 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
-import { ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
+import { BuildTask } from '../src/handlers/interfaces/index.js';
 import { Logger } from '../src/utils/index.js';
 
 void describe('handlers/build/clean', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
-    const workspaceInfo: WorkspaceInfo = {
-        workspaceRoot,
-        projectRoot: workspaceRoot,
-        projectName: 'clean-project',
-        configPath: null,
-        nodeModulePath: null
-    };
 
     void describe('getCleanTaskRunner', () => {
         void it('should not get runner when clean=false', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'clean-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                taskName: 'build',
+                taskCategory: 'build',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 clean: false
             };
 
-            const runner = getCleanTaskRunner('before', {
-                taskOptions: buildTask,
+            const runner = getCleanTaskRunner('before', buildTask, {
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -56,27 +36,15 @@ void describe('handlers/build/clean', () => {
         });
 
         void it('should not get runner when no valid clean entry', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'clean-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                taskName: 'build',
+                taskCategory: 'build',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 clean: {
                     beforeBuild: {
                         paths: [' ']
@@ -84,8 +52,7 @@ void describe('handlers/build/clean', () => {
                 }
             };
 
-            const runner = getCleanTaskRunner('before', {
-                taskOptions: buildTask,
+            const runner = getCleanTaskRunner('before', buildTask, {
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -96,32 +63,19 @@ void describe('handlers/build/clean', () => {
         });
 
         void it('should get runner with before build clean options when clean=true', () => {
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'clean-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                taskName: 'build',
+                taskCategory: 'build',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 clean: true
             };
 
-            const runner = getCleanTaskRunner('before', {
-                taskOptions: buildTask,
+            const runner = getCleanTaskRunner('before', buildTask, {
                 dryRun: true,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -145,34 +99,21 @@ void describe('handlers/build/clean', () => {
                 exclude: ['c.md']
             };
 
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'clean-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                taskName: 'build',
+                taskCategory: 'build',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 clean: {
                     beforeBuild: beforeBuildCleanOptions
                 }
             };
 
-            const runner = getCleanTaskRunner('before', {
-                taskOptions: buildTask,
+            const runner = getCleanTaskRunner('before', buildTask, {
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -191,34 +132,21 @@ void describe('handlers/build/clean', () => {
                 exclude: ['c.md']
             };
 
-            const buildTask: ParsedBuildTaskConfig = {
-                _taskName: 'build',
-                _workspaceInfo: workspaceInfo,
-                _outDir: path.resolve(workspaceRoot, 'theout'),
-                _packageJsonInfo: null,
-                _substitutions: [
-                    {
-                        searchString: '[CURRENTYEAR]',
-                        value: new Date().getFullYear().toString(),
-                        bannerOnly: true
-                    },
-                    {
-                        searchString: '[PROJECTNAME]',
-                        value: 'clean-project',
-                        bannerOnly: true
-                    }
-                ],
-                _bannerTextForStyle: undefined,
-                _bannerTextForScript: undefined,
-                _footerTextForStyle: undefined,
-                _footerTextForScript: undefined,
+            const buildTask: BuildTask = {
+                workspaceRoot,
+                projectRoot: workspaceRoot,
+                projectName: 'clean-project',
+                taskName: 'build',
+                taskCategory: 'build',
+                configPath: null,
+
+                outDir: path.resolve(workspaceRoot, 'theout'),
                 clean: {
                     afterBuild: afterBuildCleanOptions
                 }
             };
 
-            const runner = getCleanTaskRunner('after', {
-                taskOptions: buildTask,
+            const runner = getCleanTaskRunner('after', buildTask, {
                 dryRun: false,
                 logger: new Logger({ logLevel: 'error' }),
                 logLevel: 'error',
@@ -243,12 +171,20 @@ void describe('handlers/build/clean', () => {
                         beforeOrAfterCleanOptions: {
                             paths: ['C:\\']
                         },
-                        dryRun: true,
-                        workspaceInfo: {
-                            ...workspaceInfo
+                        buildTask: {
+                            workspaceRoot,
+                            projectRoot: workspaceRoot,
+                            projectName: 'clean-project',
+                            taskName: 'build',
+                            taskCategory: 'build',
+                            configPath: null,
+                            outDir: path.resolve(workspaceRoot, 'theout')
                         },
+                        dryRun: true,
                         outDir: path.resolve(workspaceRoot, 'theout'),
-                        logger: new Logger({ logLevel: 'error' })
+                        logger: new Logger({ logLevel: 'error' }),
+                        env: undefined,
+                        logLevel: 'error'
                     });
 
                     await assert.rejects(async () => await runner.run());
@@ -264,12 +200,20 @@ void describe('handlers/build/clean', () => {
                         beforeOrAfterCleanOptions: {
                             paths: ['C:/']
                         },
-                        dryRun: true,
-                        workspaceInfo: {
-                            ...workspaceInfo
+                        buildTask: {
+                            workspaceRoot,
+                            projectRoot: workspaceRoot,
+                            projectName: 'clean-project',
+                            taskName: 'build',
+                            taskCategory: 'build',
+                            configPath: null,
+                            outDir: path.resolve(workspaceRoot, 'theout')
                         },
+                        dryRun: true,
                         outDir: path.resolve(workspaceRoot, 'theout'),
-                        logger: new Logger({ logLevel: 'error' })
+                        logger: new Logger({ logLevel: 'error' }),
+                        env: undefined,
+                        logLevel: 'error'
                     });
 
                     await assert.rejects(async () => await runner.run());
@@ -285,12 +229,20 @@ void describe('handlers/build/clean', () => {
                         beforeOrAfterCleanOptions: {
                             paths: ['\\\\server']
                         },
-                        dryRun: true,
-                        workspaceInfo: {
-                            ...workspaceInfo
+                        buildTask: {
+                            workspaceRoot,
+                            projectRoot: workspaceRoot,
+                            projectName: 'clean-project',
+                            taskName: 'build',
+                            taskCategory: 'build',
+                            configPath: null,
+                            outDir: path.resolve(workspaceRoot, 'theout')
                         },
+                        dryRun: true,
                         outDir: path.resolve(workspaceRoot, 'theout'),
-                        logger: new Logger({ logLevel: 'error' })
+                        logger: new Logger({ logLevel: 'error' }),
+                        env: undefined,
+                        logLevel: 'error'
                     });
 
                     await assert.rejects(async () => await runner.run());
@@ -306,12 +258,20 @@ void describe('handlers/build/clean', () => {
                         beforeOrAfterCleanOptions: {
                             paths: ['\\\\server\\public']
                         },
-                        dryRun: true,
-                        workspaceInfo: {
-                            ...workspaceInfo
+                        buildTask: {
+                            workspaceRoot,
+                            projectRoot: workspaceRoot,
+                            projectName: 'clean-project',
+                            taskName: 'build',
+                            taskCategory: 'build',
+                            configPath: null,
+                            outDir: path.resolve(workspaceRoot, 'theout')
                         },
+                        dryRun: true,
                         outDir: path.resolve(workspaceRoot, 'theout'),
-                        logger: new Logger({ logLevel: 'error' })
+                        logger: new Logger({ logLevel: 'error' }),
+                        env: undefined,
+                        logLevel: 'error'
                     });
 
                     await assert.rejects(async () => await runner.run());
@@ -327,12 +287,20 @@ void describe('handlers/build/clean', () => {
                         beforeOrAfterCleanOptions: {
                             paths: ['//erver//public']
                         },
-                        dryRun: true,
-                        workspaceInfo: {
-                            ...workspaceInfo
+                        buildTask: {
+                            workspaceRoot,
+                            projectRoot: workspaceRoot,
+                            projectName: 'clean-project',
+                            taskName: 'build',
+                            taskCategory: 'build',
+                            configPath: null,
+                            outDir: path.resolve(workspaceRoot, 'theout')
                         },
+                        dryRun: true,
                         outDir: path.resolve(workspaceRoot, 'theout'),
-                        logger: new Logger({ logLevel: 'error' })
+                        logger: new Logger({ logLevel: 'error' }),
+                        env: undefined,
+                        logLevel: 'error'
                     });
 
                     await assert.rejects(async () => await runner.run());
@@ -345,12 +313,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['../']
                     },
-                    dryRun: true,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir: path.resolve(workspaceRoot, 'theout')
                     },
+                    dryRun: true,
                     outDir: path.resolve(workspaceRoot, 'theout'),
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 await assert.rejects(async () => await runner.run());
@@ -362,12 +338,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['../../dist']
                     },
-                    dryRun: true,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir: path.resolve(workspaceRoot, 'theout')
                     },
+                    dryRun: true,
                     outDir: path.resolve(workspaceRoot, 'theout'),
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 await assert.rejects(async () => await runner.run());
@@ -379,12 +363,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['../']
                     },
-                    dryRun: true,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir: path.resolve(workspaceRoot, 'theout')
                     },
-                    outDir: path.resolve(workspaceRoot, 'theout/src'),
-                    logger: new Logger({ logLevel: 'error' })
+                    dryRun: true,
+                    outDir: path.resolve(workspaceRoot, 'theout'),
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 await assert.rejects(async () => await runner.run());
@@ -401,12 +393,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         cleanOutDir: true
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -421,12 +421,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['/']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -441,12 +449,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['\\']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -461,12 +477,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['.']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -481,12 +505,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['src', 'path-1/**/*.js', 'path-2/**', '**/index.js']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -512,12 +544,20 @@ void describe('handlers/build/clean', () => {
                     beforeOrAfterCleanOptions: {
                         paths: ['src', 'path-1', '**/*.md']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -542,12 +582,20 @@ void describe('handlers/build/clean', () => {
                         cleanOutDir: true,
                         exclude: ['/']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -563,12 +611,20 @@ void describe('handlers/build/clean', () => {
                         cleanOutDir: true,
                         exclude: ['path-*', 'src/**/*.md']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -594,12 +650,20 @@ void describe('handlers/build/clean', () => {
                         paths: ['src'],
                         exclude: ['**/*.md', 'src/a.ts']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -621,12 +685,20 @@ void describe('handlers/build/clean', () => {
                         paths: ['path-2'],
                         exclude: ['src/nested/../../../theout/path-*/../path-2/path-3']
                     },
-                    dryRun,
-                    workspaceInfo: {
-                        ...workspaceInfo
+                    buildTask: {
+                        workspaceRoot,
+                        projectRoot: workspaceRoot,
+                        projectName: 'clean-project',
+                        taskName: 'build',
+                        taskCategory: 'build',
+                        configPath: null,
+                        outDir
                     },
+                    dryRun,
                     outDir,
-                    logger: new Logger({ logLevel: 'error' })
+                    logger: new Logger({ logLevel: 'error' }),
+                    env: undefined,
+                    logLevel: 'error'
                 });
 
                 const cleanResult = await runner.run();
@@ -666,10 +738,21 @@ void describe('handlers/build/clean', () => {
                 beforeOrAfterCleanOptions: {
                     cleanOutDir: true
                 },
+
+                buildTask: {
+                    workspaceRoot,
+                    projectRoot: workspaceRoot,
+                    projectName: 'clean-project',
+                    taskName: 'build',
+                    taskCategory: 'build',
+                    configPath: null,
+                    outDir: tempOutDir
+                },
                 dryRun,
-                workspaceInfo,
                 outDir: tempOutDir,
-                logger: new Logger({ logLevel: 'error' })
+                logger: new Logger({ logLevel: 'error' }),
+                env: undefined,
+                logLevel: 'error'
             });
 
             const cleanResult = await runner.run();

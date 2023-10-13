@@ -1,37 +1,36 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { applyEnvOverrides } from '../src/config-helpers/apply-env-overrides.js';
-
-import { BuildTask, CustomTask } from '../src/config-models/index.js';
+import { BuildTaskConfig, CustomTaskConfig } from '../src/config-models/index.js';
+import { applyEnvOverrides } from '../src/handlers/config-helpers/apply-env-overrides.js';
 
 void describe('config-helpers/apply-env-overrides', () => {
     void describe('applyEnvOverrides', () => {
         void it('should override with env value to build task', () => {
-            const config: BuildTask = {
-                banner: 'b1',
+            const config: BuildTaskConfig = {
                 clean: false,
                 copy: ['a.txt', 'b.md'],
+                outDir: 'out',
                 envOverrides: {
                     prod: {
-                        banner: 'b2',
                         clean: true,
-                        copy: ['c.md']
+                        copy: ['c.md'],
+                        outDir: 'dist'
                     }
                 }
             };
 
             applyEnvOverrides(config, ['prod']);
 
-            const expectedConfig: BuildTask = {
-                banner: 'b2',
+            const expectedConfig: BuildTaskConfig = {
                 clean: true,
                 copy: ['c.md'],
+                outDir: 'dist',
                 envOverrides: {
                     prod: {
-                        banner: 'b2',
                         clean: true,
-                        copy: ['c.md']
+                        copy: ['c.md'],
+                        outDir: 'dist'
                     }
                 }
             };
@@ -40,25 +39,29 @@ void describe('config-helpers/apply-env-overrides', () => {
         });
 
         void it('should override with env value to external task', () => {
-            const config: CustomTask = {
+            const config: CustomTaskConfig = {
                 handler: 'a.js',
+                custom: 'custom-1',
                 envOverrides: {
                     prod: {
                         handler: 'b.js',
-                        skip: true
+                        skip: true,
+                        custom: 'custom-2'
                     }
                 }
             };
 
             applyEnvOverrides(config, ['prod']);
 
-            const expectedConfig: CustomTask = {
+            const expectedConfig: CustomTaskConfig = {
                 handler: 'b.js',
+                custom: 'custom-2',
                 skip: true,
                 envOverrides: {
                     prod: {
                         handler: 'b.js',
-                        skip: true
+                        skip: true,
+                        custom: 'custom-2'
                     }
                 }
             };

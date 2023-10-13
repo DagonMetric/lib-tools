@@ -2,11 +2,10 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { getParsedCommandOptions } from '../src/config-helpers/get-parsed-command-options.js';
-
 import { CommandOptions } from '../src/config-models/index.js';
-import { ParsedCommandOptions } from '../src/config-models/parsed/index.js';
 import { InvalidCommandOptionError } from '../src/exceptions/index.js';
+import { getParsedCommandOptions } from '../src/handlers/config-helpers/get-parsed-command-options.js';
+import { ParsedCommandOptions } from '../src/handlers/interfaces/index.js';
 
 void describe('config-helpers/get-parsed-command-options', () => {
     void describe('getParsedCommandOptions', () => {
@@ -23,13 +22,13 @@ void describe('config-helpers/get-parsed-command-options', () => {
 
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
-                _configPath: null,
-                _workspaceRoot: process.cwd(),
-                _outDir: null,
-                _projects: ['a', 'b', 'c'],
-                _copyEntries: [],
-                _styleEntries: [],
-                _scriptEntries: []
+                configPath: null,
+                workspaceRoot: process.cwd(),
+                outDir: null,
+                projects: ['a', 'b', 'c'],
+                copy: [],
+                style: [],
+                script: []
             };
 
             assert.deepStrictEqual(result, expected);
@@ -54,13 +53,13 @@ void describe('config-helpers/get-parsed-command-options', () => {
 
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
-                _configPath: null,
-                _workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig'),
-                _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig/out'),
-                _projects: ['a', 'b', 'c'],
-                _copyEntries: ['**/*.js', 'README.md'],
-                _styleEntries: ['style.scss'],
-                _scriptEntries: ['index.ts']
+                configPath: null,
+                workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig'),
+                outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withoutconfig/out'),
+                projects: ['a', 'b', 'c'],
+                copy: ['**/*.js', 'README.md'],
+                style: ['style.scss'],
+                script: ['index.ts']
             };
 
             assert.deepStrictEqual(result, expected);
@@ -85,13 +84,13 @@ void describe('config-helpers/get-parsed-command-options', () => {
 
             const expected: ParsedCommandOptions = {
                 ...cmdOptions,
-                _configPath: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/libconfig.json'),
-                _workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig'),
-                _outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/out'),
-                _projects: ['a', 'b', 'c'],
-                _copyEntries: ['**/*.js', 'README.md'],
-                _styleEntries: ['style.scss'],
-                _scriptEntries: ['index.ts']
+                configPath: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/libconfig.json'),
+                workspaceRoot: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig'),
+                outDir: path.resolve(process.cwd(), './tests/test-data/parsing/withconfig/out'),
+                projects: ['a', 'b', 'c'],
+                copy: ['**/*.js', 'README.md'],
+                style: ['style.scss'],
+                script: ['index.ts']
             };
 
             assert.deepStrictEqual(result, expected);

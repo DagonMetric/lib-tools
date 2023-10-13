@@ -2,7 +2,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { readLibConfigJsonFile } from '../src/config-helpers/read-lib-config-json-file.js';
+import { readLibConfigJsonFile } from '../src/handlers/config-helpers/read-lib-config-json-file.js';
 
 void describe('config-helpers/read-lib-config-json-file', () => {
     void describe('readLibConfigJsonFile', () => {

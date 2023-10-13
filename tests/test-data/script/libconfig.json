@@ -14,14 +14,14 @@
                 "bundle": false,
                 "emitDeclarationOnly": true
               },
-              // {
-              //   "bundle": false,
-              //   "declaration": false
-              // },
+              {
+                "bundle": false,
+                "declaration": false
+              },
               {
                 "bundle": true,
-                "declaration": false
-                // "entry": "public_api.ts"
+                "declaration": false,
+                "entry": "public_api.ts"
               }
             ],
             "externals": ["data.json"]

@@ -2,10 +2,10 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { getParsedBuildTask } from '../src/config-helpers/get-parsed-build-task.js';
 import { BuildTask } from '../src/config-models/index.js';
 import { PackageJsonInfo, ParsedBuildTaskConfig, WorkspaceInfo } from '../src/config-models/parsed/index.js';
 import { InvalidConfigError } from '../src/exceptions/index.js';
+import { getParsedBuildTask } from '../src/handlers/config-helpers/get-parsed-build-task.js';
 
 void describe('config-helpers/get-parsed-build-task', () => {
     void describe('getParsedBuildTask', () => {
