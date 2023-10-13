@@ -4,10 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import * as tsj from 'ts-json-schema-generator';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const schemaOutputFilePath = path.resolve(__dirname, '../dist/schemas/schema.json');
+const schemaOutputFilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist/schemas/schema.json');
 
 const generateJsonSchemaFile = async () => {
     const schema = tsj
@@ -17,7 +14,7 @@ const generateJsonSchemaFile = async () => {
             // -p, --path
             path: '../src/config-models/*.ts',
             // -f, --tsconfig
-            tsconfig: path.resolve(__dirname, './tsconfig.schema.json')
+            tsconfig: path.resolve(path.dirname(fileURLToPath(import.meta.url)), './tsconfig.schema.json')
             // -t, --type
             // type: 'LibConfig'
         })

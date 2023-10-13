@@ -2,11 +2,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const rootDir = path.resolve(__dirname, '..');
-const distDir = path.resolve(__dirname, '../dist');
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 const distStartRegExp = /^\.?\/?dist\//;
 
 const copyFiles = async () => {
@@ -23,7 +20,9 @@ const copyFiles = async () => {
     await fs.copyFile(path.resolve(rootDir, 'bin/lib.mjs'), path.resolve(distDir, 'bin/lib.mjs'));
 
     // package.json
-    const content = await fs.readFile(path.resolve(__dirname, '../package.json'), { encoding: 'utf-8' });
+    const content = await fs.readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json'), {
+        encoding: 'utf-8'
+    });
 
     const packageJson = JSON.parse(content);
     if (packageJson.main) {
