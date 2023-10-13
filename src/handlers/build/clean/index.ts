@@ -2,11 +2,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions, CleanOptions } from '../../../config-models/index.js';
-import { WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { InvalidConfigError } from '../../../exceptions/index.js';
 import {
     AbsolutePathInfo,
-    Logger,
     colors,
     getAbsolutePathInfoes,
     isInFolder,
@@ -15,15 +13,14 @@ import {
     pathExists
 } from '../../../utils/index.js';
 
-import { BuildTaskHandleContext } from '../../interfaces/index.js';
+import { BuildTask, HandlerContext } from '../../interfaces/index.js';
 
 export interface CleanTaskRunnerOptions {
     readonly runFor: 'before' | 'after';
-    readonly beforeOrAfterCleanOptions: BeforeBuildCleanOptions | AfterBuildCleanOptions;
-    readonly workspaceInfo: WorkspaceInfo;
+    readonly beforeOrAfterCleanOptions: Readonly<BeforeBuildCleanOptions> | Readonly<AfterBuildCleanOptions>;
     readonly outDir: string;
-    readonly dryRun: boolean | undefined;
-    readonly logger: Logger;
+    readonly context: Readonly<HandlerContext>;
+    readonly buildTask: Readonly<BuildTask>;
 }
 
 export interface CleanTaskResult {
@@ -32,21 +29,26 @@ export interface CleanTaskResult {
 }
 
 export class CleanTaskRunner {
-    private readonly logger: Logger;
+    private readonly context: HandlerContext;
     private readonly cleanOutDir: boolean;
     private readonly configLocationPrefix: string;
-    private readonly configPath: string | null;
+    private readonly configPath: string | null | undefined;
     private startTime = Date.now();
 
-    constructor(readonly options: CleanTaskRunnerOptions) {
+    constructor(readonly options: Readonly<CleanTaskRunnerOptions>) {
+        this.context = options.context;
         this.cleanOutDir =
             this.options.runFor === 'before' &&
             (this.options.beforeOrAfterCleanOptions as BeforeBuildCleanOptions).cleanOutDir
                 ? true
                 : false;
-        this.logger = this.options.logger;
-        this.configPath = this.options.workspaceInfo.configPath;
-        this.configLocationPrefix = `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build`;
+
+        this.configPath = this.options.buildTask.configPath;
+
+        const taskLocation = `tasks/${this.options.buildTask.taskName}`;
+        this.configLocationPrefix = this.options.buildTask.projectName
+            ? `projects/${this.options.buildTask.projectName}/${taskLocation}`
+            : taskLocation;
     }
 
     async run(): Promise<CleanTaskResult> {
@@ -123,21 +125,21 @@ export class CleanTaskRunner {
 
             // Exclude - if clean file is same as exclude file or directory
             if (excludePathInfoes.some((i) => isSamePath(i.path, cleanPathInfo.path))) {
-                this.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
+                this.context.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
                 cleanTaskResult.excludedPaths.push(cleanPathInfo.path);
                 continue;
             }
 
             // Exclude - if clean file/directory is in exclude directory
             if (excludePathInfoes.some((i) => i.isDirectory && isInFolder(i.path, cleanPathInfo.path))) {
-                this.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
+                this.context.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
                 cleanTaskResult.excludedPaths.push(cleanPathInfo.path);
                 continue;
             }
 
             // Exclude - if exclude file is in clean directory
             if (cleanPathInfo.isDirectory && excludePathInfoes.some((i) => isInFolder(cleanPathInfo.path, i.path))) {
-                this.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
+                this.context.logger.debug(`Excluded from clean, path: ${cleanPathInfo.path}.`);
                 cleanTaskResult.excludedPaths.push(cleanPathInfo.path);
                 continue;
             }
@@ -153,7 +155,7 @@ export class CleanTaskRunner {
     }
 
     private validateCleanPath(cleanPathInfo: AbsolutePathInfo): void {
-        const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
+        const workspaceRoot = this.options.buildTask.workspaceRoot;
         const outDir = this.options.outDir;
 
         if (cleanPathInfo.isSystemRoot) {
@@ -254,7 +256,7 @@ export class CleanTaskRunner {
     }
 
     private logStart(): void {
-        this.logger.group('\u25B7 clean');
+        this.context.logger.group('\u25B7 clean');
         this.startTime = Date.now();
     }
 
@@ -268,9 +270,9 @@ export class CleanTaskRunner {
             cleanMsg += `, ${result.excludedPaths.length} excluded`;
         }
         cleanMsg += '.';
-        this.logger.info(cleanMsg);
-        this.logger.groupEnd();
-        this.logger.info(
+        this.context.logger.info(cleanMsg);
+        this.context.logger.groupEnd();
+        this.context.logger.info(
             `${colors.lightGreen('\u25B6')} clean [${colors.lightGreen(`${Date.now() - this.startTime} ms`)}]`
         );
     }
@@ -279,9 +281,11 @@ export class CleanTaskRunner {
         const cleanOutDir = isSamePath(cleanPathInfo.path, this.options.outDir) ? true : false;
 
         const msgPrefix = cleanOutDir ? 'Deleting output directory' : 'Deleting';
-        this.logger.info(`${msgPrefix} ${normalizePathToPOSIXStyle(path.relative(process.cwd(), cleanPathInfo.path))}`);
+        this.context.logger.info(
+            `${msgPrefix} ${normalizePathToPOSIXStyle(path.relative(process.cwd(), cleanPathInfo.path))}`
+        );
 
-        if (!this.options.dryRun) {
+        if (!this.context.dryRun) {
             await fs.rm(cleanPathInfo.path, {
                 recursive: true,
                 force: true
@@ -289,17 +293,16 @@ export class CleanTaskRunner {
                 // retryDelay: 1000
             });
         } else {
-            this.logger.debug('Actual deleting is not performed because the dryRun parameter is passed.');
+            this.context.logger.debug('Actual deleting is not performed because the dryRun parameter is passed.');
         }
     }
 }
 
 export function getCleanTaskRunner(
     runFor: 'before' | 'after',
-    context: BuildTaskHandleContext
+    buildTask: Readonly<BuildTask>,
+    context: Readonly<HandlerContext>
 ): CleanTaskRunner | null {
-    const buildTask = context.taskOptions;
-
     if (!buildTask.clean) {
         return null;
     }
@@ -330,10 +333,9 @@ export function getCleanTaskRunner(
         const cleanTaskRunner = new CleanTaskRunner({
             runFor: 'before',
             beforeOrAfterCleanOptions: beforeBuildCleanOptions,
-            workspaceInfo: buildTask._workspaceInfo,
-            outDir: buildTask._outDir,
-            dryRun: context.dryRun,
-            logger: context.logger
+            outDir: buildTask.outDir,
+            context,
+            buildTask
         });
 
         return cleanTaskRunner;
@@ -347,10 +349,9 @@ export function getCleanTaskRunner(
         const cleanTaskRunner = new CleanTaskRunner({
             runFor: 'after',
             beforeOrAfterCleanOptions: afterBuildCleanOptions,
-            workspaceInfo: buildTask._workspaceInfo,
-            outDir: buildTask._outDir,
-            dryRun: context.dryRun,
-            logger: context.logger
+            outDir: buildTask.outDir,
+            context,
+            buildTask
         });
 
         return cleanTaskRunner;
