@@ -1,11 +1,9 @@
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
-import { getTasks } from '../../config-helpers/index.js';
-
 import { BuildCommandOptions, CommandOptions } from '../../config-models/index.js';
-import { InvalidCommandOptionError } from '../../exceptions/index.js';
-import { handleTask } from '../../handlers/index.js';
-import { ExitCodeError, Logger, colors } from '../../utils/index.js';
+import { ExitCodeError, InvalidCommandOptionError } from '../../exceptions/index.js';
+import { TaskHandler, getTasksFromCommandOptions } from '../../handlers/index.js';
+import { Logger, colors } from '../../utils/index.js';
 
 function validateNonBuildCommandOptions(argv: CommandOptions): void {
     const buildOnlyArgNames: (keyof BuildCommandOptions)[] = ['outDir', 'copy', 'style', 'script', 'packageVersion'];
@@ -91,10 +89,6 @@ export function builder(argv: Argv): Argv<CommandOptions> {
 }
 
 export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: string }>): Promise<void> {
-    return run(argv.task, argv);
-}
-
-export async function run(taskName: string, argv: CommandOptions): Promise<void> {
     const logLevel = argv.logLevel ?? 'info';
     const logger = new Logger({
         logLevel,
@@ -102,35 +96,25 @@ export async function run(taskName: string, argv: CommandOptions): Promise<void>
         groupIndentation: 4
     });
 
-    if (!taskName) {
-        logger.error(`${colors.lightRed('Error:')} No task is provided.`);
-        process.exitCode = 1;
-
-        return;
-    }
-
     try {
-        if (taskName !== 'build') {
+        if (argv.task !== 'build') {
             validateNonBuildCommandOptions(argv);
         }
 
-        const tasks = await getTasks(argv, taskName);
+        const tasks = await getTasksFromCommandOptions(argv);
 
         if (!tasks.length) {
-            logger.error(`${colors.lightRed('Error:')} No active task found for '${taskName}'.`);
-            process.exitCode = 1;
-
-            return;
+            throw new Error(`${colors.lightRed('Error:')} No active task found for '${argv.task}'.`);
         }
 
-        for (const task of tasks) {
-            await handleTask(task, {
-                logger,
-                logLevel,
-                dryRun: argv.dryRun ? true : false,
-                env: argv.env
-            });
-        }
+        const taskHandler = new TaskHandler({
+            logger,
+            logLevel,
+            env: argv.env,
+            dryRun: argv.dryRun
+        });
+
+        await taskHandler.handleTasks(...tasks);
     } catch (err) {
         if (!err) {
             if (process.exitCode === 0) {
@@ -142,16 +126,18 @@ export async function run(taskName: string, argv: CommandOptions): Promise<void>
 
         if (err instanceof ExitCodeError) {
             process.exitCode = err.exitCode;
-            // TODO: message duplicated?
+
             if (err.message) {
                 logger.error(err.message);
             }
+
+            throw err;
         } else {
-            if (process.exitCode === 0) {
-                process.exitCode = 1;
+            if ((err as Error).message) {
+                logger.error((err as Error).message);
             }
 
-            logger.error((err as Error).message ?? err);
+            throw new ExitCodeError(1, err);
         }
     }
 }

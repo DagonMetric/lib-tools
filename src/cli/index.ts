@@ -1,32 +1,44 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { colors, findUp } from '../utils/index.js';
+import { colors, findUp, readJsonWithComments } from '../utils/index.js';
 
 import * as runCommand from './commands/run.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const thisPackageName = 'lib-tools';
 
-export { run } from './commands/run.js';
+export interface CliInfo {
+    version?: string;
+}
 
-export default async function (): Promise<void> {
-    const packageJsonPath = await findUp(
-        'package.json',
-        path.resolve(__dirname, '../'),
-        path.resolve(__dirname, '../../')
-    );
+export default async function (cliInfo?: Readonly<CliInfo>): Promise<void> {
+    let packageVersion = cliInfo?.version && typeof cliInfo.version === 'string' ? cliInfo.version : null;
 
-    if (!packageJsonPath) {
-        throw new Error('Could not find package.json file.');
+    if (!packageVersion) {
+        const thisDir = path.dirname(fileURLToPath(import.meta.url));
+
+        const packageJsonPath = await findUp(
+            'package.json',
+            path.resolve(thisDir, './'),
+            path.resolve(thisDir, '../../'),
+            true
+        );
+
+        if (!packageJsonPath) {
+            throw new Error('Could not find package.json file.');
+        }
+
+        const { name, version } = (await readJsonWithComments(packageJsonPath)) as { name: string; version: string };
+
+        if (!name || !version || name !== thisPackageName) {
+            throw new Error('Could not find package.json file.');
+        }
+
+        packageVersion = version;
     }
-
-    const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
-    const packageJson = JSON.parse(content) as { version: string };
-    const packageVersion = packageJson.version;
 
     const yargsInstance = yargs(hideBin(process.argv));
     await yargsInstance
@@ -56,6 +68,7 @@ export default async function (): Promise<void> {
         .wrap(yargsInstance.terminalWidth())
         .strict()
         .fail((msg?: string, err?: Error) => {
+            // TODO: To review
             throw msg
                 ? // Validation failed example: `Unknown argument:`
                   new Error(msg)
