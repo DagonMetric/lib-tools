@@ -1,5 +1,8 @@
 import { CommandOptions } from '../../config-models/index.js';
 
+/**
+ * @internal
+ */
 export interface ParsedCommandOptions
     extends Readonly<Pick<CommandOptions, 'logLevel' | 'dryRun' | 'env' | 'clean' | 'packageVersion'>> {
     readonly workspaceRoot: string;
