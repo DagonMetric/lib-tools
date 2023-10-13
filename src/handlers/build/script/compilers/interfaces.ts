@@ -1,8 +1,14 @@
 import { CompilerOptions } from 'typescript';
 
-import { ScriptModuleFormat, ScriptTargetStrings, TreeshakingOptions } from '../../../../config-models/index.js';
-import { SubstitutionInfo, WorkspaceInfo } from '../../../../config-models/parsed/index.js';
-import { LogLevelStrings, Logger } from '../../../../utils/index.js';
+import {
+    ScriptModuleFormat,
+    ScriptTargetStrings,
+    SubstitutionEntry,
+    TreeshakingOptions
+} from '../../../../config-models/index.js';
+import { LogLevelStrings } from '../../../../utils/index.js';
+
+import { ParsedBannerOptions, TaskConfigInfo } from '../../../interfaces/index.js';
 
 export interface TsConfigInfo {
     readonly compilerOptions: Readonly<CompilerOptions>;
@@ -11,8 +17,8 @@ export interface TsConfigInfo {
 }
 
 export interface CompileOptions {
-    readonly workspaceInfo: Readonly<WorkspaceInfo>;
-    readonly compilationIndex: number | undefined;
+    readonly taskInfo: Readonly<TaskConfigInfo & { readonly compilationIndex: number | undefined }>;
+
     readonly entryFilePath: string;
     readonly outFilePath: string;
     readonly scriptTarget: ScriptTargetStrings;
@@ -28,9 +34,11 @@ export interface CompileOptions {
     readonly preserveSymlinks: boolean | undefined;
     readonly globalName: string | undefined;
     readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
-    readonly bannerText: string | undefined;
-    readonly footerText: string | undefined;
-    readonly substitutions: readonly Readonly<SubstitutionInfo>[];
+
+    readonly banner: Readonly<ParsedBannerOptions> | undefined;
+    readonly footer: Readonly<ParsedBannerOptions> | undefined;
+    readonly substitutions: readonly Readonly<SubstitutionEntry>[];
+
     readonly dryRun: boolean;
     readonly logLevel: LogLevelStrings;
 }
@@ -44,5 +52,3 @@ export interface CompileResult {
     readonly builtAssets: readonly Readonly<CompileAsset>[];
     readonly time: number;
 }
-
-export type CompilerFn = (options: CompileOptions, logger: Logger) => Promise<CompileResult>;

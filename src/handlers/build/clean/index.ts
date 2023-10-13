@@ -15,6 +15,9 @@ import {
 
 import { BuildTask, HandlerContext } from '../../interfaces/index.js';
 
+/**
+ * @internal
+ */
 export interface CleanTaskRunnerOptions {
     readonly runFor: 'before' | 'after';
     readonly beforeOrAfterCleanOptions: Readonly<BeforeBuildCleanOptions> | Readonly<AfterBuildCleanOptions>;
@@ -23,11 +26,17 @@ export interface CleanTaskRunnerOptions {
     readonly buildTask: Readonly<BuildTask>;
 }
 
+/**
+ * @internal
+ */
 export interface CleanTaskResult {
     readonly cleanedPathInfoes: AbsolutePathInfo[];
     readonly excludedPaths: string[];
 }
 
+/**
+ * @internal
+ */
 export class CleanTaskRunner {
     private readonly context: HandlerContext;
     private readonly cleanOutDir: boolean;
@@ -298,6 +307,9 @@ export class CleanTaskRunner {
     }
 }
 
+/**
+ * @internal
+ */
 export function getCleanTaskRunner(
     runFor: 'before' | 'after',
     buildTask: Readonly<BuildTask>,

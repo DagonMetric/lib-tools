@@ -1,16 +1,15 @@
-/* eslint-disable import/default */
-/* eslint-disable import/no-named-as-default-member */
 import * as path from 'node:path';
 
-import ts from 'typescript';
+import { CompilerOptions, SourceFile } from 'typescript';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
-import { Logger, colors, isInFolder, isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
+import { LoggerBase, colors, isInFolder, isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
-import { CompileOptions, CompileResult } from '../../interfaces/index.js';
+import { CompileOptions, CompileResult } from '../interfaces.js';
+import { ts } from '../tsproxy.js';
 
-function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
-    const compilerOptions: ts.CompilerOptions = options.tsConfigInfo?.compilerOptions
+function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
+    const compilerOptions: CompilerOptions = options.tsConfigInfo?.compilerOptions
         ? { ...options.tsConfigInfo.compilerOptions }
         : {};
 
@@ -102,8 +101,11 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     return compilerOptions;
 }
 
-export default function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
-    const projectRoot = options.workspaceInfo.projectRoot;
+/**
+ * @internal
+ */
+export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+    const { projectRoot } = options.taskInfo;
     const outFileName = path.basename(options.outFilePath);
     const outFileExt = path.extname(options.outFilePath);
     const entryOutFileWithoutExt = options.entryFilePath.substring(
@@ -122,6 +124,7 @@ export default function (options: CompileOptions, logger: Logger): Promise<Compi
 
     const entryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath));
     logger.info(`With entry file: ${entryFilePathRel}`);
+
     if (options.tsConfigInfo?.configPath) {
         const tsConfigPathRel = normalizePathToPOSIXStyle(
             path.relative(process.cwd(), options.tsConfigInfo.configPath)
@@ -145,7 +148,7 @@ export default function (options: CompileOptions, logger: Logger): Promise<Compi
         content: string,
         writeByteOrderMark: boolean,
         onError?: (message: string) => void,
-        sourceFiles?: readonly ts.SourceFile[]
+        sourceFiles?: readonly SourceFile[]
     ) => {
         let newOutFilePath = filePath;
 
@@ -181,23 +184,25 @@ export default function (options: CompileOptions, logger: Logger): Promise<Compi
         if (file && isInFolder(projectRoot, filePath) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
             if (!compilerOptions.emitDeclarationOnly && options.substitutions) {
                 for (const substitution of options.substitutions.filter((s) => !s.bannerOnly)) {
-                    const escapedPattern = substitution.searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const escapedPattern = substitution.searchValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    // TODO: start and end delimiter
                     const searchRegExp = new RegExp(escapedPattern, 'g');
 
                     const m = file.match(searchRegExp);
                     if (m != null && m.length > 0) {
                         const matchedText = m[0];
                         logger.debug(
-                            `Substituting ${matchedText} with value '${substitution.value}' in file ${filePathRel}`
+                            `Substituting ${matchedText} with value '${substitution.replaceValue}' in file ${filePathRel}`
                         );
-                        file = file.replace(searchRegExp, substitution.value);
+                        file = file.replace(searchRegExp, substitution.replaceValue);
                     }
                 }
             }
 
-            if (options.bannerText && !file.trim().startsWith(options.bannerText.trim())) {
+            // TODO: Include / Exclude
+            if (options.banner && !file.trim().startsWith(options.banner.text.trim())) {
                 logger.debug(`Adding banner to file ${filePathRel}`);
-                file = `${options.bannerText}\n${host.getNewLine()}${file}`;
+                file = `${options.banner.text}\n${host.getNewLine()}${file}`;
             }
         }
 

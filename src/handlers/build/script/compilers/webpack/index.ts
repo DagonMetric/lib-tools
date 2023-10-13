@@ -1,15 +1,14 @@
-/* eslint-disable import/default */
-/* eslint-disable import/no-named-as-default-member */
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 
-import ts from 'typescript';
+import { CompilerOptions } from 'typescript';
 import webpackDefault, { Configuration, StatsAsset } from 'webpack';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
-import { Logger, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
+import { LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../utils/index.js';
 
-import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/index.js';
+import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.js';
+import { ts } from '../tsproxy.js';
 
 import { ScriptWebpackPlugin } from './plugins/script-webpack-plugin/index.js';
 
@@ -111,10 +110,10 @@ function getWebpackTargets(options: CompileOptions): string[] {
     return targets;
 }
 
-function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
+function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
     const configFileCompilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
 
-    const compilerOptions: ts.CompilerOptions = {};
+    const compilerOptions: CompilerOptions = {};
 
     compilerOptions.outDir = path.dirname(options.outFilePath);
     compilerOptions.rootDir = path.dirname(options.entryFilePath);
@@ -192,7 +191,10 @@ function getTsCompilerOptions(options: CompileOptions): ts.CompilerOptions {
     return compilerOptions;
 }
 
-export default async function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
+/**
+ * @internal
+ */
+export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     if (options.emitDeclarationOnly === true || options.tsConfigInfo?.compilerOptions.emitDeclarationOnly === true) {
         throw new CompilationError(
             `${colors.lightRed(
@@ -245,7 +247,8 @@ export default async function (options: CompileOptions, logger: Logger): Promise
                 separateMinifyFile: false,
                 // TODO:
                 sourceMapInMinifyFile: false,
-                bannerText: options.bannerText
+                banner: options.banner,
+                footer: options.footer
             })
         ],
         module: {

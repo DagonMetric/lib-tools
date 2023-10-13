@@ -1,15 +1,13 @@
-/* eslint-disable import/no-named-as-default-member */
-/* eslint-disable import/default */
 import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 
 import { InputOptions, InputPluginOption, ModuleFormat, OutputOptions, RollupBuild, RollupError, rollup } from 'rollup';
-import ts from 'typescript';
+import { CompilerOptions } from 'typescript';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 import {
-    Logger,
+    LoggerBase,
     colors,
     dashCaseToCamelCase,
     formatSizeInBytes,
@@ -17,7 +15,8 @@ import {
     pathExists
 } from '../../../../../utils/index.js';
 
-import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/index.js';
+import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.js';
+import { ts } from '../tsproxy.js';
 
 const require = createRequire(process.cwd() + '/');
 
@@ -36,7 +35,7 @@ type ModuleKindStrings = keyof typeof ts.ModuleKind;
 
 interface JsonTsCompilerOptions
     extends Pick<
-        ts.CompilerOptions,
+        CompilerOptions,
         | 'outDir'
         | 'rootDir'
         | 'allowJs'
@@ -138,6 +137,9 @@ function getTsCompilerOptionsOverride(options: CompileOptions): JsonTsCompilerOp
     return compilerOptions;
 }
 
+/**
+ * @internal
+ */
 export function getGlobalVariable(moduleId: string, globalsRecord: Record<string, string> = {}): string {
     const foundName = globalsRecord[moduleId];
 
@@ -161,7 +163,10 @@ export function getGlobalVariable(moduleId: string, globalsRecord: Record<string
     return globalName;
 }
 
-export default async function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
+/**
+ * @internal
+ */
+export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     const moduleFormat: ModuleFormat = options.moduleFormat;
     const externals = options.externals ?? [];
     let treeshake = options.treeshake;
@@ -204,12 +209,13 @@ export default async function (options: CompileOptions, logger: Logger): Promise
         );
     }
 
+    // TODO:
     if (options.substitutions) {
         const replaceValues = options.substitutions
             .filter((s) => !s.bannerOnly)
             .map((s) => {
                 return {
-                    [s.searchString]: s.value
+                    [s.searchValue]: s.replaceValue
                 };
             })
             .reduce((previousObject, currentObject) => {
@@ -217,6 +223,7 @@ export default async function (options: CompileOptions, logger: Logger): Promise
                 return { ...previousObject, ...currentObject };
             }, {});
 
+        // TODO:
         plugins.push(
             rollupReplace({
                 values: replaceValues,
@@ -273,8 +280,10 @@ export default async function (options: CompileOptions, logger: Logger): Promise
         name: options.globalName,
         extend: true,
         sourcemap: options.sourceMap,
-        banner: options.bannerText,
-        footer: options.footerText,
+        // TODO: Include / Exclude
+        banner: options.banner?.text,
+        // TODO: Include / Exclude
+        footer: options.footer?.text,
         globals: (moduleid) => getGlobalVariable(moduleid, options.globals),
         // entryFileNames: '[name].mjs',
         // inlineDynamicImports: moduleFormat === 'iife' || moduleFormat === 'umd' ? true : false, // Default:	false

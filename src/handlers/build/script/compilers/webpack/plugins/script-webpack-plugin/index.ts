@@ -5,36 +5,49 @@ import { Compiler, StatsAsset, sources } from 'webpack';
 import { CompilationError } from '../../../../../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    Logger,
+    LoggerBase,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle
 } from '../../../../../../../utils/index.js';
 
+import { ParsedBannerOptions } from '../../../../../../interfaces/index.js';
+
+/**
+ * @internal
+ */
 export interface ScriptWebpackPluginOptions {
     readonly outDir: string;
-    readonly logger: Logger;
+    readonly logger: LoggerBase;
     readonly logLevel: LogLevelStrings | undefined;
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
-    readonly bannerText: string | null | undefined;
+    readonly banner: ParsedBannerOptions | null | undefined;
+    readonly footer: ParsedBannerOptions | null | undefined;
 }
 
+/**
+ * @internal
+ */
 export class ScriptWebpackPlugin {
     readonly name = 'script-webpack-plugin';
 
-    private readonly logger: Logger;
-    private readonly banner: () => string;
+    private readonly logger: LoggerBase;
+    private readonly bannerText: () => string;
+    private readonly footerText: () => string;
 
     constructor(private readonly options: ScriptWebpackPluginOptions) {
         this.logger = this.options.logger;
-        this.banner = () => this.options.bannerText ?? '';
+        this.bannerText = () => this.options.banner?.text ?? '';
+        this.footerText = () => this.options.footer?.text ?? '';
     }
 
     apply(compiler: Compiler): void {
-        const banner = this.banner;
-        const bannerCache = new WeakMap<sources.Source>();
+        const bannerText = this.bannerText;
+        const footerText = this.footerText;
+
+        const bannerAndFooterCache = new WeakMap<sources.Source>();
 
         compiler.hooks.compilation.tap(this.name, (compilation) => {
             compilation.hooks.processAssets.tap(
@@ -44,33 +57,65 @@ export class ScriptWebpackPlugin {
                 },
                 (assets) => {
                     // Add banner
-                    if (this.options.bannerText) {
+                    if (this.options.banner != null || this.options.footer != null) {
                         for (const chunk of compilation.chunks) {
-                            // entryOnly
+                            // TODO: entryOnly?
                             if (!chunk.canBeInitial()) {
                                 continue;
                             }
 
                             for (const file of chunk.files) {
-                                const comment = compilation.getPath(banner, {
-                                    chunk,
-                                    filename: file
-                                });
+                                const commentBanner = this.options.banner?.text
+                                    ? compilation.getPath(bannerText, {
+                                          chunk,
+                                          filename: file
+                                      })
+                                    : '';
+
+                                const commentFooter = this.options.footer?.text
+                                    ? compilation.getPath(footerText, {
+                                          chunk,
+                                          filename: file
+                                      })
+                                    : '';
 
                                 compilation.updateAsset(file, (old) => {
-                                    const cached = bannerCache.get(old) as {
+                                    const cached = bannerAndFooterCache.get(old) as {
                                         source: sources.ConcatSource;
-                                        comment: string;
+                                        commentBanner: string;
+                                        commentfooter: string;
                                     };
 
-                                    if (!cached || cached.comment !== comment) {
-                                        const fileRel = normalizePathToPOSIXStyle(
-                                            path.relative(process.cwd(), path.resolve(this.options.outDir, file))
-                                        );
-                                        this.logger.debug(`Adding banner to file ${fileRel}`);
-                                        const source = new compiler.webpack.sources.ConcatSource(comment, '\n', old);
+                                    if (
+                                        !cached ||
+                                        cached.commentBanner !== commentBanner ||
+                                        cached.commentfooter !== commentFooter
+                                    ) {
+                                        let source: sources.Source;
 
-                                        bannerCache.set(old, { source, comment });
+                                        if (commentBanner && commentFooter) {
+                                            source = new compiler.webpack.sources.ConcatSource(
+                                                commentBanner,
+                                                '\n',
+                                                old,
+                                                '\n',
+                                                commentFooter
+                                            );
+                                        } else if (commentBanner) {
+                                            source = new compiler.webpack.sources.ConcatSource(
+                                                commentBanner,
+                                                '\n',
+                                                old
+                                            );
+                                        } else {
+                                            source = new compiler.webpack.sources.ConcatSource(
+                                                old,
+                                                '\n',
+                                                commentFooter
+                                            );
+                                        }
+
+                                        bannerAndFooterCache.set(old, { source, commentBanner, commentFooter });
 
                                         return source;
                                     }

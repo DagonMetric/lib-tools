@@ -185,6 +185,9 @@ function getSassUnderscoreImporter(loaderContext: LoaderContext<{}>, workspaceRo
     };
 }
 
+/**
+ * @internal
+ */
 export interface StyleTaskRunnerOptions {
     readonly styleOptions: Readonly<StyleOptions>;
     readonly outDir: string;
@@ -192,11 +195,17 @@ export interface StyleTaskRunnerOptions {
     readonly buildTask: Readonly<BuildTask>;
 }
 
+/**
+ * @internal
+ */
 export interface StyleBundleResult {
     readonly builtAssets: { path: string; size: number; emitted: boolean }[];
     readonly time: number;
 }
 
+/**
+ * @internal
+ */
 export class StyleTaskRunner {
     private readonly context: HandlerContext;
 
@@ -205,6 +214,8 @@ export class StyleTaskRunner {
     }
 
     async run(): Promise<StyleBundleResult> {
+        this.context.logger.group('\u25B7 style');
+
         const styleOptions = this.options.styleOptions;
 
         const { workspaceRoot } = this.options.buildTask;
@@ -219,12 +230,10 @@ export class StyleTaskRunner {
         const footerOptions = await getBannerOptions(
             'footer',
             'style',
-            styleOptions.banner,
+            styleOptions.footer,
             this.options.buildTask,
             substitutions
         );
-
-        this.context.logger.group('\u25B7 style');
 
         // entryPoints
         const entryPoints = await this.getEntryPoints();
@@ -679,6 +688,9 @@ export class StyleTaskRunner {
     }
 }
 
+/**
+ * @internal
+ */
 export function getStyleTaskRunner(
     buildTask: Readonly<BuildTask>,
     context: Readonly<HandlerContext>

@@ -11,6 +11,9 @@ import {
 
 import { ParsedBannerOptions } from '../../../../interfaces/index.js';
 
+/**
+ * @internal
+ */
 export interface StyleWebpackPluginOptions {
     readonly outDir: string;
     readonly logger: LoggerBase;
@@ -22,22 +25,25 @@ export interface StyleWebpackPluginOptions {
     readonly footer: ParsedBannerOptions | null | undefined;
 }
 
+/**
+ * @internal
+ */
 export class StyleWebpackPlugin {
     readonly name = 'style-webpack-plugin';
 
     private readonly logger: LoggerBase;
-    private readonly banner: () => string;
-    private readonly footer: () => string;
+    private readonly bannerText: () => string;
+    private readonly footerText: () => string;
 
     constructor(private readonly options: StyleWebpackPluginOptions) {
         this.logger = this.options.logger;
-        this.banner = () => this.options.banner?.text ?? '';
-        this.footer = () => this.options.footer?.text ?? '';
+        this.bannerText = () => this.options.banner?.text ?? '';
+        this.footerText = () => this.options.footer?.text ?? '';
     }
 
     apply(compiler: Compiler): void {
-        const banner = this.banner;
-        const footer = this.footer;
+        const bannerText = this.bannerText;
+        const footerText = this.footerText;
 
         const bannerAndFooterCache = new WeakMap<sources.Source>();
 
@@ -49,23 +55,23 @@ export class StyleWebpackPlugin {
                 },
                 (assets) => {
                     // Add banner or footer
-                    if (this.options.banner?.text != null || this.options.footer?.text != null) {
+                    if (this.options.banner != null || this.options.footer != null) {
                         for (const chunk of compilation.chunks) {
-                            // entryOnly
+                            // TODO: entryOnly
                             if (!chunk.canBeInitial()) {
                                 continue;
                             }
 
                             for (const file of chunk.files) {
                                 const commentBanner = this.options.banner?.text
-                                    ? compilation.getPath(banner, {
+                                    ? compilation.getPath(bannerText, {
                                           chunk,
                                           filename: file
                                       })
                                     : '';
 
                                 const commentFooter = this.options.footer?.text
-                                    ? compilation.getPath(footer, {
+                                    ? compilation.getPath(footerText, {
                                           chunk,
                                           filename: file
                                       })

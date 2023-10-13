@@ -1,10 +1,6 @@
-/* eslint-disable import/default */
-/* eslint-disable import/no-named-as-default-member */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-
-import ts from 'typescript';
 
 import {
     ScriptCompilation,
@@ -12,11 +8,10 @@ import {
     ScriptOptions,
     ScriptTargetStrings
 } from '../../../config-models/index.js';
-import { PackageJsonInfo, SubstitutionInfo, WorkspaceInfo } from '../../../config-models/parsed/index.js';
 import { CompilationError, InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
 import {
     LogLevelStrings,
-    Logger,
+    LoggerBase,
     colors,
     dashCaseToCamelCase,
     findUp,
@@ -27,27 +22,37 @@ import {
     resolvePath
 } from '../../../utils/index.js';
 
-import { BuildTaskHandleContext } from '../../interfaces/index.js';
+import { PackageJsonInfo, getBannerOptions, getPackageJsonInfo, getSubstitutions } from '../../config-helpers/index.js';
+import { BuildTask, HandlerContext } from '../../interfaces/index.js';
 
-import { CompileOptions, CompileResult, CompilerFn, TsConfigInfo } from './interfaces/index.js';
+import { CompileOptions, CompileResult, TsConfigInfo } from './compilers/interfaces.js';
+import { ts } from './compilers/tsproxy.js';
+
+export type CompilerFn = (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
 
 const tsConfigPathsCache = new Map<string, string>();
 const tsConfigInfoCache = new Map<string, { locationKey: string; tsConfigInfo: TsConfigInfo }>();
 const entryFilePathsCache = new Map<string, string>();
 const compilerCache = new Map<string, CompilerFn>();
+let lastDetectectedEntryFileExt: string | null = null;
 
 async function searchFileByExtensions(
-    fileNames: string[],
-    extNames: string[],
-    rootDir: string
+    extNames: readonly string[],
+    fileNames: readonly string[],
+    rootDirs: readonly string[],
+    includePaths: readonly string[] | undefined
 ): Promise<string | null> {
     for (const extName of extNames) {
-        for (const fileName of fileNames) {
-            const fileNameWithExt = fileName + extName;
-
-            const found = await findUp(fileNameWithExt, null, rootDir, true);
-            if (found) {
-                return found;
+        for (const rootDir of rootDirs) {
+            for (const fileName of fileNames) {
+                const fileNameWithExt = fileName + extName;
+                const foundPath = await findUp(fileNameWithExt, null, rootDir, true);
+                if (
+                    foundPath &&
+                    (includePaths == null || includePaths.some((includePath) => isSamePath(includePath, foundPath)))
+                ) {
+                    return foundPath;
+                }
             }
         }
     }
@@ -55,9 +60,36 @@ async function searchFileByExtensions(
     return null;
 }
 
-export * from './interfaces/index.js';
+function getLastPartPackageName(packageName: string): string {
+    const lastSlashIndex = packageName.lastIndexOf('/');
+    const lastPartPackageName = lastSlashIndex > -1 ? packageName.substring(lastSlashIndex + 1) : packageName;
 
-interface ParsedScriptCompilation extends ScriptCompilation {
+    return lastPartPackageName;
+}
+
+function getYearFromScriptTarget(scriptTarget: ScriptTargetStrings): number {
+    if (scriptTarget === 'ESNext') {
+        const year = new Date().getFullYear() - 1;
+        const esmVerson = year - 2013;
+        if (esmVerson > 1 && esmVerson < 99) {
+            return year;
+        } else {
+            return 0;
+        }
+    }
+
+    const esYearRegExp = /^es(2\d{3,3})/i;
+    const m = scriptTarget.match(esYearRegExp);
+    if (m != null && m.length > 1) {
+        const yearStr = m[1];
+
+        return parseInt(yearStr, 10);
+    }
+
+    return 0;
+}
+
+interface ParsedCompilation extends ScriptCompilation {
     readonly _entryFilePath: string;
     readonly _outFilePath: string;
     readonly _moduleFormat: ScriptModuleFormat;
@@ -74,42 +106,73 @@ interface ParsedScriptCompilation extends ScriptCompilation {
     readonly _preserveSymlinks: boolean | undefined;
 }
 
+/**
+ * @internal
+ */
 export interface ScriptTaskRunnerOptions {
     readonly scriptOptions: Readonly<ScriptOptions>;
-    readonly workspaceInfo: Readonly<WorkspaceInfo>;
-    readonly outDir: string;
-    readonly dryRun: boolean;
-    readonly logger: Logger;
+    readonly buildTask: Readonly<BuildTask>;
+    readonly logger: LoggerBase;
     readonly logLevel: LogLevelStrings;
-    readonly packageJsonInfo: Readonly<PackageJsonInfo> | null;
-    readonly bannerText: string | undefined;
-    readonly footerText: string | undefined;
-    readonly substitutions: readonly Readonly<SubstitutionInfo>[];
+    readonly dryRun: boolean;
     readonly env: string | undefined;
 }
 
+/**
+ * @internal
+ */
 export interface ScriptMainOutputAsset {
     readonly moduleFormat: ScriptModuleFormat;
     readonly outputFilePath: string;
     readonly size: number | undefined;
 }
 
+/**
+ * @internal
+ */
 export interface ScriptResult {
     readonly mainOutputAssets: readonly ScriptMainOutputAsset[];
     readonly time: number;
 }
 
+/**
+ * @internal
+ */
 export class ScriptTaskRunner {
-    private readonly logger: Logger;
+    private readonly logger: LoggerBase;
     private readonly configLocationPrefix: string;
 
     constructor(readonly options: ScriptTaskRunnerOptions) {
-        this.configLocationPrefix = `projects/${this.options.workspaceInfo.projectName ?? '0'}/tasks/build/script`;
         this.logger = this.options.logger;
+
+        const taskLocation = `tasks/${this.options.buildTask.taskName}/script`;
+        this.configLocationPrefix = this.options.buildTask.projectName
+            ? `projects/${this.options.buildTask.projectName}/${taskLocation}`
+            : taskLocation;
     }
 
     async run(): Promise<ScriptResult> {
         this.logger.group('\u25B7 script');
+
+        const { workspaceRoot, projectRoot, projectName, taskName, configPath } = this.options.buildTask;
+
+        const scriptOptions = this.options.scriptOptions;
+
+        const substitutions = await getSubstitutions(scriptOptions.substitutions ?? [], this.options.buildTask);
+        const bannerOptions = await getBannerOptions(
+            'banner',
+            'script',
+            scriptOptions.banner,
+            this.options.buildTask,
+            substitutions
+        );
+        const footerOptions = await getBannerOptions(
+            'footer',
+            'script',
+            scriptOptions.footer,
+            this.options.buildTask,
+            substitutions
+        );
 
         const mainOutputAssets: ScriptMainOutputAsset[] = [];
         let totalTime = 0;
@@ -123,8 +186,14 @@ export class ScriptTaskRunner {
             }
 
             const compileOptions: CompileOptions = {
-                workspaceInfo: this.options.workspaceInfo,
-                compilationIndex: this.options.scriptOptions.compilations === true ? undefined : i,
+                taskInfo: {
+                    taskName,
+                    workspaceRoot,
+                    projectRoot,
+                    projectName,
+                    configPath,
+                    compilationIndex: Array.isArray(this.options.scriptOptions.compilations) ? i : undefined
+                },
                 entryFilePath: compilation._entryFilePath,
                 outFilePath: compilation._outFilePath,
                 moduleFormat: compilation._moduleFormat,
@@ -140,14 +209,14 @@ export class ScriptTaskRunner {
                 preserveSymlinks: compilation._preserveSymlinks,
                 globalName: compilation.globalName,
                 treeshake: compilation.treeshake,
-                bannerText: this.options.bannerText,
-                footerText: this.options.footerText,
-                substitutions: this.options.substitutions,
+                banner: bannerOptions,
+                footer: footerOptions,
+                substitutions,
                 dryRun: this.options.dryRun,
                 logLevel: this.options.logLevel
             };
 
-            let compilerFn: (options: CompileOptions, logger: Logger) => Promise<CompileResult>;
+            let compilerFn: (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
 
             if (
                 compilation.compiler?.toLowerCase().trim() === 'tsc' ||
@@ -203,7 +272,6 @@ export class ScriptTaskRunner {
                 if (cachefn) {
                     compilerFn = cachefn;
                 } else {
-                    const projectRoot = this.options.workspaceInfo.projectRoot;
                     const handlerPath = resolvePath(projectRoot, handlerStr);
 
                     const compilerModule = (await import(pathToFileURL(handlerPath).toString())) as {
@@ -213,7 +281,7 @@ export class ScriptTaskRunner {
                     if (!compilerModule.default || typeof compilerModule.default !== 'function') {
                         throw new InvalidConfigError(
                             'No default function export found for custom compiler module.',
-                            this.options.workspaceInfo.configPath,
+                            configPath,
                             `${this.configLocationPrefix}/compilations/${i}/compiler`
                         );
                     }
@@ -224,7 +292,7 @@ export class ScriptTaskRunner {
             } else {
                 throw new InvalidConfigError(
                     'could not detect compiler tool for script compilation.',
-                    this.options.workspaceInfo.configPath,
+                    configPath,
                     `${this.configLocationPrefix}/compilations/${i}/compiler`
                 );
             }
@@ -280,47 +348,54 @@ export class ScriptTaskRunner {
         return result;
     }
 
-    private async getParsedCompilations(): Promise<ParsedScriptCompilation[]> {
+    private async getParsedCompilations(): Promise<ParsedCompilation[]> {
         this.logger.debug('Preparing compilations...');
+
+        const { projectRoot, configPath } = this.options.buildTask;
+
+        const packageJsonInfo = await getPackageJsonInfo(this.options.buildTask);
 
         if (typeof this.options.scriptOptions.compilations === 'boolean') {
             if (!this.options.scriptOptions.compilations) {
                 throw new InvalidConfigError(
                     `No compilation options. Specify 'compilations' values in script options.`,
-                    this.options.workspaceInfo.configPath,
-                    `${this.configLocationPrefix}/scriptOptions/compilations`
-                );
-            }
-
-            const tsConfigPath = await this.detectTsConfigPath();
-            const tsConfigInfo = tsConfigPath ? await this.getTsConfigInfo(tsConfigPath, null, null) : undefined;
-            const entryFilePath = await this.detectEntryFilePath(tsConfigInfo);
-
-            if (!entryFilePath) {
-                throw new InvalidConfigError(
-                    `Could not detect compilations automatically. Specify 'compilations' values in script options manually.`,
-                    this.options.workspaceInfo.configPath,
+                    configPath,
                     `${this.configLocationPrefix}/compilations`
                 );
             }
 
-            const parsedScriptCompilations: ParsedScriptCompilation[] = [];
+            const tsConfigPath = await this.detectTsConfigPath();
+            const tsConfigInfo = tsConfigPath
+                ? await this.getTsConfigInfo({ tsConfigPath, compilation: null, compilationIndex: null })
+                : undefined;
 
-            const entry = normalizePathToPOSIXStyle(
-                path.relative(this.options.workspaceInfo.projectRoot, entryFilePath)
-            );
+            // TODO:
+            const entryFilePath = await this.detectEntryFilePath({
+                tsConfigInfo,
+                packageJsonInfo
+            });
+
+            if (!entryFilePath) {
+                throw new InvalidConfigError(
+                    `Could not detect compilations automatically. Specify 'compilations' values in script options manually.`,
+                    configPath,
+                    `${this.configLocationPrefix}/compilations`
+                );
+            }
+
+            const parsedScriptCompilations: ParsedCompilation[] = [];
+
+            const entry = normalizePathToPOSIXStyle(path.relative(projectRoot, entryFilePath));
             const tsconfig = tsConfigInfo?.configPath
-                ? normalizePathToPOSIXStyle(
-                      path.relative(this.options.workspaceInfo.projectRoot, tsConfigInfo.configPath)
-                  )
+                ? normalizePathToPOSIXStyle(path.relative(projectRoot, tsConfigInfo.configPath))
                 : undefined;
 
             const preserveSymlinks =
                 this.options.scriptOptions.preserveSymlinks ?? tsConfigInfo?.compilerOptions.preserveSymlinks;
 
             if (
-                this.options.packageJsonInfo &&
-                this.options.packageJsonInfo.packageJson.private !== false &&
+                packageJsonInfo &&
+                packageJsonInfo.packageJsonConfig.private !== false &&
                 tsConfigInfo?.compilerOptions.module != null &&
                 tsConfigInfo.compilerOptions.module >= ts.ModuleKind.ES2015 &&
                 tsConfigInfo.compilerOptions.module <= ts.ModuleKind.ESNext &&
@@ -329,8 +404,12 @@ export class ScriptTaskRunner {
                 tsConfigInfo.compilerOptions.target <= ts.ScriptTarget.ESNext
             ) {
                 const moduleFormat: ScriptModuleFormat = 'esm';
-                const scriptTarget = this.getScriptTarget(null, tsConfigInfo) ?? 'ESNext';
-                const year = this.getYearFromScriptTarget(scriptTarget);
+                const scriptTarget =
+                    this.getScriptTarget({
+                        tsConfigInfo,
+                        compilation: null
+                    }) ?? 'ESNext';
+                const year = getYearFromScriptTarget(scriptTarget);
 
                 // types
                 //
@@ -354,7 +433,8 @@ export class ScriptTaskRunner {
                     bundle: false,
                     multiOutputsFormat: true,
                     moduleFormat,
-                    scriptTarget
+                    scriptTarget,
+                    packageJsonInfo
                 });
 
                 parsedScriptCompilations.push({
@@ -398,7 +478,8 @@ export class ScriptTaskRunner {
                     bundle: false,
                     multiOutputsFormat: true,
                     moduleFormat,
-                    scriptTarget
+                    scriptTarget,
+                    packageJsonInfo
                 });
 
                 parsedScriptCompilations.push({
@@ -425,7 +506,10 @@ export class ScriptTaskRunner {
                 const environmentTargets: string[] = this.options.scriptOptions.environmentTargets ?? [];
 
                 // externals and globals
-                const { externals, globals } = this.getExternalsAndGlobals(null);
+                const { externals, globals } = this.getExternalsAndGlobals({
+                    compilation: null,
+                    packageJsonInfo
+                });
 
                 const fesmCompilation: ScriptCompilation = {
                     bundle: true,
@@ -442,14 +526,15 @@ export class ScriptTaskRunner {
 
                 const fesmOutFilePath = await this.getOutputFilePath({
                     compilation: fesmCompilation,
-                    compilationIndex: 2,
+                    compilationIndex: undefined,
                     entryFilePath,
                     forTypesOutput: false,
                     bundle: true,
                     multiOutputsFormat: true,
                     tsConfigInfo,
                     moduleFormat,
-                    scriptTarget
+                    scriptTarget,
+                    packageJsonInfo
                 });
 
                 parsedScriptCompilations.push({
@@ -485,12 +570,20 @@ export class ScriptTaskRunner {
                 }
 
                 // moduleFormat
-                let moduleFormat = this.getModuleFormat(null, tsConfigInfo, entryFilePath);
+                let moduleFormat = this.getModuleFormat({
+                    compilation: null,
+                    tsConfigInfo,
+                    entryFilePath,
+                    packageJsonInfo
+                });
                 if (!moduleFormat) {
                     moduleFormat = emitDeclarationOnly ? 'esm' : 'iife';
                 }
 
-                let scriptTarget = this.getScriptTarget(null, tsConfigInfo);
+                let scriptTarget = this.getScriptTarget({
+                    compilation: null,
+                    tsConfigInfo
+                });
                 if (!scriptTarget) {
                     scriptTarget =
                         (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? 'ES5' : 'ESNext';
@@ -515,7 +608,8 @@ export class ScriptTaskRunner {
                     bundle: true,
                     multiOutputsFormat: false,
                     moduleFormat,
-                    scriptTarget
+                    scriptTarget,
+                    packageJsonInfo
                 });
 
                 // environmentTargets
@@ -536,7 +630,10 @@ export class ScriptTaskRunner {
                 }
 
                 // externals
-                const { externals, globals } = this.getExternalsAndGlobals(null);
+                const { externals, globals } = this.getExternalsAndGlobals({
+                    compilation: null,
+                    packageJsonInfo
+                });
 
                 parsedScriptCompilations.push({
                     ...compilation,
@@ -562,12 +659,12 @@ export class ScriptTaskRunner {
             if (this.options.scriptOptions.compilations.length === 0) {
                 throw new InvalidConfigError(
                     `No compilation options. Specify 'compilations' values in script options.`,
-                    this.options.workspaceInfo.configPath,
+                    configPath,
                     `${this.configLocationPrefix}/scriptOptions/compilations`
                 );
             }
 
-            const parsedScriptCompilations: ParsedScriptCompilation[] = [];
+            const parsedScriptCompilations: ParsedCompilation[] = [];
             const multiOutputsFormat = this.options.scriptOptions.compilations.length > 0 ? true : false;
 
             for (let i = 0; i < this.options.scriptOptions.compilations.length; i++) {
@@ -576,18 +673,39 @@ export class ScriptTaskRunner {
                 if (Object.keys(compilation).length === 0) {
                     throw new InvalidConfigError(
                         'Empty compilation options found.',
-                        this.options.workspaceInfo.configPath,
+                        configPath,
                         `${this.configLocationPrefix}/compilations/${i}`
                     );
                 }
 
-                const tsConfigPath = await this.getTsConfigPath(compilation, i);
+                const tsConfigPath = await this.getTsConfigPath({
+                    compilation,
+                    compilationIndex: i
+                });
                 const tsConfigInfo = tsConfigPath
-                    ? await this.getTsConfigInfo(tsConfigPath, compilation, i)
+                    ? await this.getTsConfigInfo({
+                          compilation,
+                          compilationIndex: i,
+                          tsConfigPath
+                      })
                     : undefined;
-                const entryFilePath = await this.getEntryFilePath(compilation, i);
-                const scriptTarget = this.getScriptTarget(compilation, tsConfigInfo) ?? 'ES2015';
-                let moduleFormat = this.getModuleFormat(compilation, tsConfigInfo, entryFilePath);
+                const entryFilePath = await this.getEntryFilePath({
+                    compilation,
+                    compilationIndex: i,
+                    tsConfigInfo,
+                    packageJsonInfo
+                });
+                const scriptTarget =
+                    this.getScriptTarget({
+                        compilation,
+                        tsConfigInfo
+                    }) ?? 'ES2015';
+                let moduleFormat = this.getModuleFormat({
+                    compilation,
+                    tsConfigInfo,
+                    entryFilePath,
+                    packageJsonInfo
+                });
 
                 if (!moduleFormat) {
                     if (!multiOutputsFormat) {
@@ -595,7 +713,7 @@ export class ScriptTaskRunner {
                     } else {
                         throw new InvalidConfigError(
                             `Could not detect module format automatically. Specify 'moduleFormat' value in script compilations.`,
-                            this.options.workspaceInfo.configPath,
+                            configPath,
                             `${this.configLocationPrefix}/compilations/${i}/moduleFormat`
                         );
                     }
@@ -634,7 +752,8 @@ export class ScriptTaskRunner {
                     bundle,
                     multiOutputsFormat: this.options.scriptOptions.compilations.length > 0 ? true : false,
                     moduleFormat,
-                    scriptTarget
+                    scriptTarget,
+                    packageJsonInfo
                 });
 
                 // environmentTargets
@@ -662,7 +781,10 @@ export class ScriptTaskRunner {
                 }
 
                 // externals
-                const { externals, globals } = this.getExternalsAndGlobals(compilation);
+                const { externals, globals } = this.getExternalsAndGlobals({
+                    compilation,
+                    packageJsonInfo
+                });
 
                 // preserveSymlinks
                 const preserveSymlinks =
@@ -692,11 +814,14 @@ export class ScriptTaskRunner {
     }
 
     private async getTsConfigInfo(
-        tsConfigPath: string,
-        compilation: ScriptCompilation | null,
-        compilationIndex: number | null
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation> | null;
+            compilationIndex: number | null;
+            tsConfigPath: string;
+        }>
     ): Promise<TsConfigInfo> {
-        const projectRoot = this.options.workspaceInfo.projectRoot;
+        const { projectRoot, configPath } = this.options.buildTask;
+        const { compilation, compilationIndex, tsConfigPath } = options;
 
         const locationKey = `${projectRoot}!${this.configLocationPrefix}/compilations/${compilationIndex ?? 0}`;
         const cacheData = tsConfigInfoCache.get(tsConfigPath);
@@ -724,7 +849,7 @@ export class ScriptTaskRunner {
 
             throw new InvalidConfigError(
                 `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`,
-                this.options.workspaceInfo.configPath,
+                configPath,
                 configLocation
             );
         }
@@ -740,7 +865,7 @@ export class ScriptTaskRunner {
 
             throw new InvalidConfigError(
                 `Invalid tsconfig file ${tsConfigPathRel}.${tsMsg}`,
-                this.options.workspaceInfo.configPath,
+                configPath,
                 configLocation
             );
         }
@@ -760,9 +885,14 @@ export class ScriptTaskRunner {
     }
 
     private async getTsConfigPath(
-        compilation: ScriptCompilation | null,
-        compilationIndex: number | null
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation>;
+            compilationIndex: number;
+        }>
     ): Promise<string | null> {
+        const { projectRoot, configPath } = this.options.buildTask;
+        const { compilation, compilationIndex } = options;
+
         const tsConfigFile = compilation?.tsconfig ?? this.options.scriptOptions.tsconfig;
 
         if (tsConfigFile) {
@@ -770,7 +900,6 @@ export class ScriptTaskRunner {
                 ? `${this.configLocationPrefix}/compilations/${compilationIndex}/tsconfig`
                 : `${this.configLocationPrefix}/tsconfig`;
 
-            const projectRoot = this.options.workspaceInfo.projectRoot;
             const normalizedTsConfigFile = normalizePathToPOSIXStyle(tsConfigFile);
             const cacheKey = `${projectRoot}!${normalizedTsConfigFile}`;
             const cachedPath = tsConfigPathsCache.get(cacheKey);
@@ -783,11 +912,7 @@ export class ScriptTaskRunner {
                 normalizedTsConfigFile.length < 6 ||
                 !/\.json$/i.test(normalizedTsConfigFile)
             ) {
-                throw new InvalidConfigError(
-                    `Invalid tsconfig file ${tsConfigFile}.`,
-                    this.options.workspaceInfo.configPath,
-                    configLocation
-                );
+                throw new InvalidConfigError(`Invalid tsconfig file ${tsConfigFile}.`, configPath, configLocation);
             }
 
             const tsConfigFilePath = resolvePath(projectRoot, normalizedTsConfigFile);
@@ -795,7 +920,7 @@ export class ScriptTaskRunner {
             if (!(await pathExists(tsConfigFilePath, true))) {
                 throw new InvalidConfigError(
                     `The tsconfig file ${tsConfigFile} doesn't exist.`,
-                    this.options.workspaceInfo.configPath,
+                    configPath,
                     configLocation
                 );
             }
@@ -805,11 +930,23 @@ export class ScriptTaskRunner {
             return tsConfigFilePath;
         }
 
-        return this.detectTsConfigPath();
+        this.logger.debug(`Detecting tsconfig file for compilation/${compilationIndex}...`);
+
+        const detectedTsConfigFilePath = await this.detectTsConfigPath();
+
+        if (detectedTsConfigFilePath) {
+            const detectedTsConfigFilePathRel = normalizePathToPOSIXStyle(
+                path.relative(process.cwd(), detectedTsConfigFilePath)
+            );
+            this.logger.debug(`Tsconfig file detected: ${detectedTsConfigFilePathRel}`);
+        }
+
+        return detectedTsConfigFilePath;
     }
 
     private async detectTsConfigPath(): Promise<string | null> {
-        const projectRoot = this.options.workspaceInfo.projectRoot;
+        const { workspaceRoot, projectRoot } = this.options.buildTask;
+
         const cacheKey = projectRoot;
         const cachedPath = tsConfigPathsCache.get(cacheKey);
         if (cachedPath != null) {
@@ -827,7 +964,7 @@ export class ScriptTaskRunner {
         let foundPath: string | null = null;
 
         for (const configFile of configFiles) {
-            foundPath = await findUp(configFile, projectRoot, this.options.workspaceInfo.workspaceRoot, true);
+            foundPath = await findUp(configFile, projectRoot, workspaceRoot, true);
 
             if (foundPath) {
                 break;
@@ -843,10 +980,17 @@ export class ScriptTaskRunner {
         return foundPath;
     }
 
-    private async getEntryFilePath(compilation: ScriptCompilation, compilationIndex: number): Promise<string> {
-        const projectRoot = this.options.workspaceInfo.projectRoot;
-        const projectName = this.options.workspaceInfo.projectName;
-        const configPath = this.options.workspaceInfo.configPath;
+    private async getEntryFilePath(
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation>;
+            compilationIndex: number;
+            tsConfigInfo: Readonly<TsConfigInfo> | undefined;
+            packageJsonInfo: Readonly<PackageJsonInfo> | null;
+        }>
+    ): Promise<string> {
+        const { projectRoot, projectName, configPath } = this.options.buildTask;
+        const { compilation, compilationIndex, tsConfigInfo, packageJsonInfo } = options;
+
         const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/entry`;
 
         if (compilation.entry) {
@@ -886,12 +1030,12 @@ export class ScriptTaskRunner {
             return entryFilePath;
         }
 
-        const tsConfigFilePath = await this.getTsConfigPath(compilation, compilationIndex);
-        const tsConfigInfo = tsConfigFilePath
-            ? await this.getTsConfigInfo(tsConfigFilePath, compilation, compilationIndex)
-            : undefined;
+        this.logger.debug(`Detecting entry file for compilation/${compilationIndex}...`);
 
-        const detectedEntryFilePath = await this.detectEntryFilePath(tsConfigInfo);
+        const detectedEntryFilePath = await this.detectEntryFilePath({
+            tsConfigInfo,
+            packageJsonInfo
+        });
 
         if (!detectedEntryFilePath) {
             throw new InvalidConfigError(
@@ -901,24 +1045,30 @@ export class ScriptTaskRunner {
             );
         }
 
+        const detectedEntryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), detectedEntryFilePath));
+        this.logger.debug(`Entry file detected: ${detectedEntryFilePathRel}`);
+
         return detectedEntryFilePath;
     }
 
-    private async detectEntryFilePath(tsConfigInfo: TsConfigInfo | undefined): Promise<string | null> {
-        if (tsConfigInfo?.fileNames.length && tsConfigInfo.configPath) {
-            const foundPath = tsConfigInfo.fileNames[0];
+    private async detectEntryFilePath(
+        options: Readonly<{
+            tsConfigInfo: Readonly<TsConfigInfo> | undefined;
+            packageJsonInfo: Readonly<PackageJsonInfo> | null;
+        }>
+    ): Promise<string | null> {
+        const { projectRoot } = this.options.buildTask;
+        const { tsConfigInfo, packageJsonInfo } = options;
 
-            return foundPath;
-        }
-
-        const projectRoot = this.options.workspaceInfo.projectRoot;
         const cacheKey = projectRoot;
         const cached = entryFilePathsCache.get(cacheKey);
         if (cached !== null) {
             return cached?.length ? cached : null;
         }
 
-        const lastPartPackageName = this.getLastPartPackageName();
+        const lastPartPackageName = packageJsonInfo?.packageName
+            ? getLastPartPackageName(packageJsonInfo.packageName)
+            : null;
 
         const searchFileNames = ['public_api', 'public-api', 'index'];
         if (lastPartPackageName) {
@@ -926,36 +1076,24 @@ export class ScriptTaskRunner {
         }
         searchFileNames.push('main');
 
-        const tsExtNames = ['.mts', '.cts', '.tsx', '.ts'];
-        const jsExtNames = ['.mjs', '.cjs', '.jsx', '.js'];
+        const searchDirs = [projectRoot, path.resolve(projectRoot, 'src'), path.resolve(projectRoot, 'lib')];
 
-        // Search ts files
-        //
-        let foundPath = await searchFileByExtensions(searchFileNames, tsExtNames, projectRoot);
-
-        if (!foundPath) {
-            foundPath = await searchFileByExtensions(searchFileNames, tsExtNames, path.resolve(projectRoot, 'src'));
+        let searchExtNames = ['.mts', '.cts', '.tsx', '.ts', '.mjs', '.cjs', '.jsx', '.js'];
+        if (lastDetectectedEntryFileExt) {
+            searchExtNames = searchExtNames.filter((e) => e !== lastDetectectedEntryFileExt);
+            searchExtNames.unshift(lastDetectectedEntryFileExt);
         }
 
-        if (!foundPath) {
-            foundPath = await searchFileByExtensions(searchFileNames, tsExtNames, path.resolve(projectRoot, 'lib'));
-        }
-
-        // Search ts files
-        //
-        if (!foundPath) {
-            foundPath = await searchFileByExtensions(searchFileNames, jsExtNames, projectRoot);
-        }
-
-        if (!foundPath) {
-            foundPath = await searchFileByExtensions(searchFileNames, jsExtNames, path.resolve(projectRoot, 'src'));
-        }
-
-        if (!foundPath) {
-            foundPath = await searchFileByExtensions(searchFileNames, jsExtNames, path.resolve(projectRoot, 'lib'));
-        }
+        // TODO: To review - tsConfigInfo?.fileNames for includes
+        const foundPath = await searchFileByExtensions(
+            searchExtNames,
+            searchFileNames,
+            searchDirs,
+            tsConfigInfo?.fileNames
+        );
 
         if (foundPath) {
+            lastDetectectedEntryFileExt = path.extname(foundPath);
             entryFilePathsCache.set(cacheKey, foundPath);
 
             return foundPath;
@@ -966,17 +1104,20 @@ export class ScriptTaskRunner {
         }
     }
 
-    private async getOutputFilePath(options: {
-        compilation: ScriptCompilation;
-        compilationIndex: number | undefined;
-        entryFilePath: string;
-        forTypesOutput: boolean;
-        bundle: boolean;
-        multiOutputsFormat: boolean;
-        moduleFormat: ScriptModuleFormat;
-        tsConfigInfo: TsConfigInfo | undefined;
-        scriptTarget: ScriptTargetStrings | undefined;
-    }): Promise<string> {
+    private async getOutputFilePath(
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation>;
+            compilationIndex: number | undefined;
+            entryFilePath: string;
+            forTypesOutput: boolean;
+            bundle: boolean;
+            multiOutputsFormat: boolean;
+            moduleFormat: ScriptModuleFormat;
+            tsConfigInfo: Readonly<TsConfigInfo> | undefined;
+            scriptTarget: ScriptTargetStrings | undefined;
+            packageJsonInfo: Readonly<PackageJsonInfo> | null;
+        }>
+    ): Promise<string> {
         const {
             compilation,
             compilationIndex,
@@ -986,10 +1127,16 @@ export class ScriptTaskRunner {
             bundle,
             multiOutputsFormat,
             moduleFormat,
-            scriptTarget
+            scriptTarget,
+            packageJsonInfo
         } = options;
 
-        const lastPartPackageName = this.getLastPartPackageName();
+        const { configPath, outDir, workspaceRoot, projectRoot } = this.options.buildTask;
+
+        const lastPartPackageName = packageJsonInfo?.packageName
+            ? getLastPartPackageName(packageJsonInfo.packageName)
+            : null;
+
         const entryFileName = path.basename(entryFilePath);
         const entryFileExt = path.extname(entryFileName);
         const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
@@ -1018,7 +1165,7 @@ export class ScriptTaskRunner {
                     if (!/^\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
                         throw new InvalidConfigError(
                             'Invalid file extension for declaration output.',
-                            this.options.workspaceInfo.configPath,
+                            configPath,
                             configLocation
                         );
                     }
@@ -1026,30 +1173,30 @@ export class ScriptTaskRunner {
                     if (/^\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
                         throw new InvalidConfigError(
                             'Invalid file extension for non-declaration output.',
-                            this.options.workspaceInfo.configPath,
+                            configPath,
                             configLocation
                         );
                     }
                 }
 
-                outFilePath = resolvePath(this.options.outDir, normalziedOut);
+                outFilePath = resolvePath(outDir, normalziedOut);
             } else {
                 const outFileName = await this.getOutputFileName(options);
-                outFilePath = resolvePath(this.options.outDir, path.join(normalziedOut, outFileName));
+                outFilePath = resolvePath(outDir, path.join(normalziedOut, outFileName));
             }
 
             if (isSamePath(outFilePath, entryFilePath)) {
                 throw new InvalidConfigError(
                     'The compilation output path must not be the same as entry file path.',
-                    this.options.workspaceInfo.configPath,
+                    configPath,
                     configLocation
                 );
             }
 
-            if (!isInFolder(this.options.outDir, outFilePath)) {
+            if (!isInFolder(outDir, outFilePath)) {
                 throw new InvalidConfigError(
                     'The compilation output path must not be outside of project outDir.',
-                    this.options.workspaceInfo.configPath,
+                    configPath,
                     configLocation
                 );
             }
@@ -1057,22 +1204,20 @@ export class ScriptTaskRunner {
             return outFilePath;
         } else {
             const outFileName = await this.getOutputFileName(options);
-            let customOutDir = this.options.outDir;
-            const workspaceRoot = this.options.workspaceInfo.workspaceRoot;
-            const projectRoot = this.options.workspaceInfo.projectRoot;
+            let customOutDir = outDir;
 
             if (
                 tsConfigInfo?.configPath &&
                 tsConfigInfo?.compilerOptions.outDir != null &&
                 isInFolder(projectRoot, tsConfigInfo.configPath) &&
-                (isInFolder(this.options.outDir, tsConfigInfo.compilerOptions.outDir) ||
-                    isSamePath(this.options.outDir, tsConfigInfo.compilerOptions.outDir))
+                (isInFolder(outDir, tsConfigInfo.compilerOptions.outDir) ||
+                    isSamePath(outDir, tsConfigInfo.compilerOptions.outDir))
             ) {
                 customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);
             } else if (!isSamePath(projectRoot, workspaceRoot)) {
                 const relToWorkspaceRoot = normalizePathToPOSIXStyle(path.relative(workspaceRoot, projectRoot));
                 if (relToWorkspaceRoot.split('/').length > 1) {
-                    customOutDir = resolvePath(this.options.outDir, relToWorkspaceRoot);
+                    customOutDir = resolvePath(outDir, relToWorkspaceRoot);
                 }
             }
 
@@ -1082,7 +1227,7 @@ export class ScriptTaskRunner {
                 } else {
                     if (moduleFormat === 'esm') {
                         if (scriptTarget && scriptTarget !== 'ES5') {
-                            const year = this.getYearFromScriptTarget(scriptTarget);
+                            const year = getYearFromScriptTarget(scriptTarget);
 
                             if (year > 2014) {
                                 customOutDir = bundle
@@ -1118,21 +1263,25 @@ export class ScriptTaskRunner {
         }
     }
 
-    private async getOutputFileName(options: {
-        entryFilePath: string;
-        forTypesOutput: boolean;
-        bundle: boolean;
-        moduleFormat: ScriptModuleFormat;
-    }): Promise<string> {
-        const { entryFilePath, forTypesOutput, moduleFormat, bundle } = options;
+    private async getOutputFileName(
+        options: Readonly<{
+            entryFilePath: string;
+            forTypesOutput: boolean;
+            bundle: boolean;
+            moduleFormat: ScriptModuleFormat;
+            packageJsonInfo: Readonly<PackageJsonInfo> | null;
+        }>
+    ): Promise<string> {
+        const { entryFilePath, forTypesOutput, moduleFormat, bundle, packageJsonInfo } = options;
 
-        const packageJson = this.options.packageJsonInfo?.packageJson;
-        if (packageJson) {
+        if (packageJsonInfo?.packageJsonConfig) {
+            const packageJsonConfig = packageJsonInfo.packageJsonConfig;
+
             let entryFromPackageJson: string | undefined;
 
             if (forTypesOutput) {
-                if (packageJson.exports && typeof packageJson.exports === 'object') {
-                    const exports = packageJson.exports as Record<
+                if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
+                    const exports = packageJsonConfig.exports as Record<
                         string,
                         | {
                               types?: unknown;
@@ -1163,12 +1312,12 @@ export class ScriptTaskRunner {
                     }
                 }
 
-                if (!entryFromPackageJson && packageJson.types && typeof packageJson.types === 'string') {
-                    entryFromPackageJson = packageJson.types.trim();
+                if (!entryFromPackageJson && packageJsonConfig.types && typeof packageJsonConfig.types === 'string') {
+                    entryFromPackageJson = packageJsonConfig.types.trim();
                 }
             } else {
-                if (packageJson.exports && typeof packageJson.exports === 'object') {
-                    const exports = packageJson.exports as Record<
+                if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
+                    const exports = packageJsonConfig.exports as Record<
                         string,
                         | {
                               import?: string | { default?: unknown };
@@ -1209,12 +1358,12 @@ export class ScriptTaskRunner {
                     }
                 }
 
-                if (!entryFromPackageJson && packageJson.module && typeof packageJson.module === 'string') {
-                    entryFromPackageJson = packageJson.module.trim();
+                if (!entryFromPackageJson && packageJsonConfig.module && typeof packageJsonConfig.module === 'string') {
+                    entryFromPackageJson = packageJsonConfig.module.trim();
                 }
 
-                if (!entryFromPackageJson && packageJson.main && typeof packageJson.main === 'string') {
-                    entryFromPackageJson = packageJson.main.trim();
+                if (!entryFromPackageJson && packageJsonConfig.main && typeof packageJsonConfig.main === 'string') {
+                    entryFromPackageJson = packageJsonConfig.main.trim();
                 }
             }
 
@@ -1225,8 +1374,6 @@ export class ScriptTaskRunner {
                 }
             }
         }
-
-        const lastPartPackageName = this.getLastPartPackageName();
 
         const entryFileName = path.basename(entryFilePath);
         const entryFileExt = path.extname(entryFileName);
@@ -1248,6 +1395,10 @@ export class ScriptTaskRunner {
         } else if (/^\.(t|j)sx$/i.test(entryFileExt)) {
             suggestedOutFileExt = '.jsx';
         }
+
+        const lastPartPackageName = packageJsonInfo?.packageName
+            ? getLastPartPackageName(packageJsonInfo.packageName)
+            : null;
 
         if (
             lastPartPackageName &&
@@ -1276,43 +1427,14 @@ export class ScriptTaskRunner {
         return entryFileNameWithoutExt + suggestedOutFileExt;
     }
 
-    private getLastPartPackageName(): string | null {
-        let lastPartPackageName: string | null = null;
-        if (this.options.packageJsonInfo?.packageName) {
-            const packageName = this.options.packageJsonInfo.packageName;
-            const lastSlashIndex = packageName.lastIndexOf('/');
-            lastPartPackageName = lastSlashIndex > -1 ? packageName.substring(lastSlashIndex + 1) : packageName;
-        }
-
-        return lastPartPackageName;
-    }
-
-    private getYearFromScriptTarget(scriptTarget: ScriptTargetStrings): number {
-        if (scriptTarget === 'ESNext') {
-            const year = new Date().getFullYear() - 1;
-            const esmVerson = year - 2013;
-            if (esmVerson > 1 && esmVerson < 99) {
-                return year;
-            } else {
-                return 0;
-            }
-        }
-
-        const esYearRegExp = /^es(2\d{3,3})/i;
-        const m = scriptTarget.match(esYearRegExp);
-        if (m != null && m.length > 1) {
-            const yearStr = m[1];
-
-            return parseInt(yearStr, 10);
-        }
-
-        return 0;
-    }
-
     private getScriptTarget(
-        compilation: ScriptCompilation | null,
-        tsConfigInfo: TsConfigInfo | undefined
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation> | null;
+            tsConfigInfo: Readonly<TsConfigInfo> | undefined;
+        }>
     ): ScriptTargetStrings | undefined {
+        const { compilation, tsConfigInfo } = options;
+
         if (compilation?.scriptTarget) {
             return compilation.scriptTarget;
         }
@@ -1325,10 +1447,15 @@ export class ScriptTaskRunner {
     }
 
     private getModuleFormat(
-        compilation: ScriptCompilation | null,
-        tsConfigInfo: TsConfigInfo | undefined,
-        entryFilePath: string | null
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation> | null;
+            tsConfigInfo: Readonly<TsConfigInfo> | undefined;
+            entryFilePath: string | null;
+            packageJsonInfo: Readonly<PackageJsonInfo> | null;
+        }>
     ): ScriptModuleFormat | undefined {
+        const { compilation, tsConfigInfo, entryFilePath, packageJsonInfo } = options;
+
         if (compilation?.moduleFormat) {
             return compilation.moduleFormat;
         }
@@ -1365,7 +1492,7 @@ export class ScriptTaskRunner {
             }
         }
 
-        if (this.options.packageJsonInfo?.packageJson.type === 'module') {
+        if (packageJsonInfo?.packageJsonConfig.type === 'module') {
             return 'esm';
         }
 
@@ -1385,9 +1512,7 @@ export class ScriptTaskRunner {
         }
 
         if (
-            (environmentTargets.includes('web') ||
-                environmentTargets.includes('browser') ||
-                this.options.packageJsonInfo == null) &&
+            (environmentTargets.includes('web') || environmentTargets.includes('browser') || packageJsonInfo == null) &&
             !environmentTargets.some((e) => e.startsWith('node')) &&
             tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.NodeNext &&
             tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node16
@@ -1405,41 +1530,48 @@ export class ScriptTaskRunner {
         return undefined;
     }
 
-    private getExternalsAndGlobals(compilation: ScriptCompilation | null): {
+    private getExternalsAndGlobals(
+        options: Readonly<{
+            compilation: Readonly<ScriptCompilation> | null;
+            packageJsonInfo: Readonly<PackageJsonInfo> | null;
+        }>
+    ): {
         externals: string[];
         globals: Record<string, string>;
     } {
+        const { compilation, packageJsonInfo } = options;
+
         const globals: Record<string, string> = {};
         const externals: string[] = ['tslib'];
         const excludes = compilation?.externalExclude ?? this.options.scriptOptions.externalExclude ?? [];
 
         if (this.options.scriptOptions.packageDependenciesAsExternals !== false) {
-            if (this.options.packageJsonInfo?.packageJson?.devDependencies) {
-                Object.keys(this.options.packageJsonInfo.packageJson.devDependencies)
+            if (packageJsonInfo?.packageJsonConfig?.devDependencies) {
+                Object.keys(packageJsonInfo.packageJsonConfig.devDependencies)
                     .filter((e) => !externals.includes(e) && !excludes.includes(e))
                     .forEach((e) => {
                         externals.push(e);
                     });
             }
 
-            if (this.options.packageJsonInfo?.packageJson?.dependencies) {
-                Object.keys(this.options.packageJsonInfo.packageJson.dependencies)
+            if (packageJsonInfo?.packageJsonConfig?.dependencies) {
+                Object.keys(packageJsonInfo.packageJsonConfig.dependencies)
                     .filter((e) => !externals.includes(e) && !excludes.includes(e))
                     .forEach((e) => {
                         externals.push(e);
                     });
             }
 
-            if (this.options.packageJsonInfo?.packageJson?.peerDependencies) {
-                Object.keys(this.options.packageJsonInfo.packageJson.peerDependencies)
+            if (packageJsonInfo?.packageJsonConfig?.peerDependencies) {
+                Object.keys(packageJsonInfo.packageJsonConfig.peerDependencies)
                     .filter((e) => !externals.includes(e) && !excludes.includes(e))
                     .forEach((e) => {
                         externals.push(e);
                     });
             }
 
-            if (this.options.packageJsonInfo?.packageJson?.optionalDependencies) {
-                Object.keys(this.options.packageJsonInfo.packageJson.optionalDependencies)
+            if (packageJsonInfo?.packageJsonConfig?.optionalDependencies) {
+                Object.keys(packageJsonInfo.packageJsonConfig.optionalDependencies)
                     .filter((e) => !externals.includes(e) && !excludes.includes(e))
                     .forEach((e) => {
                         externals.push(e);
@@ -1496,9 +1628,13 @@ export class ScriptTaskRunner {
     }
 }
 
-export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTaskRunner | null {
-    const buildTask = context.taskOptions;
-
+/**
+ * @internal
+ */
+export function getScriptTaskRunner(
+    buildTask: Readonly<BuildTask>,
+    context: Readonly<HandlerContext>
+): ScriptTaskRunner | null {
     if (!buildTask.script) {
         return null;
     }
@@ -1541,15 +1677,10 @@ export function getScriptTaskRunner(context: BuildTaskHandleContext): ScriptTask
 
     const taskRunner = new ScriptTaskRunner({
         scriptOptions,
-        workspaceInfo: buildTask._workspaceInfo,
-        outDir: buildTask._outDir,
-        dryRun: context.dryRun,
-        logLevel: context.logLevel,
+        buildTask,
         logger: context.logger,
-        packageJsonInfo: buildTask._packageJsonInfo,
-        bannerText: buildTask._bannerTextForScript,
-        footerText: buildTask._footerTextForScript,
-        substitutions: buildTask._substitutions,
+        logLevel: context.logLevel,
+        dryRun: context.dryRun,
         env: context.env
     });
 

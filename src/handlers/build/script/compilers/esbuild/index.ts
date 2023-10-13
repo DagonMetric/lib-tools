@@ -5,14 +5,14 @@ import * as path from 'node:path';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 import {
-    Logger,
+    LoggerBase,
     colors,
     formatSizeInBytes,
     normalizePathToPOSIXStyle,
     pathExists
 } from '../../../../../utils/index.js';
 
-import { CompileAsset, CompileOptions, CompileResult } from '../../interfaces/index.js';
+import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.js';
 
 function getEsBuildTargets(options: CompileOptions): string[] {
     const targets: string[] = [options.scriptTarget.toLowerCase()];
@@ -44,7 +44,10 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     return undefined;
 }
 
-export default async function (options: CompileOptions, logger: Logger): Promise<CompileResult> {
+/**
+ * @internal
+ */
+export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     logger.info(
         `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
     );
@@ -56,7 +59,9 @@ export default async function (options: CompileOptions, logger: Logger): Promise
             entryPoints: [options.entryFilePath],
             outfile: options.outFilePath,
             bundle: true,
-            banner: options.bannerText ? { js: options.bannerText } : undefined,
+            // TODO: Include & Exclude
+            banner: options.banner ? { js: options.banner.text } : undefined,
+            footer: options.footer ? { js: options.footer.text } : undefined,
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
             format: options.moduleFormat === 'umd' ? 'iife' : options.moduleFormat,

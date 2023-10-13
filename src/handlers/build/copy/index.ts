@@ -18,11 +18,17 @@ import {
 
 import { BuildTask, HandlerContext } from '../../interfaces/index.js';
 
+/**
+ * @internal
+ */
 export interface CopyFileInfo {
     from: string;
     to: string;
 }
 
+/**
+ * @internal
+ */
 export interface CopyTaskRunnerOptions {
     readonly copyEntries: CopyEntry[];
     readonly outDir: string;
@@ -30,6 +36,9 @@ export interface CopyTaskRunnerOptions {
     readonly buildTask: Readonly<BuildTask>;
 }
 
+/**
+ * @internal
+ */
 export interface CopyTaskResult {
     readonly copiedFileInfoes: CopyFileInfo[];
     readonly excludedPaths: string[];
@@ -74,6 +83,9 @@ async function globFiles(globPattern: string, cwd: string): Promise<string[]> {
     return procesedFilePaths;
 }
 
+/**
+ * @internal
+ */
 export class CopyTaskRunner {
     private readonly context: HandlerContext;
     private startTime = Date.now();
@@ -315,6 +327,9 @@ export class CopyTaskRunner {
     }
 }
 
+/**
+ * @internal
+ */
 export function getCopyTaskRunner(
     buildTask: Readonly<BuildTask>,
     context: Readonly<HandlerContext>
