@@ -1,6 +1,7 @@
 /**
- * @param {{logger: { info: (message: string) => void}}} [context]
+ * @param {{taskName: string}} [task]
+ * @param {{logger: { info: (message: string) => void}}} [options]
  */
-export function hello(context) {
-    context.logger.info('Hello!');
+export function hello(task, options) {
+    options.logger.info(`Hello ${task.taskName}`);
 }
