@@ -3,10 +3,10 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { CommandOptions } from '../src/config-models/index.js';
-import { getTasksFromCommandOptions } from '../src/handlers/config-helpers/get-tasks.js';
-import { BuildTask } from '../src/handlers/interfaces/index.js';
+import { BuildTask } from '../src/handlers/build-task.js';
+import { getTasksFromCommandOptions } from '../src/handlers/get-tasks.js';
 
-void describe('config-helpers/get-tasks', () => {
+void describe('handlers/get-tasks', () => {
     void describe('getTasksFromCommandOptions', () => {
         void it('should return tasks from libconfig.json file', async () => {
             const workspaceRel = './tests/test-data/parsing/withconfig';

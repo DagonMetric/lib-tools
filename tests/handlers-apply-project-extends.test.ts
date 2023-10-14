@@ -1,11 +1,11 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { BuildTaskConfig, CustomTaskConfig, ProjectConfig } from '../src/config-models/index.js';
-import { InvalidConfigError } from '../src/exceptions/index.js';
-import { applyProjectExtends } from '../src/handlers/config-helpers/apply-project-extends.js';
+import { BuildTaskConfig, CustomTaskConfig, ProjectConfig } from '../src/config-models/internals/index.js';
+import { InvalidConfigError } from '../src/handlers/exceptions/index.js';
+import { applyProjectExtends } from '../src/handlers/internals/apply-project-extends.js';
 
-void describe('config-helpers/apply-project-extends', () => {
+void describe('handlers/internals/apply-project-extends', () => {
     void describe('applyProjectExtends', () => {
         void it('should extend', () => {
             const buildTaskProjectA: BuildTaskConfig = {

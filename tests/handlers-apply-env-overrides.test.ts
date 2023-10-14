@@ -1,10 +1,10 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { BuildTaskConfig, CustomTaskConfig } from '../src/config-models/index.js';
-import { applyEnvOverrides } from '../src/handlers/config-helpers/apply-env-overrides.js';
+import { BuildTaskConfig, CustomTaskConfig } from '../src/config-models/internals/index.js';
+import { applyEnvOverrides } from '../src/handlers/internals/apply-env-overrides.js';
 
-void describe('config-helpers/apply-env-overrides', () => {
+void describe('handlers/internals/apply-env-overrides', () => {
     void describe('applyEnvOverrides', () => {
         void it('should override with env value to build task', () => {
             const config: BuildTaskConfig = {

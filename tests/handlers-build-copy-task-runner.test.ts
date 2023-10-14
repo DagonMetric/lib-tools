@@ -4,11 +4,11 @@ import * as path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
 import { CopyEntry } from '../src/config-models/index.js';
-import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/build/copy/index.js';
-import { BuildTask } from '../src/handlers/interfaces/index.js';
+import { BuildTask } from '../src/handlers/build-task.js';
+import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/internals/build/copy/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/copy', () => {
+void describe('handlers/internals/build/copy', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
 
     void describe('getCopyTaskRunner', () => {

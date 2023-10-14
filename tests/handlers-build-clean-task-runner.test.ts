@@ -4,11 +4,11 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
-import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/build/clean/index.js';
-import { BuildTask } from '../src/handlers/interfaces/index.js';
+import { BuildTask } from '../src/handlers/build-task.js';
+import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/internals/build/clean/index.js';
 import { Logger } from '../src/utils/index.js';
 
-void describe('handlers/build/clean', () => {
+void describe('handlers/internals/build/clean', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
 
     void describe('getCleanTaskRunner', () => {

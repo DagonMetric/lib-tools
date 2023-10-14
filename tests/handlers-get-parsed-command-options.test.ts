@@ -3,11 +3,11 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { CommandOptions } from '../src/config-models/index.js';
-import { InvalidCommandOptionError } from '../src/exceptions/index.js';
-import { getParsedCommandOptions } from '../src/handlers/config-helpers/get-parsed-command-options.js';
-import { ParsedCommandOptions } from '../src/handlers/interfaces/index.js';
+import { InvalidCommandOptionError } from '../src/handlers//exceptions/index.js';
+import { getParsedCommandOptions } from '../src/handlers/internals/get-parsed-command-options.js';
+import { ParsedCommandOptions } from '../src/handlers/internals/parsed-command-options.js';
 
-void describe('config-helpers/get-parsed-command-options', () => {
+void describe('handlers/internals/get-parsed-command-options', () => {
     void describe('getParsedCommandOptions', () => {
         void it('should parse command options without any file args', async () => {
             const cmdOptions: CommandOptions = {
