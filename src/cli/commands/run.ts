@@ -119,27 +119,16 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: 
 
         await taskHandler.handleTasks(...tasks);
     } catch (err) {
-        if (!err) {
-            logger.error('Unhandled error occours.');
-            process.exit(1);
-        }
-
         if (err instanceof ExitCodeError) {
             process.exitCode = err.exitCode;
 
-            if (err.message) {
-                logger.error(err.message);
-            }
-
-            // TODO: To review
             throw err;
-        } else {
-            if ((err as Error).message) {
-                logger.error((err as Error).message);
-            }
+        } else if ((err as Error)?.message) {
+            logger.error((err as Error).message);
 
-            // TODO: To review
             throw new ExitCodeError(1, err);
+        } else {
+            throw err;
         }
     }
 }

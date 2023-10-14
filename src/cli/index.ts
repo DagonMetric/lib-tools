@@ -40,12 +40,22 @@ export default async function (cliInfo: Readonly<CliInfo>): Promise<void> {
         .wrap(yargsInstance.terminalWidth())
         .strict()
         .fail((msg?: string, err?: Error) => {
-            // TODO: To review
-            throw msg
-                ? // Validation failed example: `Unknown argument:`
-                  new Error(msg)
-                : // Unknown exception, re-throw.
-                  err;
+            if (msg) {
+                // Validation failed example: `Unknown argument:`
+                const errMsg = msg;
+                const errPrefix = 'error:';
+                if (errMsg.toLowerCase().startsWith(errPrefix)) {
+                    errMsg.substring(errPrefix.length).trim();
+                }
+
+                // eslint-disable-next-line no-console
+                console.error(`${colors.lightRed('Error:')} ${errMsg}`);
+                process.exit(1);
+            } else {
+                // eslint-disable-next-line no-console
+                console.error(err?.message ? err.message : err);
+                process.exit(process.exitCode ?? 1);
+            }
         })
         .parseAsync();
 }
