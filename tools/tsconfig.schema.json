@@ -1,5 +1,6 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {},
-  "include": ["../src/config-models"]
+  "include": ["../src/config-models"],
+  "files": ["../src/config-models/internals/lib-config.ts"]
 }
