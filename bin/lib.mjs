@@ -66,7 +66,4 @@ const runCli = async () => {
     await cliModule.default({ version: cliInfo.version });
 };
 
-void runCli().catch((err) => {
-    console.error(`Unhandled error occours.${err ? `\n${err}` : ''}`);
-    process.exit(1);
-});
+void runCli();
