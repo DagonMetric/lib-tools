@@ -5,16 +5,10 @@ import { colors } from '../utils/index.js';
 
 import * as runCommand from './commands/run.js';
 
-/**
- * @internal
- */
 export interface CliInfo {
     version: string;
 }
 
-/**
- * @internal
- */
 export default async function (cliInfo: Readonly<CliInfo>): Promise<void> {
     const packageVersion = cliInfo.version;
 

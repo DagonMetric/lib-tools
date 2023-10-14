@@ -19,19 +19,10 @@ function validateNonBuildCommandOptions(argv: CommandOptions): void {
     }
 }
 
-/**
- * @internal
- */
 export const command = 'run <task> [options..]';
 
-/**
- * @internal
- */
 export const describe = 'Run by task name';
 
-/**
- * @internal
- */
 export function builder(argv: Argv): Argv<CommandOptions> {
     return (
         argv
@@ -101,9 +92,6 @@ export function builder(argv: Argv): Argv<CommandOptions> {
     );
 }
 
-/**
- * @internal
- */
 export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: string }>): Promise<void> {
     const logLevel = argv.logLevel ?? 'info';
     const logger = new Logger({
@@ -117,6 +105,11 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: 
             validateNonBuildCommandOptions(argv);
         }
 
+        const tasks = await getTasksFromCommandOptions(argv);
+        if (!tasks.length) {
+            throw new Error(`${colors.lightRed('Error:')} No active task found for '${argv.task}'.`);
+        }
+
         const taskHandler = new TaskHandler({
             logger,
             logLevel,
@@ -124,20 +117,11 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: 
             dryRun: argv.dryRun
         });
 
-        const tasks = await getTasksFromCommandOptions(argv);
-
-        if (!tasks.length) {
-            throw new Error(`${colors.lightRed('Error:')} No active task found for '${argv.task}'.`);
-        }
-
         await taskHandler.handleTasks(...tasks);
     } catch (err) {
         if (!err) {
-            if (process.exitCode === 0) {
-                process.exitCode = 1;
-            }
-
-            return;
+            logger.error('Unhandled error occours.');
+            process.exit(1);
         }
 
         if (err instanceof ExitCodeError) {
@@ -147,12 +131,14 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: 
                 logger.error(err.message);
             }
 
+            // TODO: To review
             throw err;
         } else {
             if ((err as Error).message) {
                 logger.error((err as Error).message);
             }
 
+            // TODO: To review
             throw new ExitCodeError(1, err);
         }
     }
