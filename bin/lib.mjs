@@ -7,37 +7,55 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const thisPackageName = 'lib-tools';
 
+const pathExists = (p) =>
+    fs
+        .access(p)
+        .then(() => true)
+        .catch(() => false);
+
 const getCliInfo = async () => {
-    let packageJsonPath = '';
+    let packageJsonPath;
 
     try {
         // TODO: experimental
         // import.meta.resolve(...);
-
-        // const require = createRequire(import.meta.url);
-        const require = createRequire(process.cwd() + '/');
-        packageJsonPath = require.resolve(`${thisPackageName}/package.json`);
-    } catch (err) {
-        // console.error(err);
-    }
+        const cwdRequire = createRequire(process.cwd() + '/');
+        packageJsonPath = cwdRequire.resolve(`${thisPackageName}/package.json`);
+    } catch (_) {}
 
     if (!packageJsonPath) {
-        packageJsonPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json');
+        const testPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json');
+        if (await pathExists(testPath)) {
+            packageJsonPath = testPath;
+        }
     }
 
-    const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
-    const packageJson = JSON.parse(content);
-    const version = packageJson.version;
+    let cliPath;
+    let cliVersion;
 
-    const cliPath = path.resolve(
-        path.dirname(packageJsonPath),
-        packageJson.exports?.['.']?.import ?? packageJson.module ?? packageJson.main
-    );
+    if (packageJsonPath) {
+        const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
+        const packageJson = JSON.parse(content);
+        const cliEntry = packageJson.exports?.['./cli']?.default;
+        const testCliPath = cliEntry ? path.resolve(path.dirname(packageJsonPath), cliEntry) : undefined;
 
-    return {
-        version,
-        cliPath
-    };
+        if (packageJson.name === thisPackageName && testCliPath && (await pathExists(testCliPath))) {
+            cliPath = testCliPath;
+            cliVersion = packageJson.version;
+        }
+    }
+
+    if (cliPath && cliVersion) {
+        return {
+            cliPath,
+            version: cliVersion
+        };
+    } else {
+        return {
+            cliPath: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../cli/index.js'),
+            version: '0.0.0-dev'
+        };
+    }
 };
 
 const runCli = async () => {
@@ -48,4 +66,7 @@ const runCli = async () => {
     await cliModule.default({ version: cliInfo.version });
 };
 
-void runCli();
+void runCli().catch((err) => {
+    console.error(`Unhandled error occours.${err ? `\n${err}` : ''}`);
+    process.exit(1);
+});
