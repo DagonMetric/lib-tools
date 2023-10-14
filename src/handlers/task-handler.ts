@@ -4,11 +4,11 @@ import { pathToFileURL } from 'node:url';
 import { colors } from '../utils/colors.js';
 import { dashCaseToCamelCase } from '../utils/dash-case-to-camel-case.js';
 import { Logger, LoggerBase } from '../utils/logger.js';
-import { resolvePath } from '../utils/path-helpers.js';
+import { findUp, normalizePathToPOSIXStyle } from '../utils/path-helpers.js';
 
 import { BuildTask } from './build-task.js';
 import { CustomTask } from './custom-task.js';
-import { ExitCodeError, InvalidConfigError } from './exceptions/index.js';
+import { InvalidConfigError } from './exceptions/index.js';
 import { HandlerOptions } from './handler-options.js';
 
 import { build } from './internals/build/index.js';
@@ -24,11 +24,10 @@ function checkDefined<T extends {}>(value: T | undefined): T {
 export class TaskHandler {
     private readonly options: HandlerOptions;
     private readonly logger: LoggerBase;
+    private readonly addedTasks = new WeakMap<BuildTask | CustomTask, Promise<void>>();
+    private readonly startTimes = new WeakMap<BuildTask | CustomTask, number>();
 
-    private _addedTasks = new WeakMap<BuildTask | CustomTask, Promise<void>>();
-    private _startTimes = new WeakMap<BuildTask | CustomTask, number>();
-
-    private _errored = false;
+    private errored = false;
 
     constructor(options?: Partial<HandlerOptions>) {
         const logLevel = options?.logLevel ?? 'info';
@@ -52,14 +51,14 @@ export class TaskHandler {
 
         const results = await Promise.allSettled(
             sortedTasks.map((task) => {
-                const cached = this._addedTasks.get(task);
+                const cached = this.addedTasks.get(task);
                 if (cached) {
                     return cached;
                 }
 
-                const promise = this._handleTaskCore(task);
+                const promise = this.handleTaskCore(task);
 
-                this._addedTasks.set(task, promise);
+                this.addedTasks.set(task, promise);
 
                 return promise;
             })
@@ -73,9 +72,9 @@ export class TaskHandler {
     }
 
     protected onTaskStart(task: BuildTask | CustomTask): void {
-        this._startTimes.set(task, Date.now());
+        this.startTimes.set(task, Date.now());
 
-        if (this._errored) {
+        if (this.errored) {
             return;
         }
 
@@ -84,12 +83,12 @@ export class TaskHandler {
     }
 
     protected onTaskFinish(task: BuildTask | CustomTask): void {
-        if (this._errored) {
-            return; // Skip logging.
+        if (this.errored) {
+            return;
         }
 
         const taskPath = task.projectName ? `${task.projectName}/${task.taskName}` : task.taskName;
-        const duration = Date.now() - checkDefined(this._startTimes.get(task));
+        const duration = Date.now() - checkDefined(this.startTimes.get(task));
 
         this.logger.groupEnd();
         this.logger.info(
@@ -100,13 +99,13 @@ export class TaskHandler {
     }
 
     protected onTaskError(task: BuildTask | CustomTask, err: unknown): void {
-        if (this._errored) {
+        if (this.errored) {
             return;
         }
 
-        this._errored = true;
+        this.errored = true;
         const taskPath = task.projectName ? `${task.projectName}/${task.taskName}` : task.taskName;
-        const duration = Date.now() - checkDefined(this._startTimes.get(task));
+        const duration = Date.now() - checkDefined(this.startTimes.get(task));
 
         this.logger.groupEnd();
         this.logger.error(
@@ -115,39 +114,18 @@ export class TaskHandler {
             )}`
         );
 
-        if (!err) {
-            if (process.exitCode === 0) {
-                process.exitCode = 1;
-            }
-
-            return;
-        }
-
-        if (err instanceof ExitCodeError) {
-            process.exitCode = err.exitCode;
-            // TODO: message duplicated?
-            if (err.message) {
-                this.logger.error(err.message);
-            }
-        } else {
-            if (process.exitCode === 0) {
-                process.exitCode = 1;
-            }
-
-            this.logger.error((err as Error).message ?? err);
-        }
+        throw err;
     }
 
-    private async _handleTaskCore(task: Readonly<BuildTask> | Readonly<CustomTask>): Promise<void> {
+    private async handleTaskCore(task: Readonly<BuildTask> | Readonly<CustomTask>): Promise<void> {
         try {
             this.onTaskStart(task);
 
             if (task.taskCategory === 'build') {
                 await build(task, this.options);
             } else {
-                const configLocation = task.projectName
-                    ? `projects/${task.projectName}/tasks/${task.taskName}/handler`
-                    : `tasks/${task.taskName}/handler`;
+                const taskLocation = `tasks/${task.taskName}/handler`;
+                const configLocation = task.projectName ? `projects/${task.projectName}/${taskLocation}` : taskLocation;
                 const handlerStr = task.handler.trim();
 
                 if (handlerStr.toLocaleLowerCase().startsWith('exec:')) {
@@ -170,8 +148,17 @@ export class TaskHandler {
                         throw new InvalidConfigError('No valid exec command.', task.configPath, configLocation);
                     }
                 } else {
-                    const projectRoot = task.projectRoot;
-                    const handlerPath = resolvePath(projectRoot, handlerStr);
+                    const { workspaceRoot, projectRoot } = task;
+
+                    const handlerPath = await findUp(normalizePathToPOSIXStyle(handlerStr), projectRoot, workspaceRoot);
+                    if (!handlerPath) {
+                        throw new InvalidConfigError(
+                            `Handler module '${handlerStr}' doesn't exist.`,
+                            task.configPath,
+                            configLocation
+                        );
+                    }
+
                     const handlerModule = (await import(pathToFileURL(handlerPath).toString())) as {};
 
                     const taskNameCamelCase = dashCaseToCamelCase(task.taskName);
@@ -188,9 +175,10 @@ export class TaskHandler {
                     }
 
                     const taskHandlerFn = nameTaskHander ?? defaultTaskHander;
+
                     if (!taskHandlerFn) {
                         throw new InvalidConfigError(
-                            'No valid handler function found.',
+                            'No valid default or name export function found.',
                             task.configPath,
                             configLocation
                         );
@@ -203,10 +191,10 @@ export class TaskHandler {
                     }
                 }
             }
+
+            this.onTaskFinish(task);
         } catch (err) {
             this.onTaskError(task, err);
-
-            throw err;
         }
     }
 }

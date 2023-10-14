@@ -206,7 +206,7 @@ async function getTasksFromLibConfig(
         }
     }
 
-    if (!libConfig.projects?.length) {
+    if (!libConfig.projects) {
         throw new InvalidConfigError(
             `No project is defined. Specify project options in 'projects' list.`,
             configPath,
