@@ -7,9 +7,6 @@
 const stripCommentsRegExp =
     /("(?:[^\\"]*(?:\\.)?)*")|('(?:[^\\']*(?:\\.)?)*')|(\/\*(?:\r?\n|.)*?\*\/)|(\/{2,}.*?(?:(?:\r?\n)|$))/g;
 
-/**
- * @internal
- */
 export function stripComments(content: string): string {
     const result = content.replace(stripCommentsRegExp, (match, _0, _1, m3: string, m4: string) => {
         // Only one of m1, m2, m3, m4 matches

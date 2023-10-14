@@ -52,9 +52,6 @@ async function getStats(absolutePath: string, useCache = false): Promise<Stats> 
     return stats;
 }
 
-/**
- * @internal
- */
 export function normalizePathToPOSIXStyle(p: string): string {
     if (!p?.trim().length) {
         return '';
@@ -110,9 +107,6 @@ export function normalizePathToPOSIXStyle(p: string): string {
     return p;
 }
 
-/**
- * @internal
- */
 export function isWindowsStyleAbsolute(p: string): boolean {
     if (!p) {
         return false;
@@ -123,9 +117,6 @@ export function isWindowsStyleAbsolute(p: string): boolean {
     return path.win32.isAbsolute(p);
 }
 
-/**
- * @internal
- */
 export function isSamePath(p1: string, p2: string, ignoreCase = false): boolean {
     if (p1 === p2) {
         return true;
@@ -146,9 +137,6 @@ export function isSamePath(p1: string, p2: string, ignoreCase = false): boolean 
     return path.relative(normalizedP1, normalizedP2) === '';
 }
 
-/**
- * @internal
- */
 export function isInFolder(parentDir: string, checkPath: string, ignoreCase = false): boolean {
     parentDir = normalizePathToPOSIXStyle(parentDir);
     checkPath = normalizePathToPOSIXStyle(checkPath);
@@ -189,18 +177,12 @@ export function isInFolder(parentDir: string, checkPath: string, ignoreCase = fa
     return false;
 }
 
-/**
- * @internal
- */
 export function resolvePath(rootPath: string, currentPath: string): string {
     return process.platform === 'win32' && isWindowsStyleAbsolute(currentPath)
         ? path.resolve(normalizePathToPOSIXStyle(currentPath))
         : path.resolve(rootPath, normalizePathToPOSIXStyle(currentPath));
 }
 
-/**
- * @internal
- */
 export async function pathExists(p: string, useCache = false): Promise<boolean> {
     if (useCache) {
         const cached = pathExistsCache.get(p);
@@ -223,9 +205,6 @@ export async function pathExists(p: string, useCache = false): Promise<boolean> 
         });
 }
 
-/**
- * @internal
- */
 export async function findUp(
     pathToFind: string,
     startDir: string | string[] | null,
