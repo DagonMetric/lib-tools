@@ -50,10 +50,13 @@ function toLogLevel(logLevelString: LogLevelStrings): LogLevel {
 }
 
 export class Logger implements LoggerBase {
+    private readonly options: LoggerOptions;
     private readonly _console: Console;
     private _minLogLevel: LogLevel = LogLevel.Info;
 
-    constructor(private readonly options: LoggerOptions) {
+    constructor(options: LoggerOptions = {}) {
+        this.options = options ?? {};
+
         if (this.options.logLevel != null) {
             this._minLogLevel =
                 typeof this.options.logLevel === 'string' ? toLogLevel(this.options.logLevel) : this.options.logLevel;
