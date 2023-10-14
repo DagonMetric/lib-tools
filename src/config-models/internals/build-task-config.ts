@@ -1,4 +1,5 @@
-import { BuildTaskOptions } from './build-task-options.js';
+import { BuildTaskOptions } from '../build-task-options.js';
+
 import { OverridableTaskOptions } from './overridable-task-options.js';
 
 /**

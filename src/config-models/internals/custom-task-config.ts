@@ -1,4 +1,5 @@
-import { CustomTaskOptions } from './custom-task-options.js';
+import { CustomTaskOptions } from '../custom-task-options.js';
+
 import { OverridableTaskOptions } from './overridable-task-options.js';
 
 /**

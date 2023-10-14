@@ -1,4 +1,4 @@
-import { TaskOptions } from './task-options.js';
+import { TaskOptions } from '../task-options.js';
 
 /**
  * Overridable task options.
