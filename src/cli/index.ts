@@ -1,50 +1,22 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { colors, findUp, readJsonWithComments } from '../utils/index.js';
+import { colors } from '../utils/index.js';
 
 import * as runCommand from './commands/run.js';
-
-const thisPackageName = 'lib-tools';
 
 /**
  * @internal
  */
 export interface CliInfo {
-    version?: string;
+    version: string;
 }
 
 /**
  * @internal
  */
-export default async function (cliInfo?: Readonly<CliInfo>): Promise<void> {
-    let packageVersion = cliInfo?.version && typeof cliInfo.version === 'string' ? cliInfo.version : null;
-
-    if (!packageVersion) {
-        const thisDir = path.dirname(fileURLToPath(import.meta.url));
-
-        const packageJsonPath = await findUp(
-            'package.json',
-            path.resolve(thisDir, './'),
-            path.resolve(thisDir, '../../'),
-            true
-        );
-
-        if (!packageJsonPath) {
-            throw new Error('Could not find package.json file.');
-        }
-
-        const { name, version } = (await readJsonWithComments(packageJsonPath)) as { name: string; version: string };
-
-        if (!name || !version || name !== thisPackageName) {
-            throw new Error('Could not find package.json file.');
-        }
-
-        packageVersion = version;
-    }
+export default async function (cliInfo: Readonly<CliInfo>): Promise<void> {
+    const packageVersion = cliInfo.version;
 
     const yargsInstance = yargs(hideBin(process.argv));
     await yargsInstance

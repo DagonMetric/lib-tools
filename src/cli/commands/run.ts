@@ -1,8 +1,7 @@
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
 import { BuildCommandOptions, CommandOptions } from '../../config-models/index.js';
-import { ExitCodeError, InvalidCommandOptionError } from '../../exceptions/index.js';
-import { TaskHandler, getTasksFromCommandOptions } from '../../handlers/index.js';
+import { ExitCodeError, InvalidCommandOptionError, TaskHandler } from '../../handlers/index.js';
 import { Logger, colors } from '../../utils/index.js';
 
 function validateNonBuildCommandOptions(argv: CommandOptions): void {
@@ -113,18 +112,18 @@ export async function handler(argv: ArgumentsCamelCase<CommandOptions & { task: 
             validateNonBuildCommandOptions(argv);
         }
 
-        const tasks = await getTasksFromCommandOptions(argv);
-
-        if (!tasks.length) {
-            throw new Error(`${colors.lightRed('Error:')} No active task found for '${argv.task}'.`);
-        }
-
         const taskHandler = new TaskHandler({
             logger,
             logLevel,
             env: argv.env,
             dryRun: argv.dryRun
         });
+
+        const tasks = await taskHandler.getTasksFromCommandOptions(argv);
+
+        if (!tasks.length) {
+            throw new Error(`${colors.lightRed('Error:')} No active task found for '${argv.task}'.`);
+        }
 
         await taskHandler.handleTasks(...tasks);
     } catch (err) {
