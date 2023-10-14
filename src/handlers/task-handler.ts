@@ -1,14 +1,20 @@
 import assert from 'node:assert';
 import { pathToFileURL } from 'node:url';
 
-import { ExitCodeError, InvalidConfigError } from '../exceptions/index.js';
-import { Logger, colors, dashCaseToCamelCase, resolvePath } from '../utils/index.js';
+import { CommandOptions } from '../config-models/index.js';
+import { Logger, colors } from '../utils/index.js';
+import { dashCaseToCamelCase, resolvePath } from '../utils/internals/index.js';
 
-import { build } from './build/index.js';
-import { exec } from './exec.js';
-import { BuildTask, CustomTask, HandlerContext } from './interfaces/index.js';
+import { BuildTask } from './build-task.js';
+import { CustomTask } from './custom-task.js';
+import { ExitCodeError, InvalidConfigError } from './exceptions/index.js';
+import { HandlerOptions } from './handler-options.js';
+import { build } from './internals/build/index.js';
+import { exec } from './internals/exec.js';
+import { getTasksFromCommandOptions, getTasksFromLibConfigFile } from './internals/get-tasks.js';
+import { TaskFilter } from './task-filter.js';
 
-type CustomTaskHandlerFn = (task: Readonly<CustomTask>, context: Readonly<HandlerContext>) => Promise<void> | void;
+type CustomTaskHandlerFn = (task: Readonly<CustomTask>, options: Readonly<HandlerOptions>) => Promise<void> | void;
 
 function checkDefined<T extends {}>(value: T | undefined): T {
     assert(value !== undefined);
@@ -18,13 +24,13 @@ function checkDefined<T extends {}>(value: T | undefined): T {
 export class TaskHandler {
     private _addedTasks = new WeakMap<BuildTask | CustomTask, Promise<void>>();
     private _startTimes = new WeakMap<BuildTask | CustomTask, number>();
-    private readonly _context: HandlerContext;
+    private readonly _context: HandlerOptions;
     private _errored = false;
 
-    constructor(context?: Partial<HandlerContext>) {
-        const logLevel = context?.logLevel ?? 'info';
+    constructor(options?: Partial<HandlerOptions>) {
+        const logLevel = options?.logLevel ?? 'info';
         const logger =
-            context?.logger ??
+            options?.logger ??
             new Logger({
                 logLevel,
                 warnPrefix: colors.lightYellow('Warning:'),
@@ -33,9 +39,24 @@ export class TaskHandler {
         this._context = {
             logLevel,
             logger,
-            dryRun: context?.dryRun ?? false,
-            env: context?.env ?? undefined
+            dryRun: options?.dryRun ?? false,
+            env: options?.env ?? undefined
         };
+    }
+
+    async getTasksFromCommandOptions(
+        cmdOptions: Readonly<CommandOptions & { task: string }>
+    ): Promise<(BuildTask | CustomTask)[]> {
+        // TODO:
+        return getTasksFromCommandOptions(cmdOptions);
+    }
+
+    async getTasksFromLibConfigFile(
+        configPath: string,
+        filter?: Readonly<TaskFilter> | null,
+        env?: string
+    ): Promise<(BuildTask | CustomTask)[]> {
+        return getTasksFromLibConfigFile(configPath, filter, env);
     }
 
     async handleTasks(...tasks: readonly (BuildTask | CustomTask)[]): Promise<void> {
