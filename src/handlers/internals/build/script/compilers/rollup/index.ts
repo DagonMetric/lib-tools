@@ -5,13 +5,14 @@ import * as path from 'node:path';
 import { InputOptions, InputPluginOption, ModuleFormat, OutputOptions, RollupBuild, RollupError, rollup } from 'rollup';
 import { CompilerOptions } from 'typescript';
 
-import { LoggerBase, colors } from '../../../../../../utils/index.js';
 import {
+    LoggerBase,
+    colors,
     dashCaseToCamelCase,
     formatSizeInBytes,
     normalizePathToPOSIXStyle,
     pathExists
-} from '../../../../../../utils/internals/index.js';
+} from '../../../../../../utils/index.js';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 

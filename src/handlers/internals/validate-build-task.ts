@@ -4,13 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { BuildTaskOptions, CommandOptions } from '../../config-models/index.js';
-import {
-    isInFolder,
-    isSamePath,
-    normalizePathToPOSIXStyle,
-    pathExists,
-    resolvePath
-} from '../../utils/internals/index.js';
+import { isInFolder, isSamePath, normalizePathToPOSIXStyle, pathExists, resolvePath } from '../../utils/index.js';
 
 import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
 

@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 
 import { PackageJsonOptions } from '../../config-models/index.js';
-import { findUp, isInFolder, isSamePath, readJsonWithComments } from '../../utils/internals/index.js';
+import { findUp, isInFolder, isSamePath, readJsonWithComments } from '../../utils/index.js';
 
 import { BuildTask } from '../build-task.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';

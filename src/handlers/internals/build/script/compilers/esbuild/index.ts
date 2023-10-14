@@ -3,8 +3,13 @@ import * as esbuild from 'esbuild';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { LoggerBase, colors } from '../../../../../../utils/index.js';
-import { formatSizeInBytes, normalizePathToPOSIXStyle, pathExists } from '../../../../../../utils/internals/index.js';
+import {
+    LoggerBase,
+    colors,
+    formatSizeInBytes,
+    normalizePathToPOSIXStyle,
+    pathExists
+} from '../../../../../../utils/index.js';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 

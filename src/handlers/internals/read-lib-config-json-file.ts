@@ -1,5 +1,5 @@
 import { LibConfig } from '../../config-models/internals/index.js';
-import { readJsonWithComments } from '../../utils/internals/index.js';
+import { readJsonWithComments } from '../../utils/index.js';
 
 import { validateLibConfig } from './validate-lib-config.js';
 

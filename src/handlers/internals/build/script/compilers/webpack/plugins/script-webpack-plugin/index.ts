@@ -2,8 +2,13 @@ import * as path from 'node:path';
 
 import { Compiler, StatsAsset, sources } from 'webpack';
 
-import { LogLevelStrings, LoggerBase, colors } from '../../../../../../../../utils/index.js';
-import { formatSizeInBytes, normalizePathToPOSIXStyle } from '../../../../../../../../utils/internals/index.js';
+import {
+    LogLevelStrings,
+    LoggerBase,
+    colors,
+    formatSizeInBytes,
+    normalizePathToPOSIXStyle
+} from '../../../../../../../../utils/index.js';
 
 import { CompilationError } from '../../../../../../../exceptions/index.js';
 

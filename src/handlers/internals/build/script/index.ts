@@ -11,8 +11,10 @@ import {
     ScriptOptions,
     ScriptTargetStrings
 } from '../../../../config-models/index.js';
-import { LogLevelStrings, LoggerBase, colors } from '../../../../utils/index.js';
 import {
+    LogLevelStrings,
+    LoggerBase,
+    colors,
     dashCaseToCamelCase,
     findUp,
     isInFolder,
@@ -20,7 +22,7 @@ import {
     normalizePathToPOSIXStyle,
     pathExists,
     resolvePath
-} from '../../../../utils/internals/index.js';
+} from '../../../../utils/index.js';
 
 import { BuildTask } from '../../../build-task.js';
 import { CompilationError, InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';

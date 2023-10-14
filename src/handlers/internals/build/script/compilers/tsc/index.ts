@@ -2,8 +2,13 @@ import * as path from 'node:path';
 
 import { CompilerOptions, SourceFile } from 'typescript';
 
-import { LoggerBase, colors } from '../../../../../../utils/index.js';
-import { isInFolder, isSamePath, normalizePathToPOSIXStyle } from '../../../../../../utils/internals/index.js';
+import {
+    LoggerBase,
+    colors,
+    isInFolder,
+    isSamePath,
+    normalizePathToPOSIXStyle
+} from '../../../../../../utils/index.js';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 

@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { CommandOptions } from '../../config-models/index.js';
-import { pathExists, resolvePath } from '../../utils/internals/index.js';
+import { pathExists, resolvePath } from '../../utils/index.js';
 
 import { InvalidCommandOptionError } from '../exceptions/index.js';
 

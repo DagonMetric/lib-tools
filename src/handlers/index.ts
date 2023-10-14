@@ -4,4 +4,5 @@ export * from './build-task.js';
 export * from './custom-task.js';
 export * from './handler-options.js';
 export * from './task-filter.js';
+export * from './get-tasks.js';
 export * from './task-handler.js';

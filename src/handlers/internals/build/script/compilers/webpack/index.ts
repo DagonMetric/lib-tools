@@ -4,8 +4,7 @@ import * as path from 'node:path';
 import { CompilerOptions } from 'typescript';
 import webpackDefault, { Configuration, StatsAsset } from 'webpack';
 
-import { LoggerBase, colors } from '../../../../../../utils/index.js';
-import { normalizePathToPOSIXStyle } from '../../../../../../utils/internals/index.js';
+import { LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../../utils/index.js';
 
 import { CompilationError } from '../../../../../exceptions/index.js';
 

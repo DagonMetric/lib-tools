@@ -1,24 +1,23 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { CommandOptions } from '../../config-models/index.js';
-import { BuildTaskConfig, CustomTaskConfig, LibConfig } from '../../config-models/internals/index.js';
-import { findUp, isInFolder, isSamePath, pathExists, resolvePath } from '../../utils/internals/index.js';
+import { CommandOptions } from '../config-models/index.js';
+import { BuildTaskConfig, CustomTaskConfig, LibConfig } from '../config-models/internals/index.js';
+import { findUp, isInFolder, isSamePath, pathExists, resolvePath } from '../utils/index.js';
 
-import { BuildTask } from '../build-task.js';
-import { CustomTask } from '../custom-task.js';
-import { InvalidCommandOptionError, InvalidConfigError } from '../exceptions/index.js';
-import { TaskFilter } from '../task-filter.js';
-import { TaskInfo } from '../task-info.js';
-
-import { applyEnvOverrides } from './apply-env-overrides.js';
-import { applyProjectExtends } from './apply-project-extends.js';
-import { getParsedCommandOptions } from './get-parsed-command-options.js';
-import { ParsedCommandOptions } from './parsed-command-options.js';
-import { readLibConfigJsonFile } from './read-lib-config-json-file.js';
-import { validateBuildTask } from './validate-build-task.js';
-import { validateCustomTask } from './validate-custom-task.js';
-import { validateLibConfig } from './validate-lib-config.js';
+import { BuildTask } from './build-task.js';
+import { CustomTask } from './custom-task.js';
+import { InvalidCommandOptionError, InvalidConfigError } from './exceptions/index.js';
+import { applyEnvOverrides } from './internals/apply-env-overrides.js';
+import { applyProjectExtends } from './internals/apply-project-extends.js';
+import { getParsedCommandOptions } from './internals/get-parsed-command-options.js';
+import { ParsedCommandOptions } from './internals/parsed-command-options.js';
+import { readLibConfigJsonFile } from './internals/read-lib-config-json-file.js';
+import { validateBuildTask } from './internals/validate-build-task.js';
+import { validateCustomTask } from './internals/validate-custom-task.js';
+import { validateLibConfig } from './internals/validate-lib-config.js';
+import { TaskFilter } from './task-filter.js';
+import { TaskInfo } from './task-info.js';
 
 const libConfigValidationStatusCache = new Map<string, true>();
 
@@ -291,9 +290,6 @@ async function getTasksFromLibConfig(
     return tasks;
 }
 
-/**
- * @internal
- */
 export async function getTasksFromCommandOptions(
     cmdOptions: Readonly<CommandOptions & { task: string }>
 ): Promise<(BuildTask | CustomTask)[]> {
@@ -362,9 +358,6 @@ export async function getTasksFromCommandOptions(
     }
 }
 
-/**
- * @internal
- */
 export async function getTasksFromLibConfigFile(
     configPath: string,
     filter?: Readonly<TaskFilter> | null,

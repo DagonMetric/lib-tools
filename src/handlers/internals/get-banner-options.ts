@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { BannerOptions, SubstitutionEntry } from '../../config-models/index.js';
-import { findUp } from '../../utils/internals/index.js';
+import { findUp } from '../../utils/index.js';
 
 import { BuildTask } from '../build-task.js';
 import { InvalidConfigError } from '../exceptions/index.js';

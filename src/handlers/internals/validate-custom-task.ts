@@ -1,5 +1,5 @@
 import { CustomTaskOptions } from '../../config-models/index.js';
-import { findUp, normalizePathToPOSIXStyle } from '../../utils/internals/index.js';
+import { findUp, normalizePathToPOSIXStyle } from '../../utils/index.js';
 
 import { InvalidConfigError } from '../exceptions/index.js';
 

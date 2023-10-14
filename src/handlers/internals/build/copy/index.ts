@@ -5,16 +5,18 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { CopyEntry } from '../../../../config-models/index.js';
-import { LogLevelStrings, LoggerBase, colors } from '../../../../utils/index.js';
 import {
     AbsolutePathInfo,
+    LogLevelStrings,
+    LoggerBase,
+    colors,
     getAbsolutePathInfoes,
     isInFolder,
     isSamePath,
     normalizePathToPOSIXStyle,
     pathExists,
     resolvePath
-} from '../../../../utils/internals/index.js';
+} from '../../../../utils/index.js';
 
 import { BuildTask } from '../../../build-task.js';
 import { HandlerOptions } from '../../../handler-options.js';

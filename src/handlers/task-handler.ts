@@ -1,18 +1,18 @@
 import assert from 'node:assert';
 import { pathToFileURL } from 'node:url';
 
-import { CommandOptions } from '../config-models/index.js';
-import { Logger, colors } from '../utils/index.js';
-import { dashCaseToCamelCase, resolvePath } from '../utils/internals/index.js';
+import { colors } from '../utils/colors.js';
+import { dashCaseToCamelCase } from '../utils/dash-case-to-camel-case.js';
+import { Logger, LoggerBase } from '../utils/logger.js';
+import { resolvePath } from '../utils/path-helpers.js';
 
 import { BuildTask } from './build-task.js';
 import { CustomTask } from './custom-task.js';
 import { ExitCodeError, InvalidConfigError } from './exceptions/index.js';
 import { HandlerOptions } from './handler-options.js';
+
 import { build } from './internals/build/index.js';
 import { exec } from './internals/exec.js';
-import { getTasksFromCommandOptions, getTasksFromLibConfigFile } from './internals/get-tasks.js';
-import { TaskFilter } from './task-filter.js';
 
 type CustomTaskHandlerFn = (task: Readonly<CustomTask>, options: Readonly<HandlerOptions>) => Promise<void> | void;
 
@@ -22,41 +22,29 @@ function checkDefined<T extends {}>(value: T | undefined): T {
 }
 
 export class TaskHandler {
+    private readonly options: HandlerOptions;
+    private readonly logger: LoggerBase;
+
     private _addedTasks = new WeakMap<BuildTask | CustomTask, Promise<void>>();
     private _startTimes = new WeakMap<BuildTask | CustomTask, number>();
-    private readonly _context: HandlerOptions;
+
     private _errored = false;
 
     constructor(options?: Partial<HandlerOptions>) {
         const logLevel = options?.logLevel ?? 'info';
-        const logger =
+        this.logger =
             options?.logger ??
             new Logger({
                 logLevel,
                 warnPrefix: colors.lightYellow('Warning:'),
                 groupIndentation: 4
             });
-        this._context = {
+        this.options = {
             logLevel,
-            logger,
+            logger: this.logger,
             dryRun: options?.dryRun ?? false,
             env: options?.env ?? undefined
         };
-    }
-
-    async getTasksFromCommandOptions(
-        cmdOptions: Readonly<CommandOptions & { task: string }>
-    ): Promise<(BuildTask | CustomTask)[]> {
-        // TODO:
-        return getTasksFromCommandOptions(cmdOptions);
-    }
-
-    async getTasksFromLibConfigFile(
-        configPath: string,
-        filter?: Readonly<TaskFilter> | null,
-        env?: string
-    ): Promise<(BuildTask | CustomTask)[]> {
-        return getTasksFromLibConfigFile(configPath, filter, env);
     }
 
     async handleTasks(...tasks: readonly (BuildTask | CustomTask)[]): Promise<void> {
@@ -92,7 +80,7 @@ export class TaskHandler {
         }
 
         const taskPath = task.projectName ? `${task.projectName}/${task.taskName}` : task.taskName;
-        this._context.logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
+        this.logger.group(`\u25B7 ${colors.lightBlue(taskPath)}`);
     }
 
     protected onTaskFinish(task: BuildTask | CustomTask): void {
@@ -103,8 +91,8 @@ export class TaskHandler {
         const taskPath = task.projectName ? `${task.projectName}/${task.taskName}` : task.taskName;
         const duration = Date.now() - checkDefined(this._startTimes.get(task));
 
-        this._context.logger.groupEnd();
-        this._context.logger.info(
+        this.logger.groupEnd();
+        this.logger.info(
             `${colors.lightGreen('\u25B6')} ${colors.lightBlue(taskPath)} ${colors.lightGreen(
                 ` completed in ${duration} ms.`
             )}`
@@ -120,8 +108,8 @@ export class TaskHandler {
         const taskPath = task.projectName ? `${task.projectName}/${task.taskName}` : task.taskName;
         const duration = Date.now() - checkDefined(this._startTimes.get(task));
 
-        this._context.logger.groupEnd();
-        this._context.logger.error(
+        this.logger.groupEnd();
+        this.logger.error(
             `${colors.lightRed('\u2716')} ${colors.lightBlue(taskPath)} ${colors.lightRed(
                 ` completed with error in ${duration} ms.`
             )}`
@@ -139,14 +127,14 @@ export class TaskHandler {
             process.exitCode = err.exitCode;
             // TODO: message duplicated?
             if (err.message) {
-                this._context.logger.error(err.message);
+                this.logger.error(err.message);
             }
         } else {
             if (process.exitCode === 0) {
                 process.exitCode = 1;
             }
 
-            this._context.logger.error((err as Error).message ?? err);
+            this.logger.error((err as Error).message ?? err);
         }
     }
 
@@ -155,7 +143,7 @@ export class TaskHandler {
             this.onTaskStart(task);
 
             if (task.taskCategory === 'build') {
-                await build(task, this._context);
+                await build(task, this.options);
             } else {
                 const configLocation = task.projectName
                     ? `projects/${task.projectName}/tasks/${task.taskName}/handler`
@@ -167,17 +155,17 @@ export class TaskHandler {
                     if (handlerStr.length > index) {
                         const execCmd = handlerStr.substring(index).trim();
                         const envObj: Record<string, string | undefined> = { ...process.env };
-                        envObj.logLevel = this._context.logLevel;
+                        envObj.logLevel = this.options.logLevel;
 
-                        if (this._context.env) {
-                            envObj[this._context.env] = 'true';
+                        if (this.options.env) {
+                            envObj[this.options.env] = 'true';
                         }
 
-                        if (this._context.dryRun) {
+                        if (this.options.dryRun) {
                             envObj.dryRun = 'true';
                         }
 
-                        await exec(execCmd, this._context.logger, envObj);
+                        await exec(execCmd, this.logger, envObj);
                     } else {
                         throw new InvalidConfigError('No valid exec command.', task.configPath, configLocation);
                     }
@@ -208,7 +196,7 @@ export class TaskHandler {
                         );
                     }
 
-                    const result = taskHandlerFn(task, this._context);
+                    const result = taskHandlerFn(task, this.options);
 
                     if (result && result instanceof Promise) {
                         await result;

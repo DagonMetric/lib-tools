@@ -10,14 +10,16 @@ import type { FileImporter } from 'sass';
 import webpackDefault, { Configuration, LoaderContext, RuleSetUseItem, StatsAsset } from 'webpack';
 
 import { StyleMinifyOptions, StyleOptions } from '../../../../config-models/index.js';
-import { LogLevelStrings, LoggerBase, colors } from '../../../../utils/index.js';
 import {
+    LogLevelStrings,
+    LoggerBase,
+    colors,
     findUp,
     normalizePathToPOSIXStyle,
     pathExists,
     readJsonWithComments,
     resolvePath
-} from '../../../../utils/internals/index.js';
+} from '../../../../utils/index.js';
 
 import { BuildTask } from '../../../build-task.js';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.js';
