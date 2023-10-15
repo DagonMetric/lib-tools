@@ -1,5 +1,13 @@
-import { CommandOptions } from '../../config-models/index.js';
-import { colors } from '../../utils/index.js';
+/** *****************************************************************************************
+ * @license
+ * Copyright (c) DagonMetric. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ ****************************************************************************************** */
+
+import { CommandOptions } from '../../config-models/index.mjs';
+import { colors } from '../../utils/index.mjs';
 
 function formatErrorMessage(
     argName: keyof CommandOptions | null | undefined,

@@ -1,6 +1,14 @@
+/** *****************************************************************************************
+ * @license
+ * Copyright (c) DagonMetric. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ ****************************************************************************************** */
+
 import { ErrorObject } from 'ajv';
 
-import { colors } from '../../utils/index.js';
+import { colors } from '../../utils/index.mjs';
 
 const seeMoreWikiLink = 'https://github.com/DagonMetric/lib-tools/wiki/Lib-Tools-Workspace-Configuration';
 
