@@ -12,7 +12,7 @@ const generateJsonSchemaFile = async () => {
             // -i, --id
             schemaId: 'lib-tools://schemas/schema.json',
             // -p, --path
-            path: '../src/config-models/**/*.ts',
+            // path: '../src/config-models/**/*.mts',
             // -f, --tsconfig
             tsconfig: path.resolve(path.dirname(fileURLToPath(import.meta.url)), './tsconfig.schema.json')
             // -t, --type
