@@ -1,13 +1,13 @@
 import { ArgumentsCamelCase, Argv } from 'yargs';
 
-import { BuildCommandOptions, CommandOptions } from '../../config-models/index.js';
+import { BuildCommandOptions, CommandOptions } from '../../config-models/index.mjs';
 import {
     ExitCodeError,
     InvalidCommandOptionError,
     TaskHandler,
     getTasksFromCommandOptions
-} from '../../handlers/index.js';
-import { Logger, colors } from '../../utils/index.js';
+} from '../../handlers/index.mjs';
+import { Logger, colors } from '../../utils/index.mjs';
 
 function validateNonBuildCommandOptions(argv: CommandOptions): void {
     const buildOnlyArgNames: (keyof BuildCommandOptions)[] = ['outDir', 'copy', 'style', 'script', 'packageVersion'];
