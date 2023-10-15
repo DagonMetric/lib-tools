@@ -1,11 +1,22 @@
 #!/usr/bin/env node
+/** *****************************************************************************************
+ * @license
+ * Copyright (c) DagonMetric. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ ****************************************************************************************** */
+
+'use strict';
 
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const thisPackageName = 'lib-tools';
+const cliName = 'lib-tools';
+
+const thisDir = path.dirname(fileURLToPath(import.meta.url));
 
 const pathExists = (p) =>
     fs
@@ -20,14 +31,16 @@ const getCliInfo = async () => {
         // TODO: experimental
         // import.meta.resolve(...);
         const cwdRequire = createRequire(process.cwd() + '/');
-        packageJsonPath = cwdRequire.resolve(`${thisPackageName}/package.json`);
+        packageJsonPath = cwdRequire.resolve(`${cliName}/package.json`);
     } catch (_) {}
 
     if (!packageJsonPath) {
-        const testPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../package.json');
-        if (await pathExists(testPath)) {
-            packageJsonPath = testPath;
-        }
+        try {
+            // TODO: experimental
+            // import.meta.resolve(...);
+            const thisDirRequire = createRequire(thisDir + '/');
+            packageJsonPath = thisDirRequire.resolve(`${cliName}/package.json`);
+        } catch (_) {}
     }
 
     let cliPath;
@@ -36,34 +49,33 @@ const getCliInfo = async () => {
     if (packageJsonPath) {
         const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
         const packageJson = JSON.parse(content);
-        const cliEntry = packageJson.exports?.['./cli']?.default;
-        const testCliPath = cliEntry ? path.resolve(path.dirname(packageJsonPath), cliEntry) : undefined;
+        cliVersion = packageJson.version;
+        const cliExportEntry = packageJson.exports?.['./cli']?.import ?? packageJson.exports?.['./cli']?.default;
+        const testCliPath = cliExportEntry ? path.resolve(path.dirname(packageJsonPath), cliExportEntry) : undefined;
 
-        if (packageJson.name === thisPackageName && testCliPath && (await pathExists(testCliPath))) {
+        if (testCliPath && (await pathExists(testCliPath))) {
             cliPath = testCliPath;
-            cliVersion = packageJson.version;
         }
     }
 
     if (cliPath && cliVersion) {
         return {
             cliPath,
-            version: cliVersion
+            cliName,
+            cliVersion
         };
     } else {
-        return {
-            cliPath: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../cli/index.js'),
-            version: '0.0.0-dev'
-        };
+        console.error('Error: Could not load lib-tools cli.');
+        process.exit(1);
     }
 };
 
 const runCli = async () => {
     const cliInfo = await getCliInfo();
-    process.title = `${thisPackageName} v${cliInfo.version}`;
+
     const cliModule = await import(pathToFileURL(cliInfo.cliPath).toString());
 
-    await cliModule.default({ version: cliInfo.version });
+    await cliModule.default(cliInfo);
 };
 
 void runCli();
