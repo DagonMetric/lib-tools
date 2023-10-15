@@ -1,3 +1,11 @@
+/** *****************************************************************************************
+ * @license
+ * Copyright (c) DagonMetric. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ ****************************************************************************************** */
+
 import { WriteStream } from 'node:tty';
 
 function supportColor(): boolean {
@@ -79,14 +87,21 @@ function colorize(str: string, colorKey: ColorKeys): string {
     return buf.join('');
 }
 
+let _ansiRegExp: RegExp | undefined;
+
 // Copy from https://github.com/chalk/ansi-regex/blob/main/index.js
-function ansiRegex(onlyFirst = false): RegExp {
+function ansiRegExp(onlyFirst = false): RegExp {
+    if (_ansiRegExp) {
+        return _ansiRegExp;
+    }
     const pattern = [
         '[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)',
         '(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))'
     ].join('|');
 
-    return new RegExp(pattern, onlyFirst ? undefined : 'g');
+    _ansiRegExp = new RegExp(pattern, onlyFirst ? undefined : 'g');
+
+    return _ansiRegExp;
 }
 
 export const colors = {
@@ -102,6 +117,6 @@ export const colors = {
     lightBlue: (str: string) => colorize(str, 'lightBlue'),
     lightMagenta: (str: string) => colorize(str, 'lightMagenta'),
     lightCyan: (str: string) => colorize(str, 'lightCyan'),
-    stripColor: (str: string, onlyFirst = false) => str.replace(ansiRegex(onlyFirst), ''),
+    stripColor: (str: string, onlyFirst = false) => str.replace(ansiRegExp(onlyFirst), ''),
     supportColor
 };

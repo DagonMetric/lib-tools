@@ -1,12 +1,17 @@
+/** *****************************************************************************************
+ * @license
+ * Copyright (c) DagonMetric. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ ****************************************************************************************** */
+
 import { glob } from 'glob';
 
 import { Stats } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-/**
- * @internal
- */
 export interface AbsolutePathInfo {
     readonly path: string;
     readonly isSystemRoot: boolean;
@@ -256,9 +261,6 @@ export async function findUp(
     return null;
 }
 
-/**
- * @internal
- */
 export async function getAbsolutePathInfoes(
     globPatternsOrRelativePaths: string[],
     cwd: string,
