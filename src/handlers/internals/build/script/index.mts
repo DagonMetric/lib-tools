@@ -39,7 +39,7 @@ import { getBannerOptions } from '../../get-banner-options.mjs';
 import { PackageJsonInfo, getPackageJsonInfo } from '../../get-package-json-info.mjs';
 import { getSubstitutions } from '../../get-substitutions.mjs';
 
-import { CompileOptions, CompileResult, TsConfigInfo } from './compilers/interfaces.mjs';
+import { CompileAsset, CompileOptions, CompileResult, TsConfigInfo } from './compilers/interfaces.mjs';
 import { setTypescriptModule, ts } from './compilers/tsproxy.mjs';
 
 export type CompilerFn = (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
@@ -134,11 +134,8 @@ export interface ScriptTaskRunnerOptions {
     readonly env: string | undefined;
 }
 
-export interface ScriptOutputAsset {
+export interface ScriptOutputAsset extends CompileAsset {
     readonly moduleFormat: ScriptModuleFormat;
-    readonly path: string;
-    readonly size: number | undefined;
-    readonly isEntry: boolean | undefined;
 }
 
 export interface ScriptResult {
@@ -1180,7 +1177,7 @@ export class ScriptTaskRunner {
                     this.logger.debug('Detecting output file name...');
                 }
 
-                const outFileName = await this.detectOutputFileName(options);
+                const outFileName = await this.detectAndGetOutputFileName(options);
 
                 this.logger.debug(`Output file detected: ${outFileName}`);
 
@@ -1211,7 +1208,7 @@ export class ScriptTaskRunner {
                 this.logger.debug('Detecting output file name...');
             }
 
-            const outFileName = await this.detectOutputFileName(options);
+            const outFileName = await this.detectAndGetOutputFileName(options);
 
             this.logger.debug(`Output file detected: ${outFileName}`);
 
@@ -1274,7 +1271,7 @@ export class ScriptTaskRunner {
         }
     }
 
-    private async detectOutputFileName(
+    private async detectAndGetOutputFileName(
         options: Readonly<{
             entryFilePath: string;
             forTypesOutput: boolean;
