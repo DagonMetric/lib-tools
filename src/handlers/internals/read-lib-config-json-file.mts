@@ -5,8 +5,7 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
-import { LibConfig } from '../../config-models/internals/index.mjs';
+import { LibConfig } from '../../config-models/lib-config.mjs';
 import { readJsonWithComments } from '../../utils/index.mjs';
 
 import { validateLibConfig } from './validate-lib-config.mjs';

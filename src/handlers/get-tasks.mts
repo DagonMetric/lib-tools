@@ -5,12 +5,13 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
+import { BuildTaskConfig } from '../config-models/build-task-config.mjs';
+import { CustomTaskConfig } from '../config-models/custom-task-config.mjs';
 import { CommandOptions } from '../config-models/index.mjs';
-import { BuildTaskConfig, CustomTaskConfig, LibConfig } from '../config-models/internals/index.mjs';
+import { LibConfig } from '../config-models/lib-config.mjs';
 import { findUp, isInFolder, isSamePath, pathExists, resolvePath } from '../utils/index.mjs';
 
 import { BuildTask } from './build-task.mjs';

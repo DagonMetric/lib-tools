@@ -5,10 +5,9 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
 import Ajv, { Schema } from 'ajv';
 
-import { LibConfig } from '../../config-models/internals/index.mjs';
+import { LibConfig } from '../../config-models/lib-config.mjs';
 import schema from '../../schemas/schema.json' assert { type: 'json' };
 
 import { ConfigSchemaValidationError } from '../exceptions/index.mjs';

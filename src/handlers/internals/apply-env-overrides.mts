@@ -5,9 +5,8 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
 import { TaskOptions } from '../../config-models/index.mjs';
-import { OverridableTaskOptions } from '../../config-models/internals/index.mjs';
+import { OverridableTaskOptions } from '../../config-models/overridable-task-options.mjs';
 
 function overrideConfig(oldConfig: Record<string, unknown>, newConfig: Record<string, unknown>) {
     Object.keys(newConfig).forEach((key: string) => {
