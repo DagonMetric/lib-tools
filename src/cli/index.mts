@@ -5,10 +5,15 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
+import * as fs from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { colors } from '../utils/index.mjs';
+import { Logger, colors } from '../public-api.mjs';
 
 import * as runCommand from './commands/run.mjs';
 
@@ -17,12 +22,37 @@ export interface CliInfo {
     cliVersion: string;
 }
 
-export default async function (cliInfo: Readonly<CliInfo>): Promise<void> {
-    if (!cliInfo?.cliName || !cliInfo.cliVersion) {
-        throw new Error(`Valid 'cliInfo' options argument is required.`);
-    }
+export default async function (cliInfo?: Readonly<CliInfo>): Promise<void> {
+    const logger = new Logger({ name: 'cli' });
 
-    const { cliName, cliVersion } = cliInfo;
+    let cliName: string;
+    let cliVersion: string;
+
+    if (!cliInfo?.cliName || !cliInfo.cliVersion) {
+        const thisDir = path.dirname(fileURLToPath(import.meta.url));
+        let packageJsonPath: string | undefined;
+
+        try {
+            // TODO: experimental
+            // import.meta.resolve(...);
+            const thisDirRequire = createRequire(thisDir + '/');
+            packageJsonPath = thisDirRequire.resolve('lib-tools/package.json');
+        } catch (_) {}
+
+        if (!packageJsonPath) {
+            logger.error(`${colors.lightRed('Error:')} Could not load lib-tools/package.json file.`);
+            // Exit or re-throw
+            process.exit(1);
+        }
+
+        const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
+        const { name, verstion } = JSON.parse(content) as { name: string; verstion: string };
+        cliName = name;
+        cliVersion = verstion;
+    } else {
+        cliName = cliInfo.cliName;
+        cliVersion = cliInfo.cliVersion;
+    }
 
     try {
         process.title = `${cliName} v${cliVersion}`;
@@ -60,29 +90,33 @@ export default async function (cliInfo: Readonly<CliInfo>): Promise<void> {
         .strict()
         .fail((msg?: string, err?: Error) => {
             if (msg) {
-                // Validation failed example: `Unknown argument:`
                 const errMsg = msg;
                 const errPrefix = 'error:';
                 if (errMsg.toLowerCase().startsWith(errPrefix)) {
                     errMsg.substring(errPrefix.length).trim();
                 }
 
-                // eslint-disable-next-line no-console
-                console.error(`${colors.lightRed('Error:')} ${errMsg}`);
+                logger.error(`${colors.lightRed('Error:')} ${errMsg}`);
                 // Exit or re-throw
                 process.exit(1);
             } else {
                 let errMsg: string | undefined;
-                if (typeof err !== 'object' || err === null) {
-                    errMsg = String(err);
+                const unknownErrorPrefix = colors.lightRed('Unknown error occours.');
+
+                if (!err) {
+                    errMsg = unknownErrorPrefix;
                 } else if (typeof err.message === 'string') {
                     errMsg = err.message;
                 } else if (typeof err.stack === 'string') {
-                    errMsg = err.stack;
+                    errMsg = unknownErrorPrefix + '\n' + err.stack;
+                } else if (typeof err !== 'object') {
+                    errMsg = unknownErrorPrefix + '\n' + +String(err);
+                } else {
+                    // errMsg = unknownErrorPrefix + '\n' + util.format('%o', err);
+                    errMsg = unknownErrorPrefix + '\n' + +JSON.stringify(err, null, 2);
                 }
 
-                // eslint-disable-next-line no-console
-                console.error(errMsg ? errMsg : err);
+                logger.error(errMsg);
                 // Exit or re-throw
                 process.exit(process.exitCode ?? 1);
             }

@@ -6,9 +6,6 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
-'use strict';
-
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -18,7 +15,7 @@ const cliName = 'lib-tools';
 
 const thisDir = path.dirname(fileURLToPath(import.meta.url));
 
-const pathExists = (p) =>
+const pathExists = (p: string) =>
     fs
         .access(p)
         .then(() => true)
@@ -48,7 +45,10 @@ const getCliInfo = async () => {
 
     if (packageJsonPath) {
         const content = await fs.readFile(packageJsonPath, { encoding: 'utf-8' });
-        const packageJson = JSON.parse(content);
+        const packageJson = JSON.parse(content) as {
+            version?: string;
+            exports?: Record<string, { import?: string; default?: string }>;
+        };
         cliVersion = packageJson.version;
         const cliExportEntry = packageJson.exports?.['./cli']?.import ?? packageJson.exports?.['./cli']?.default;
         const testCliPath = cliExportEntry ? path.resolve(path.dirname(packageJsonPath), cliExportEntry) : undefined;
@@ -65,6 +65,7 @@ const getCliInfo = async () => {
             cliVersion
         };
     } else {
+        // eslint-disable-next-line no-console
         console.error('Error: Could not load lib-tools cli.');
         process.exit(1);
     }
@@ -73,7 +74,9 @@ const getCliInfo = async () => {
 const runCli = async () => {
     const cliInfo = await getCliInfo();
 
-    const cliModule = await import(pathToFileURL(cliInfo.cliPath).toString());
+    const cliModule = (await import(pathToFileURL(cliInfo.cliPath).toString())) as {
+        default: (options: unknown) => Promise<void>;
+    };
 
     await cliModule.default(cliInfo);
 };
