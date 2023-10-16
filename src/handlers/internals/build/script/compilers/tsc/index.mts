@@ -7,7 +7,7 @@
  ****************************************************************************************** */
 import * as path from 'node:path';
 
-import { CompilerOptions, SourceFile } from 'typescript';
+import { CompilerOptions, SourceFile, WriteFileCallbackData } from 'typescript';
 
 import {
     LoggerBase,
@@ -19,7 +19,7 @@ import {
 
 import { CompilationError } from '../../../../../exceptions/index.mjs';
 
-import { CompileOptions, CompileResult } from '../interfaces.mjs';
+import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.mjs';
 import { ts } from '../tsproxy.mjs';
 
 function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
@@ -34,8 +34,10 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
         compilerOptions.allowJs = true;
     }
 
-    if (compilerOptions.target !== ts.ScriptTarget[options.scriptTarget]) {
-        compilerOptions.target = ts.ScriptTarget[options.scriptTarget];
+    const scriptTarget = ts.ScriptTarget[options.scriptTarget];
+
+    if (compilerOptions.target !== scriptTarget) {
+        compilerOptions.target = scriptTarget;
     }
 
     if (options.moduleFormat === 'cjs') {
@@ -45,11 +47,11 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
                 compilerOptions.module !== ts.ModuleKind.Node16 &&
                 compilerOptions.module !== ts.ModuleKind.NodeNext)
         ) {
-            if ((compilerOptions.target as number) > 8) {
-                // TODO: To review
+            if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
                 compilerOptions.module = ts.ModuleKind.NodeNext;
+            } else if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                compilerOptions.module = ts.ModuleKind.Node16;
             } else {
-                // TODO: To review
                 compilerOptions.module = ts.ModuleKind.CommonJS;
             }
         }
@@ -62,26 +64,41 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
             compilerOptions.module === ts.ModuleKind.System ||
             compilerOptions.module === ts.ModuleKind.UMD
         ) {
-            // TODO: To review
-            compilerOptions.module = ts.ModuleKind.ESNext;
+            if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                compilerOptions.module = ts.ModuleKind.NodeNext;
+            } else if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                compilerOptions.module = ts.ModuleKind.Node16;
+            } else if (scriptTarget > ts.ScriptTarget.ES2022) {
+                compilerOptions.module = ts.ModuleKind.ESNext;
+            } else if (scriptTarget > ts.ScriptTarget.ES2020) {
+                compilerOptions.module = ts.ModuleKind.ES2022;
+            } else if (scriptTarget > ts.ScriptTarget.ES2015) {
+                compilerOptions.module = ts.ModuleKind.ES2020;
+            } else {
+                compilerOptions.module = ts.ModuleKind.ES2015;
+            }
         }
     } else if (options.moduleFormat === 'iife') {
-        if (compilerOptions.module !== ts.ModuleKind.System && compilerOptions.module !== ts.ModuleKind.UMD) {
-            compilerOptions.module = ts.ModuleKind.UMD;
+        if (compilerOptions.module == null) {
+            compilerOptions.module = ts.ModuleKind.ES2015;
         }
+
+        // if (compilerOptions.module !== ts.ModuleKind.System && compilerOptions.module !== ts.ModuleKind.UMD) {
+        //     compilerOptions.module = ts.ModuleKind.UMD;
+        // }
 
         // TODO: To review
-        if (compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
-            compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
-        }
-    }
-
-    if (options.emitDeclarationOnly != null) {
-        compilerOptions.emitDeclarationOnly = options.emitDeclarationOnly;
+        // if (compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
+        //     compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
+        // }
     }
 
     if (options.declaration != null) {
         compilerOptions.declaration = options.declaration;
+    }
+
+    if (options.emitDeclarationOnly != null) {
+        compilerOptions.emitDeclarationOnly = options.emitDeclarationOnly;
     }
 
     if (compilerOptions.emitDeclarationOnly) {
@@ -112,20 +129,16 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
         }
     }
 
+    if (options.preserveSymlinks != null) {
+        compilerOptions.preserveSymlinks = options.preserveSymlinks;
+    }
+
     return compilerOptions;
 }
 
 export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     const { projectRoot } = options.taskInfo;
-    const outFileName = path.basename(options.outFilePath);
-    const outFileExt = path.extname(options.outFilePath);
-    const entryOutFileWithoutExt = options.entryFilePath.substring(
-        0,
-        options.entryFilePath.length - path.extname(options.entryFilePath).length
-    );
     const compilerOptions = getTsCompilerOptions(options);
-
-    const builtAssets: { path: string; size: number }[] = [];
 
     if (compilerOptions.emitDeclarationOnly) {
         logger.info(`Generating typing declaration files with ${colors.lightMagenta('tsc')}...`);
@@ -133,15 +146,14 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         logger.info(`Compiling with ${colors.lightMagenta('tsc')}...`);
     }
 
-    const entryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath));
-    logger.info(`With entry file: ${entryFilePathRel}`);
+    logger.info(`With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`);
 
     if (options.tsConfigInfo?.configPath) {
-        const tsConfigPathRel = normalizePathToPOSIXStyle(
-            path.relative(process.cwd(), options.tsConfigInfo.configPath)
+        logger.info(
+            `With tsconfig file: ${normalizePathToPOSIXStyle(
+                path.relative(process.cwd(), options.tsConfigInfo.configPath)
+            )}`
         );
-
-        logger.info(`With tsconfig file: ${tsConfigPathRel}`);
     }
 
     let infoMsg = `With script target: '${options.scriptTarget}'`;
@@ -152,40 +164,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
 
     const startTime = Date.now();
     const host = ts.createCompilerHost(compilerOptions);
-
-    const baseWriteFile = host.writeFile;
-    host.writeFile = (
-        filePath: string,
-        content: string,
-        writeByteOrderMark: boolean,
-        onError?: (message: string) => void,
-        sourceFiles?: readonly SourceFile[]
-    ) => {
-        let newOutFilePath = filePath;
-
-        if (
-            isSamePath(filePath.substring(0, filePath.length - path.extname(filePath).length), entryOutFileWithoutExt)
-        ) {
-            newOutFilePath = filePath.substring(0, filePath.length - path.basename(filePath).length) + outFileName;
-        } else if (!compilerOptions.emitDeclarationOnly && outFileExt !== '.mjs') {
-            newOutFilePath = newOutFilePath.replace(/\.js(\.map)?$/, `${outFileExt}$1`);
-        }
-
-        const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), newOutFilePath));
-        const size = Buffer.byteLength(content, 'utf-8');
-
-        if (options.dryRun) {
-            logger.info(`Built: ${pathRel}`);
-        } else {
-            baseWriteFile.call(host, newOutFilePath, content, writeByteOrderMark, onError, sourceFiles);
-            logger.info(`Emitted: ${pathRel}`);
-        }
-
-        builtAssets.push({
-            path: newOutFilePath,
-            size
-        });
-    };
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const baseReadFile = host.readFile;
@@ -209,15 +187,92 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
                     }
                 }
             }
-
-            // TODO: Include / Exclude
-            if (options.banner && !file.trim().startsWith(options.banner.text.trim())) {
-                logger.debug(`Adding banner to file ${filePathRel}`);
-                file = `${options.banner.text}\n${host.getNewLine()}${file}`;
-            }
         }
 
         return file;
+    };
+
+    const outFilePath = options.outFilePath;
+    const outDir = compilerOptions.outDir ?? path.dirname(outFilePath);
+    const outFileName = path.basename(outFilePath);
+    const outFileNameWithoutExt = outFileName.substring(0, outFileName.length - path.extname(outFileName).length);
+    const entryFileName = path.basename(options.entryFilePath);
+    const entryOuputPathWithoutExt = path.resolve(
+        outDir,
+        entryFileName.substring(0, entryFileName.length - path.extname(entryFileName).length)
+    );
+
+    const builtAssets: CompileAsset[] = [];
+    let hasEntry = false;
+
+    const baseWriteFile = host.writeFile;
+    host.writeFile = (
+        filePath: string,
+        content: string,
+        writeByteOrderMark: boolean,
+        onError?: (message: string) => void,
+        sourceFiles?: readonly SourceFile[],
+        data?: WriteFileCallbackData
+    ) => {
+        const lastExtName = path.extname(filePath);
+        const filePathWithoutExt = filePath.substring(0, filePath.length - lastExtName.length);
+        let testEntryOutPath = entryOuputPathWithoutExt;
+        if (/\.d$/i.test(filePathWithoutExt)) {
+            testEntryOutPath += path.extname(filePathWithoutExt);
+        }
+
+        let adjustedOutFilePath = filePath;
+        let isEntry = false;
+
+        if (isSamePath(filePath, outFilePath)) {
+            isEntry = true;
+            hasEntry = true;
+        } else if (lastExtName.toLowerCase() === '.map') {
+            const jsExtName = path.extname(filePathWithoutExt);
+            const filePathWithoutAllExt = filePathWithoutExt.substring(0, filePathWithoutExt.length - jsExtName.length);
+
+            if (isSamePath(filePathWithoutAllExt, testEntryOutPath)) {
+                adjustedOutFilePath =
+                    filePath.substring(0, filePath.length - path.basename(filePath).length) +
+                    outFileNameWithoutExt +
+                    jsExtName +
+                    lastExtName;
+            }
+        } else if (isSamePath(filePathWithoutExt, testEntryOutPath)) {
+            isEntry = true;
+            hasEntry = true;
+
+            adjustedOutFilePath =
+                filePath.substring(0, filePath.length - path.basename(filePath).length) +
+                outFileNameWithoutExt +
+                lastExtName;
+        }
+
+        const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), adjustedOutFilePath));
+
+        let newContent = content;
+
+        // TODO: Include / Exclude
+        if (options.banner && !content.trimStart().startsWith(options.banner.text.trim())) {
+            logger.debug(`Adding banner to file ${pathRel}`);
+            newContent = `${options.banner.text}\n${host.getNewLine()}${content}`;
+        }
+
+        const size = Buffer.byteLength(newContent, 'utf-8');
+
+        if (options.dryRun) {
+            logger.info(`Built: ${pathRel}`);
+        } else {
+            baseWriteFile.call(host, adjustedOutFilePath, newContent, writeByteOrderMark, onError, sourceFiles, data);
+
+            logger.info(`Emitted: ${pathRel}`);
+        }
+
+        builtAssets.push({
+            path: path.resolve(adjustedOutFilePath),
+            size,
+            isEntry
+        });
     };
 
     const program = ts.createProgram([options.entryFilePath], compilerOptions, host);
@@ -250,6 +305,10 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         errorMessage += errorLines.join('\n');
 
         throw new CompilationError(errorMessage);
+    }
+
+    if (!hasEntry) {
+        logger.warn('No exportable entry found in generated output paths.');
     }
 
     const result: CompileResult = {
