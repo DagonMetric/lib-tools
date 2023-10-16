@@ -2,5 +2,5 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {},
   "include": ["../src/config-models"],
-  "files": ["../src/config-models/internals/lib-config.mts"]
+  "files": ["../src/config-models/lib-config.mts"]
 }

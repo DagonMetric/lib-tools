@@ -2,38 +2,38 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import * as tsj from 'ts-json-schema-generator';
+import { createGenerator } from 'ts-json-schema-generator';
 
-const schemaOutputFilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist/schemas/schema.json');
+const thisFile = fileURLToPath(import.meta.url);
+const thisDir = path.dirname(thisFile);
+const schemaOutputFilePath = path.resolve(thisDir, '../dist/schemas/schema.json');
 
-const generateJsonSchemaFile = async () => {
-    const schema = tsj
-        .createGenerator({
-            // -i, --id
-            schemaId: 'lib-tools://schemas/schema.json',
-            // -p, --path
-            // path: '../src/config-models/**/*.mts',
-            // -f, --tsconfig
-            tsconfig: path.resolve(path.dirname(fileURLToPath(import.meta.url)), './tsconfig.schema.json')
-            // -t, --type
-            // type: 'LibConfig'
-        })
-        .createSchema('LibConfig');
+export async function generateJsonSchemaFile() {
+    const schema = createGenerator({
+        // -i, --id
+        schemaId: 'lib-tools://schemas/schema.json',
+        // -p, --path
+        // path: '../src/config-models/**/*.mts',
+        // -f, --tsconfig
+        tsconfig: path.resolve(thisDir, './tsconfig.schema.json')
+        // -t, --type
+        // type: 'LibConfig'
+    }).createSchema('LibConfig');
 
     const schemaString = JSON.stringify(schema, null, 2);
 
     const schemaOutputDir = path.dirname(schemaOutputFilePath);
 
-    try {
-        await fs.access(schemaOutputDir);
-    } catch (err) {
-        await fs.mkdir(schemaOutputDir, {
-            mode: 0o777,
-            recursive: true
-        });
-    }
+    await fs.mkdir(schemaOutputDir, {
+        mode: 0o777,
+        recursive: true
+    });
 
     await fs.writeFile(schemaOutputFilePath, schemaString);
-};
+}
 
-await generateJsonSchemaFile();
+export default generateJsonSchemaFile;
+
+if (process.argv.length >= 2 && process.argv[1] === path.resolve(thisFile)) {
+    await generateJsonSchemaFile();
+}
