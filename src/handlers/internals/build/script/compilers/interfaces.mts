@@ -55,6 +55,7 @@ export interface CompileOptions {
 export interface CompileAsset {
     readonly path: string;
     readonly size: number | undefined;
+    readonly isEntry: boolean | undefined;
 }
 
 export interface CompileResult {

@@ -32,7 +32,7 @@ import {
 } from '../../../../utils/index.mjs';
 
 import { BuildTask } from '../../../build-task.mjs';
-import { CompilationError, InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.mjs';
+import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.mjs';
 import { HandlerOptions } from '../../../handler-options.mjs';
 
 import { getBannerOptions } from '../../get-banner-options.mjs';
@@ -50,10 +50,10 @@ const entryFilePathsCache = new Map<string, string>();
 const compilerCache = new Map<string, CompilerFn>();
 let lastDetectectedEntryFileExt: string | null = null;
 
-const require = createRequire(process.cwd() + '/');
+const cwdRequire = createRequire(process.cwd() + '/');
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-setTypescriptModule(require('typescript'));
+setTypescriptModule(cwdRequire('typescript'));
 
 async function searchFileByExtensions(
     extNames: readonly string[],
@@ -134,14 +134,15 @@ export interface ScriptTaskRunnerOptions {
     readonly env: string | undefined;
 }
 
-export interface ScriptMainOutputAsset {
+export interface ScriptOutputAsset {
     readonly moduleFormat: ScriptModuleFormat;
-    readonly outputFilePath: string;
+    readonly path: string;
     readonly size: number | undefined;
+    readonly isEntry: boolean | undefined;
 }
 
 export interface ScriptResult {
-    readonly mainOutputAssets: readonly ScriptMainOutputAsset[];
+    readonly outputAssets: readonly ScriptOutputAsset[];
     readonly time: number;
 }
 
@@ -181,7 +182,7 @@ export class ScriptTaskRunner {
             substitutions
         );
 
-        const mainOutputAssets: ScriptMainOutputAsset[] = [];
+        const outputAssets: ScriptOutputAsset[] = [];
         let totalTime = 0;
         const compilations = await this.getParsedCompilations();
 
@@ -307,27 +308,13 @@ export class ScriptTaskRunner {
             const compileResult = await compilerFn(compileOptions, this.logger);
 
             totalTime += compileResult.time;
-            const mainOuputAsset = compileResult.builtAssets.find((a) =>
-                isSamePath(a.path, compileOptions.outFilePath)
-            );
 
-            if (!mainOuputAsset) {
-                const outputPathRel = normalizePathToPOSIXStyle(
-                    path.relative(process.cwd(), compileOptions.outFilePath)
-                );
-
-                throw new CompilationError(
-                    `${colors.lightRed(
-                        'Error in compilation.'
-                    )} The output file ${outputPathRel} could not be generated.`
-                );
+            for (const builtAsset of compileResult.builtAssets) {
+                outputAssets.push({
+                    ...builtAsset,
+                    moduleFormat: compileOptions.moduleFormat
+                });
             }
-
-            mainOutputAssets.push({
-                moduleFormat: compileOptions.moduleFormat,
-                outputFilePath: path.resolve(mainOuputAsset.path),
-                size: mainOuputAsset.size
-            });
 
             const builtAssetsCount = compileResult.builtAssets.length;
             const msgSuffix = this.options.dryRun ? 'built [dry run]' : 'emitted';
@@ -345,7 +332,7 @@ export class ScriptTaskRunner {
         }
 
         const result: ScriptResult = {
-            mainOutputAssets,
+            outputAssets,
             time: totalTime
         };
 
@@ -1077,7 +1064,7 @@ export class ScriptTaskRunner {
             ? getLastPartPackageName(packageJsonInfo.packageName)
             : null;
 
-        const searchFileNames = ['public_api', 'public-api', 'index'];
+        const searchFileNames = ['index', 'public-api', 'public_api'];
         if (lastPartPackageName) {
             searchFileNames.push(lastPartPackageName);
         }
@@ -1091,7 +1078,6 @@ export class ScriptTaskRunner {
             searchExtNames.unshift(lastDetectectedEntryFileExt);
         }
 
-        // TODO: To review - tsConfigInfo?.fileNames for includes
         const foundPath = await searchFileByExtensions(
             searchExtNames,
             searchFileNames,
@@ -1153,23 +1139,23 @@ export class ScriptTaskRunner {
 
             let outFilePath: string;
 
-            let normalziedOut = normalizePathToPOSIXStyle(compilation.out);
-            const normalziedOutExt = path.extname(normalziedOut);
+            let normalizedOut = normalizePathToPOSIXStyle(compilation.out);
+            const normalizedOutExt = path.extname(normalizedOut);
 
-            normalziedOut = normalziedOut.replace(/\[name\]/gi, entryFileNameWithoutExt);
+            normalizedOut = normalizedOut.replace(/\[name\]/gi, entryFileNameWithoutExt);
             if (lastPartPackageName) {
-                normalziedOut = normalziedOut.replace(/\[package_?name\]/gi, lastPartPackageName);
+                normalizedOut = normalizedOut.replace(/\[package_?name\]/gi, lastPartPackageName);
             }
 
             if (
                 !compilation.out?.trim().endsWith('/') &&
-                normalziedOutExt &&
-                /^\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(normalziedOutExt)
+                normalizedOutExt &&
+                /^\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(normalizedOutExt)
             ) {
                 // Validation
                 //
                 if (forTypesOutput) {
-                    if (!/^\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
+                    if (!/^\.d\.[cm]?ts$/i.test(normalizedOutExt)) {
                         throw new InvalidConfigError(
                             'Invalid file extension for declaration output.',
                             configPath,
@@ -1177,7 +1163,7 @@ export class ScriptTaskRunner {
                         );
                     }
                 } else {
-                    if (/^\.d\.[cm]?ts$/i.test(normalziedOutExt)) {
+                    if (/^\.d\.[cm]?ts$/i.test(normalizedOutExt)) {
                         throw new InvalidConfigError(
                             'Invalid file extension for non-declaration output.',
                             configPath,
@@ -1186,10 +1172,19 @@ export class ScriptTaskRunner {
                     }
                 }
 
-                outFilePath = resolvePath(outDir, normalziedOut);
+                outFilePath = resolvePath(outDir, normalizedOut);
             } else {
-                const outFileName = await this.getOutputFileName(options);
-                outFilePath = resolvePath(outDir, path.join(normalziedOut, outFileName));
+                if (compilationIndex != null) {
+                    this.logger.debug(`Detecting output file name for compilation/${compilationIndex}...`);
+                } else {
+                    this.logger.debug('Detecting output file name...');
+                }
+
+                const outFileName = await this.detectOutputFileName(options);
+
+                this.logger.debug(`Output file detected: ${outFileName}`);
+
+                outFilePath = resolvePath(outDir, path.join(normalizedOut, outFileName));
             }
 
             if (isSamePath(outFilePath, entryFilePath)) {
@@ -1210,7 +1205,16 @@ export class ScriptTaskRunner {
 
             return outFilePath;
         } else {
-            const outFileName = await this.getOutputFileName(options);
+            if (compilationIndex != null) {
+                this.logger.debug(`Detecting output file name for compilation/${compilationIndex}...`);
+            } else {
+                this.logger.debug('Detecting output file name...');
+            }
+
+            const outFileName = await this.detectOutputFileName(options);
+
+            this.logger.debug(`Output file detected: ${outFileName}`);
+
             let customOutDir = outDir;
 
             if (
@@ -1270,7 +1274,7 @@ export class ScriptTaskRunner {
         }
     }
 
-    private async getOutputFileName(
+    private async detectOutputFileName(
         options: Readonly<{
             entryFilePath: string;
             forTypesOutput: boolean;
@@ -1321,6 +1325,14 @@ export class ScriptTaskRunner {
 
                 if (!entryFromPackageJson && packageJsonConfig.types && typeof packageJsonConfig.types === 'string') {
                     entryFromPackageJson = packageJsonConfig.types.trim();
+                }
+
+                if (
+                    !entryFromPackageJson &&
+                    packageJsonConfig.typings &&
+                    typeof packageJsonConfig.typings === 'string'
+                ) {
+                    entryFromPackageJson = packageJsonConfig.typings.trim();
                 }
             } else {
                 if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
