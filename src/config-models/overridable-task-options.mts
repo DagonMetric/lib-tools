@@ -5,12 +5,14 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
-import { CustomTaskOptions } from '../custom-task-options.mjs';
-
-import { OverridableTaskOptions } from './overridable-task-options.mjs';
+import { TaskOptions } from './task-options.mjs';
 
 /**
- * Custom task configuration.
+ * Overridable task options.
  */
-export interface CustomTaskConfig extends CustomTaskOptions, OverridableTaskOptions<CustomTaskOptions> {}
+export interface OverridableTaskOptions<TTaskOptions extends TaskOptions> {
+    /**
+     * To override task options based on env value passed in command line.
+     */
+    envOverrides?: Record<string, Partial<TTaskOptions>>;
+}

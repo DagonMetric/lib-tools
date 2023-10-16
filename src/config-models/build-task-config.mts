@@ -5,9 +5,10 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
+import { BuildTaskOptions } from './build-task-options.mjs';
+import { OverridableTaskOptions } from './overridable-task-options.mjs';
 
-export * from './build-task-config.mjs';
-export * from './custom-task-config.mjs';
-export * from './lib-config.mjs';
-export * from './overridable-task-options.mjs';
-export * from './project-config.mjs';
+/**
+ * Build task configuration.
+ */
+export interface BuildTaskConfig extends BuildTaskOptions, OverridableTaskOptions<BuildTaskOptions> {}
