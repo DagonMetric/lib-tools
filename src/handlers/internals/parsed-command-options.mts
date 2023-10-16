@@ -5,7 +5,6 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-
 import { CommandOptions } from '../../config-models/index.mjs';
 
 export interface ParsedCommandOptions
