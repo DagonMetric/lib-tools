@@ -353,10 +353,8 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         name: options.globalName,
         extend: true,
         sourcemap: options.sourceMap,
-        // TODO: Include / Exclude
-        banner: options.banner?.text,
-        // TODO: Include / Exclude
-        footer: options.footer?.text,
+        banner: options.banner,
+        footer: options.footer,
         globals: (moduleid) => getGlobalVariable(moduleid, options.globals),
         // entryFileNames: '[name].mjs',
         // inlineDynamicImports: moduleFormat === 'iife' || moduleFormat === 'umd' ? true : false, // Default:	false

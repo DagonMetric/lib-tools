@@ -5,16 +5,21 @@
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
-import { SubstitutionEntry } from '../../config-models/index.mjs';
+import { SubstitutionEntry, SubstitutionOptions } from '../../config-models/index.mjs';
 
 import { BuildTask } from '../build-task.mjs';
 
 import { getPackageJsonInfo } from './get-package-json-info.mjs';
 
 export async function getSubstitutions(
-    substitutions: readonly Readonly<SubstitutionEntry>[],
+    substitutions: boolean | Readonly<SubstitutionOptions> | undefined,
     buildTask: Readonly<BuildTask>
 ): Promise<SubstitutionEntry[]> {
+    if (!substitutions) {
+        return [];
+    }
+
+    const substitutionOptions = typeof substitutions === 'object' ? { ...substitutions } : ({} as SubstitutionOptions);
     const { projectName } = buildTask;
 
     const newSubstitutions: SubstitutionEntry[] = [];
@@ -22,14 +27,18 @@ export async function getSubstitutions(
     newSubstitutions.push({
         searchValue: '[CURRENTYEAR]',
         replaceValue: new Date().getFullYear().toString(),
-        bannerOnly: true
+        bannerOnly: substitutionOptions.bannerOnly ?? true,
+        exclude: substitutionOptions.exclude,
+        include: substitutionOptions.include
     });
 
     if (projectName) {
         newSubstitutions.push({
             searchValue: '[PROJECTNAME]',
             replaceValue: projectName,
-            bannerOnly: true
+            bannerOnly: substitutionOptions.bannerOnly ?? true,
+            exclude: substitutionOptions.exclude,
+            include: substitutionOptions.include
         });
     }
 
@@ -46,20 +55,26 @@ export async function getSubstitutions(
         newSubstitutions.push({
             searchValue: '[PACKAGENAME]',
             replaceValue: packageName,
-            bannerOnly: true
+            bannerOnly: substitutionOptions.bannerOnly ?? true,
+            exclude: substitutionOptions.exclude,
+            include: substitutionOptions.include
         });
 
         if (packageVersion && typeof packageVersion === 'string') {
             newSubstitutions.push({
                 searchValue: '[PACKAGEVERSION]',
                 replaceValue: packageVersion,
-                bannerOnly: false
+                bannerOnly: substitutionOptions.bannerOnly ?? false,
+                exclude: substitutionOptions.exclude,
+                include: substitutionOptions.include
             });
 
             newSubstitutions.push({
                 searchValue: '0.0.0-PLACEHOLDER',
                 replaceValue: packageVersion,
-                bannerOnly: false
+                bannerOnly: substitutionOptions.bannerOnly ?? false,
+                exclude: substitutionOptions.exclude,
+                include: substitutionOptions.include
             });
         }
 
@@ -67,7 +82,9 @@ export async function getSubstitutions(
             newSubstitutions.push({
                 searchValue: '[DESCRIPTION]',
                 replaceValue: mergedPackageJson.description,
-                bannerOnly: true
+                bannerOnly: substitutionOptions.bannerOnly ?? true,
+                exclude: substitutionOptions.exclude,
+                include: substitutionOptions.include
             });
         }
 
@@ -90,14 +107,18 @@ export async function getSubstitutions(
                         newSubstitutions.push({
                             searchValue: '[LICENSEURL]',
                             replaceValue: licenseUrl,
-                            bannerOnly: true
+                            bannerOnly: substitutionOptions.bannerOnly ?? true,
+                            exclude: substitutionOptions.exclude,
+                            include: substitutionOptions.include
                         });
                     }
                 } else {
                     newSubstitutions.push({
                         searchValue: '[LICENSE]',
                         replaceValue: mergedPackageJson.license,
-                        bannerOnly: true
+                        bannerOnly: substitutionOptions.bannerOnly ?? true,
+                        exclude: substitutionOptions.exclude,
+                        include: substitutionOptions.include
                     });
                 }
             } else if (typeof mergedPackageJson.license === 'object') {
@@ -106,7 +127,9 @@ export async function getSubstitutions(
                     newSubstitutions.push({
                         searchValue: '[LICENSE]',
                         replaceValue: licenseObj.type,
-                        bannerOnly: true
+                        bannerOnly: substitutionOptions.bannerOnly ?? true,
+                        exclude: substitutionOptions.exclude,
+                        include: substitutionOptions.include
                     });
                 }
 
@@ -115,7 +138,9 @@ export async function getSubstitutions(
                     newSubstitutions.push({
                         searchValue: '[LICENSEURL]',
                         replaceValue: licenseObj.url,
-                        bannerOnly: true
+                        bannerOnly: substitutionOptions.bannerOnly ?? true,
+                        exclude: substitutionOptions.exclude,
+                        include: substitutionOptions.include
                     });
                 }
             }
@@ -126,14 +151,18 @@ export async function getSubstitutions(
                 newSubstitutions.push({
                     searchValue: '[LICENSEURL]',
                     replaceValue: mergedPackageJson.homepage,
-                    bannerOnly: true
+                    bannerOnly: substitutionOptions.bannerOnly ?? true,
+                    exclude: substitutionOptions.exclude,
+                    include: substitutionOptions.include
                 });
             }
 
             newSubstitutions.push({
                 searchValue: '[HOMEPAGE]',
                 replaceValue: mergedPackageJson.homepage,
-                bannerOnly: true
+                bannerOnly: substitutionOptions.bannerOnly ?? true,
+                exclude: substitutionOptions.exclude,
+                include: substitutionOptions.include
             });
         }
 
@@ -152,14 +181,16 @@ export async function getSubstitutions(
                 newSubstitutions.push({
                     searchValue: '[AUTHOR]',
                     replaceValue: author,
-                    bannerOnly: true
+                    bannerOnly: substitutionOptions.bannerOnly ?? true,
+                    exclude: substitutionOptions.exclude,
+                    include: substitutionOptions.include
                 });
             }
         }
     }
 
-    if (substitutions && substitutions.length > 0) {
-        for (const substitution of substitutions) {
+    if (substitutionOptions.values && substitutionOptions.values.length > 0) {
+        for (const substitution of substitutionOptions.values) {
             const foundItem = newSubstitutions.find((s) => s.searchValue === substitution.searchValue);
             if (foundItem != null) {
                 foundItem.replaceValue = substitution.replaceValue;

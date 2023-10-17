@@ -252,10 +252,9 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         let newContent = content;
         const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), adjustedOutFilePath));
 
-        // TODO: Include / Exclude
-        if (options.banner && !content.trimStart().startsWith(options.banner.text.trim())) {
+        if (options.banner && !content.trimStart().startsWith(options.banner.trim())) {
             logger.debug(`Adding banner to file ${pathRel}`);
-            newContent = `${options.banner.text}\n${host.getNewLine()}${content}`;
+            newContent = `${options.banner}\n${host.getNewLine()}${content}`;
         }
 
         const size = Buffer.byteLength(newContent, 'utf-8');

@@ -148,10 +148,8 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             outdir,
             bundle: true,
             // TODO: Substitutions
-            // TODO: Include & Exclude
-            banner: options.banner ? { js: options.banner.text } : undefined,
-            // TODO: Include & Exclude
-            footer: options.footer ? { js: options.footer.text } : undefined,
+            banner: options.banner ? { js: options.banner } : undefined,
+            footer: options.footer ? { js: options.footer } : undefined,
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
             format: moduleFormat,

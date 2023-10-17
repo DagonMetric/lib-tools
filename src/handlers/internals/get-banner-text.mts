@@ -8,13 +8,11 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
-import { BannerOptions, SubstitutionEntry } from '../../config-models/index.mjs';
+import { SubstitutionEntry } from '../../config-models/index.mjs';
 import { findUp } from '../../utils/index.mjs';
 
 import { BuildTask } from '../build-task.mjs';
 import { InvalidConfigError } from '../exceptions/index.mjs';
-
-import { ParsedBannerOptions } from './parsed-banner-options.mjs';
 
 const commentEndRegExp = /\*\//g;
 const regExpEscapePattern = /[.*+?^${}()|[\]\\]/g;
@@ -84,25 +82,24 @@ function applySubstitutions(str: string, substitutions: readonly SubstitutionEnt
     return str;
 }
 
-async function getBannerOptionsCore(
+export async function getBannerText(
     location: 'banner' | 'footer',
     bannerFor: 'script' | 'style',
     banner: boolean | string | undefined,
-    include: readonly string[] | undefined,
-    exclude: readonly string[] | undefined,
     buildTask: Readonly<BuildTask>,
-    substitutions: readonly SubstitutionEntry[],
-    configLocationSuffix?: string
-): Promise<ParsedBannerOptions | undefined> {
+    substitutions: readonly SubstitutionEntry[]
+): Promise<string | undefined> {
+    if (!banner) {
+        return undefined;
+    }
+
     if (!banner) {
         return undefined;
     }
 
     const { workspaceRoot, projectRoot, projectName, taskName, configPath } = buildTask;
 
-    const taskLocation = `tasks/${taskName}/${bannerFor}/${location}${
-        configLocationSuffix ? `/${configLocationSuffix}` : ''
-    }`;
+    const taskLocation = `tasks/${taskName}/${bannerFor}/${location}`;
     const configLocation = projectName ? `projects/${projectName}/${taskLocation}` : taskLocation;
 
     const searchFiles = [
@@ -168,51 +165,5 @@ async function getBannerOptionsCore(
     bannerText = wrapComment(bannerText, location);
     bannerText = applySubstitutions(bannerText, substitutions);
 
-    return {
-        text: bannerText,
-        include,
-        exclude
-    };
-}
-
-export async function getBannerOptions(
-    location: 'banner' | 'footer',
-    bannerFor: 'script' | 'style',
-    banner: boolean | string | Readonly<BannerOptions> | undefined,
-    buildTask: Readonly<BuildTask>,
-    substitutions: readonly SubstitutionEntry[]
-): Promise<ParsedBannerOptions | undefined> {
-    if (!banner) {
-        return undefined;
-    }
-
-    if (typeof banner === 'object') {
-        const inputOptions = banner;
-
-        if (inputOptions.entry) {
-            return getBannerOptionsCore(
-                location,
-                bannerFor,
-                inputOptions.entry,
-                inputOptions.include,
-                inputOptions.exclude,
-                buildTask,
-                substitutions,
-                'entry'
-            );
-        } else {
-            return undefined;
-        }
-    } else {
-        return getBannerOptionsCore(
-            location,
-            bannerFor,
-            banner,
-            undefined,
-            undefined,
-            buildTask,
-            substitutions,
-            undefined
-        );
-    }
+    return bannerText;
 }

@@ -35,7 +35,7 @@ import { BuildTask } from '../../../build-task.mjs';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.mjs';
 import { HandlerOptions } from '../../../handler-options.mjs';
 
-import { getBannerOptions } from '../../get-banner-options.mjs';
+import { getBannerText } from '../../get-banner-text.mjs';
 import { PackageJsonInfo, getPackageJsonInfo } from '../../get-package-json-info.mjs';
 import { getSubstitutions } from '../../get-substitutions.mjs';
 
@@ -164,15 +164,15 @@ export class ScriptTaskRunner {
 
         const scriptOptions = this.options.scriptOptions;
 
-        const substitutions = await getSubstitutions(scriptOptions.substitutions ?? [], this.options.buildTask);
-        const bannerOptions = await getBannerOptions(
+        const substitutions = await getSubstitutions(scriptOptions.substitutions, this.options.buildTask);
+        const bannerText = await getBannerText(
             'banner',
             'script',
             scriptOptions.banner,
             this.options.buildTask,
             substitutions
         );
-        const footerOptions = await getBannerOptions(
+        const footerText = await getBannerText(
             'footer',
             'script',
             scriptOptions.footer,
@@ -217,8 +217,8 @@ export class ScriptTaskRunner {
                 preserveSymlinks: compilation._preserveSymlinks,
                 globalName: compilation.globalName,
                 treeshake: compilation.treeshake,
-                banner: bannerOptions,
-                footer: footerOptions,
+                banner: bannerText,
+                footer: footerText,
                 substitutions,
                 dryRun: this.options.dryRun,
                 logLevel: this.options.logLevel

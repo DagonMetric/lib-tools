@@ -17,8 +17,6 @@ import { LogLevelStrings } from '../../../../../utils/index.mjs';
 
 import { TaskInfo } from '../../../../task-info.mjs';
 
-import { ParsedBannerOptions } from '../../../parsed-banner-options.mjs';
-
 export interface TsConfigInfo {
     readonly compilerOptions: Readonly<CompilerOptions>;
     readonly configPath: string | undefined;
@@ -48,8 +46,8 @@ export interface CompileOptions {
     readonly globalName: string | undefined;
     readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
 
-    readonly banner: Readonly<ParsedBannerOptions> | undefined;
-    readonly footer: Readonly<ParsedBannerOptions> | undefined;
+    readonly banner: string | undefined;
+    readonly footer: string | undefined;
     readonly substitutions: readonly Readonly<SubstitutionEntry>[];
 
     readonly dryRun: boolean;

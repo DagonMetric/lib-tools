@@ -19,8 +19,6 @@ import {
 
 import { CompilationError } from '../../../../../../../exceptions/index.mjs';
 
-import { ParsedBannerOptions } from '../../../../../../parsed-banner-options.mjs';
-
 export interface ScriptWebpackPluginOptions {
     readonly outDir: string;
     readonly logger: LoggerBase;
@@ -28,8 +26,8 @@ export interface ScriptWebpackPluginOptions {
     readonly dryRun: boolean | undefined;
     readonly separateMinifyFile: boolean;
     readonly sourceMapInMinifyFile: boolean;
-    readonly banner: ParsedBannerOptions | null | undefined;
-    readonly footer: ParsedBannerOptions | null | undefined;
+    readonly banner: string | null | undefined;
+    readonly footer: string | null | undefined;
 }
 
 export class ScriptWebpackPlugin {
@@ -41,8 +39,8 @@ export class ScriptWebpackPlugin {
 
     constructor(private readonly options: ScriptWebpackPluginOptions) {
         this.logger = this.options.logger;
-        this.bannerText = () => this.options.banner?.text ?? '';
-        this.footerText = () => this.options.footer?.text ?? '';
+        this.bannerText = () => this.options.banner ?? '';
+        this.footerText = () => this.options.footer ?? '';
     }
 
     apply(compiler: Compiler): void {
@@ -67,14 +65,14 @@ export class ScriptWebpackPlugin {
                             }
 
                             for (const file of chunk.files) {
-                                const commentBanner = this.options.banner?.text
+                                const commentBanner = this.options.banner
                                     ? compilation.getPath(bannerText, {
                                           chunk,
                                           filename: file
                                       })
                                     : '';
 
-                                const commentFooter = this.options.footer?.text
+                                const commentFooter = this.options.footer
                                     ? compilation.getPath(footerText, {
                                           chunk,
                                           filename: file
