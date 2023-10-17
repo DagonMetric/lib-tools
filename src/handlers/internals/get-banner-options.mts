@@ -23,7 +23,7 @@ const bannerTextCache = new Map<string, string>();
 async function readFileUp(searchFileNames: string[], startDir: string, endDir: string): Promise<string | undefined> {
     const cacheKey = `${startDir}!${endDir}!${searchFileNames.join('!')}`;
     const cached = bannerTextCache.get(cacheKey);
-    if (cached != null) {
+    if (cached !== undefined) {
         if (cached.length > 0) {
             return cached;
         }
