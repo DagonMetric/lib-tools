@@ -107,31 +107,33 @@ export interface SubstitutionEntry {
 }
 
 /**
- * Banner options.
+ * Substitution options.
  */
-export interface BannerOptions {
+export interface SubstitutionOptions {
     /**
-     * Set `true` value to search banner file automatically or set file path to add banner content to the generated files.
+     * Substitution entries.
      */
-    entry?: string | boolean;
+    values: SubstitutionEntry[];
     /**
-     * List of files or glob magic paths to exclude.
+     * Start boundary delimiter. Default: `\\b`.
+     */
+    startDelimiter?: string;
+    /**
+     * End boundary delimiter. Default: `\\b(?!\\.)`.
+     */
+    endDelimiter?: string;
+    /**
+     * If true only apply to banner.
+     */
+    bannerOnly?: boolean;
+    /**
+     * List of files or glob magic paths to exclude from substitution.
      */
     exclude?: string[];
     /**
-     * List of files or glob magic paths to include.
+     * List of files or glob magic paths to include in substitution.
      */
     include?: string[];
-}
-
-/**
- * Footer options.
- */
-export interface FooterOptions extends BannerOptions {
-    /**
-     * Set `true` value to search footer file automatically or set file path to add footer content to the generated files.
-     */
-    entry?: string | boolean;
 }
 
 /**
@@ -231,17 +233,17 @@ export interface StyleOptions {
      */
     target?: CssTargetOptions;
     /**
-     * Substitution entries.
+     * Substitution options.
      */
-    substitutions?: SubstitutionEntry[];
+    substitutions?: boolean | SubstitutionOptions;
     /**
-     * Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated style files.
+     * Set `true` value to search banner file automatically, or set file path to add banner content to the generated style files.
      */
-    banner?: string | boolean | BannerOptions;
+    banner?: string | boolean;
     /**
-     * Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated style files.
+     * Set `true` value to search footer file automatically, or set file path to add footer content to the generated style files.
      */
-    footer?: string | boolean | FooterOptions;
+    footer?: string | boolean;
 }
 
 /**
@@ -368,17 +370,17 @@ export interface ScriptOptions {
      */
     preserveSymlinks?: boolean;
     /**
-     * Substitution entries.
+     * Substitution options.
      */
-    substitutions?: SubstitutionEntry[];
+    substitutions?: boolean | SubstitutionOptions;
     /**
-     * Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated script files.
+     * Set `true` value to search banner file automatically, or set file path to add banner content to the generated script files.
      */
-    banner?: string | boolean | BannerOptions;
+    banner?: string | boolean;
     /**
-     * Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated script files.
+     * Set `true` value to search footer file automatically, or set file path to add footer content to the generated script files.
      */
-    footer?: string | boolean | FooterOptions;
+    footer?: string | boolean;
 }
 
 /**
