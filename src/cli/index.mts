@@ -23,7 +23,7 @@ export interface CliInfo {
 }
 
 export default async function (cliInfo?: Readonly<CliInfo>): Promise<void> {
-    const logger = new Logger({ name: 'cli' });
+    const logger = new Logger();
 
     let cliName: string;
     let cliVersion: string;
