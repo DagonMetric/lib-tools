@@ -63,7 +63,7 @@ export async function getPackageJsonInfo(buildTask: Readonly<BuildTask>): Promis
 
     const cacheKey = `${projectRoot}!${configPath ?? ''}!${JSON.stringify(packageJsonOptions)}`;
     const cached = packageJsonInfoCache.get(cacheKey);
-    if (cached != null) {
+    if (cached !== undefined) {
         return cached === false ? null : cached;
     }
 
