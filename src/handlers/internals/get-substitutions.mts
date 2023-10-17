@@ -6,6 +6,7 @@
  * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
  ****************************************************************************************** */
 import { SubstitutionEntry, SubstitutionOptions } from '../../config-models/index.mjs';
+import { getAbsolutePathInfoes } from '../../utils/index.mjs';
 
 import { BuildTask } from '../build-task.mjs';
 
@@ -20,25 +21,32 @@ export async function getSubstitutions(
     }
 
     const substitutionOptions = typeof substitutions === 'object' ? { ...substitutions } : ({} as SubstitutionOptions);
-    const { projectName } = buildTask;
+    const { projectRoot, projectName } = buildTask;
+
+    const pathInfoes = substitutionOptions.files
+        ? await getAbsolutePathInfoes(substitutionOptions.files ?? [], projectRoot, true)
+        : undefined;
+    const files = pathInfoes?.map((p) => p.path);
 
     const newSubstitutions: SubstitutionEntry[] = [];
 
     newSubstitutions.push({
         searchValue: '[CURRENTYEAR]',
         replaceValue: new Date().getFullYear().toString(),
-        bannerOnly: substitutionOptions.bannerOnly ?? true,
-        exclude: substitutionOptions.exclude,
-        include: substitutionOptions.include
+        bannerOnly: true,
+        files,
+        startDelimiter: substitutionOptions.startDelimiter,
+        endDelimiter: substitutionOptions.endDelimiter
     });
 
     if (projectName) {
         newSubstitutions.push({
             searchValue: '[PROJECTNAME]',
             replaceValue: projectName,
-            bannerOnly: substitutionOptions.bannerOnly ?? true,
-            exclude: substitutionOptions.exclude,
-            include: substitutionOptions.include
+            bannerOnly: true,
+            files,
+            startDelimiter: substitutionOptions.startDelimiter,
+            endDelimiter: substitutionOptions.endDelimiter
         });
     }
 
@@ -55,26 +63,29 @@ export async function getSubstitutions(
         newSubstitutions.push({
             searchValue: '[PACKAGENAME]',
             replaceValue: packageName,
-            bannerOnly: substitutionOptions.bannerOnly ?? true,
-            exclude: substitutionOptions.exclude,
-            include: substitutionOptions.include
+            bannerOnly: true,
+            files,
+            startDelimiter: substitutionOptions.startDelimiter,
+            endDelimiter: substitutionOptions.endDelimiter
         });
 
         if (packageVersion && typeof packageVersion === 'string') {
             newSubstitutions.push({
                 searchValue: '[PACKAGEVERSION]',
                 replaceValue: packageVersion,
-                bannerOnly: substitutionOptions.bannerOnly ?? false,
-                exclude: substitutionOptions.exclude,
-                include: substitutionOptions.include
+                bannerOnly: false,
+                files,
+                startDelimiter: substitutionOptions.startDelimiter,
+                endDelimiter: substitutionOptions.endDelimiter
             });
 
             newSubstitutions.push({
                 searchValue: '0.0.0-PLACEHOLDER',
                 replaceValue: packageVersion,
-                bannerOnly: substitutionOptions.bannerOnly ?? false,
-                exclude: substitutionOptions.exclude,
-                include: substitutionOptions.include
+                bannerOnly: false,
+                files,
+                startDelimiter: substitutionOptions.startDelimiter,
+                endDelimiter: substitutionOptions.endDelimiter
             });
         }
 
@@ -82,9 +93,10 @@ export async function getSubstitutions(
             newSubstitutions.push({
                 searchValue: '[DESCRIPTION]',
                 replaceValue: mergedPackageJson.description,
-                bannerOnly: substitutionOptions.bannerOnly ?? true,
-                exclude: substitutionOptions.exclude,
-                include: substitutionOptions.include
+                bannerOnly: true,
+                files,
+                startDelimiter: substitutionOptions.startDelimiter,
+                endDelimiter: substitutionOptions.endDelimiter
             });
         }
 
@@ -107,18 +119,20 @@ export async function getSubstitutions(
                         newSubstitutions.push({
                             searchValue: '[LICENSEURL]',
                             replaceValue: licenseUrl,
-                            bannerOnly: substitutionOptions.bannerOnly ?? true,
-                            exclude: substitutionOptions.exclude,
-                            include: substitutionOptions.include
+                            bannerOnly: true,
+                            files,
+                            startDelimiter: substitutionOptions.startDelimiter,
+                            endDelimiter: substitutionOptions.endDelimiter
                         });
                     }
                 } else {
                     newSubstitutions.push({
                         searchValue: '[LICENSE]',
                         replaceValue: mergedPackageJson.license,
-                        bannerOnly: substitutionOptions.bannerOnly ?? true,
-                        exclude: substitutionOptions.exclude,
-                        include: substitutionOptions.include
+                        bannerOnly: true,
+                        files,
+                        startDelimiter: substitutionOptions.startDelimiter,
+                        endDelimiter: substitutionOptions.endDelimiter
                     });
                 }
             } else if (typeof mergedPackageJson.license === 'object') {
@@ -127,9 +141,10 @@ export async function getSubstitutions(
                     newSubstitutions.push({
                         searchValue: '[LICENSE]',
                         replaceValue: licenseObj.type,
-                        bannerOnly: substitutionOptions.bannerOnly ?? true,
-                        exclude: substitutionOptions.exclude,
-                        include: substitutionOptions.include
+                        bannerOnly: true,
+                        files,
+                        startDelimiter: substitutionOptions.startDelimiter,
+                        endDelimiter: substitutionOptions.endDelimiter
                     });
                 }
 
@@ -138,9 +153,10 @@ export async function getSubstitutions(
                     newSubstitutions.push({
                         searchValue: '[LICENSEURL]',
                         replaceValue: licenseObj.url,
-                        bannerOnly: substitutionOptions.bannerOnly ?? true,
-                        exclude: substitutionOptions.exclude,
-                        include: substitutionOptions.include
+                        bannerOnly: true,
+                        files,
+                        startDelimiter: substitutionOptions.startDelimiter,
+                        endDelimiter: substitutionOptions.endDelimiter
                     });
                 }
             }
@@ -151,18 +167,20 @@ export async function getSubstitutions(
                 newSubstitutions.push({
                     searchValue: '[LICENSEURL]',
                     replaceValue: mergedPackageJson.homepage,
-                    bannerOnly: substitutionOptions.bannerOnly ?? true,
-                    exclude: substitutionOptions.exclude,
-                    include: substitutionOptions.include
+                    bannerOnly: true,
+                    files,
+                    startDelimiter: substitutionOptions.startDelimiter,
+                    endDelimiter: substitutionOptions.endDelimiter
                 });
             }
 
             newSubstitutions.push({
                 searchValue: '[HOMEPAGE]',
                 replaceValue: mergedPackageJson.homepage,
-                bannerOnly: substitutionOptions.bannerOnly ?? true,
-                exclude: substitutionOptions.exclude,
-                include: substitutionOptions.include
+                bannerOnly: true,
+                files,
+                startDelimiter: substitutionOptions.startDelimiter,
+                endDelimiter: substitutionOptions.endDelimiter
             });
         }
 
@@ -181,9 +199,10 @@ export async function getSubstitutions(
                 newSubstitutions.push({
                     searchValue: '[AUTHOR]',
                     replaceValue: author,
-                    bannerOnly: substitutionOptions.bannerOnly ?? true,
-                    exclude: substitutionOptions.exclude,
-                    include: substitutionOptions.include
+                    bannerOnly: true,
+                    files,
+                    startDelimiter: substitutionOptions.startDelimiter,
+                    endDelimiter: substitutionOptions.endDelimiter
                 });
             }
         }
@@ -194,23 +213,44 @@ export async function getSubstitutions(
             const foundItem = newSubstitutions.find((s) => s.searchValue === substitution.searchValue);
             if (foundItem != null) {
                 foundItem.replaceValue = substitution.replaceValue;
-                if (substitution.startDelimiter != null) {
-                    foundItem.startDelimiter = substitution.startDelimiter;
-                }
-                if (substitution.endDelimiter != null) {
-                    foundItem.endDelimiter = substitution.endDelimiter;
-                }
+                foundItem.startDelimiter = substitution.startDelimiter ?? substitutionOptions.startDelimiter;
+                foundItem.endDelimiter = substitution.endDelimiter ?? substitutionOptions.endDelimiter;
+
                 if (substitution.bannerOnly != null) {
                     foundItem.bannerOnly = substitution.bannerOnly;
                 }
-                if (substitution.include != null) {
-                    foundItem.include = substitution.include;
-                }
-                if (substitution.exclude != null) {
-                    foundItem.exclude = substitution.exclude;
+
+                if (substitution.files != null) {
+                    const itemPathInfoes = substitution.files
+                        ? await getAbsolutePathInfoes(substitution.files ?? [], projectRoot, true)
+                        : undefined;
+                    const itemfiles = itemPathInfoes?.map((p) => p.path);
+
+                    foundItem.files = itemfiles;
+                } else if (files != null) {
+                    foundItem.files = [...files];
                 }
             } else {
-                newSubstitutions.push(substitution);
+                const newSubstitution: SubstitutionEntry = {
+                    searchValue: substitution.searchValue,
+                    replaceValue: substitution.replaceValue,
+                    startDelimiter: substitution.startDelimiter ?? substitutionOptions.startDelimiter,
+                    endDelimiter: substitution.endDelimiter ?? substitutionOptions.endDelimiter,
+                    bannerOnly: substitution.bannerOnly
+                };
+
+                if (substitution.files != null) {
+                    const itemPathInfoes = substitution.files
+                        ? await getAbsolutePathInfoes(substitution.files ?? [], projectRoot, true)
+                        : undefined;
+                    const itemfiles = itemPathInfoes?.map((p) => p.path);
+
+                    newSubstitution.files = itemfiles;
+                } else if (files != null) {
+                    newSubstitution.files = [...files];
+                }
+
+                newSubstitutions.push(newSubstitution);
             }
         }
     }
