@@ -343,39 +343,23 @@
           "description": "Css bundle target options."
         },
         "substitutions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SubstitutionEntry"
-          },
-          "description": "Substitution entries."
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SubstitutionOptions"
+            }
+          ],
+          "description": "Substitution options."
         },
         "banner": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "$ref": "#/definitions/BannerOptions"
-            }
-          ],
-          "description": "Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated style files."
+          "type": ["string", "boolean"],
+          "description": "Set `true` value to search banner file automatically, or set file path to add banner content to the generated style files."
         },
         "footer": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "$ref": "#/definitions/FooterOptions"
-            }
-          ],
-          "description": "Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated style files."
+          "type": ["string", "boolean"],
+          "description": "Set `true` value to search footer file automatically, or set file path to add footer content to the generated style files."
         }
       },
       "required": ["compilations"],
@@ -476,6 +460,47 @@
       "additionalProperties": false,
       "description": "Css bundle target options."
     },
+    "SubstitutionOptions": {
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SubstitutionEntry"
+          },
+          "description": "Substitution entries."
+        },
+        "startDelimiter": {
+          "type": "string",
+          "description": "Start boundary delimiter. Default: `\\\\b`."
+        },
+        "endDelimiter": {
+          "type": "string",
+          "description": "End boundary delimiter. Default: `\\\\b(?!\\\\.)`."
+        },
+        "bannerOnly": {
+          "type": "boolean",
+          "description": "If true only apply to banner."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to exclude from substitution."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to include in substitution."
+        }
+      },
+      "required": ["values"],
+      "additionalProperties": false,
+      "description": "Substitution options."
+    },
     "SubstitutionEntry": {
       "type": "object",
       "properties": {
@@ -517,56 +542,6 @@
       "required": ["searchValue", "replaceValue"],
       "additionalProperties": false,
       "description": "Substitution entry."
-    },
-    "BannerOptions": {
-      "type": "object",
-      "properties": {
-        "entry": {
-          "type": ["string", "boolean"],
-          "description": "Set `true` value to search banner file automatically or set file path to add banner content to the generated files."
-        },
-        "exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of files or glob magic paths to exclude."
-        },
-        "include": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of files or glob magic paths to include."
-        }
-      },
-      "additionalProperties": false,
-      "description": "Banner options."
-    },
-    "FooterOptions": {
-      "type": "object",
-      "properties": {
-        "entry": {
-          "type": ["string", "boolean"],
-          "description": "Set `true` value to search footer file automatically or set file path to add footer content to the generated files."
-        },
-        "exclude": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of files or glob magic paths to exclude."
-        },
-        "include": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of files or glob magic paths to include."
-        }
-      },
-      "additionalProperties": false,
-      "description": "Footer options."
     },
     "ScriptOptions": {
       "type": "object",
@@ -629,39 +604,23 @@
           "description": "Enable or disable resolving symlinks to their realpaths."
         },
         "substitutions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/SubstitutionEntry"
-          },
-          "description": "Substitution entries."
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/SubstitutionOptions"
+            }
+          ],
+          "description": "Substitution options."
         },
         "banner": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "$ref": "#/definitions/BannerOptions"
-            }
-          ],
-          "description": "Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated script files."
+          "type": ["string", "boolean"],
+          "description": "Set `true` value to search banner file automatically, or set file path to add banner content to the generated script files."
         },
         "footer": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "$ref": "#/definitions/FooterOptions"
-            }
-          ],
-          "description": "Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated script files."
+          "type": ["string", "boolean"],
+          "description": "Set `true` value to search footer file automatically, or set file path to add footer content to the generated script files."
         }
       },
       "required": ["compilations"],
