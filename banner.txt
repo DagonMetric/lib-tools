@@ -1,0 +1,7 @@
+/** *****************************************************************************************
+ * @license
+ * Copyright (c) [AUTHOR]. All Rights Reserved.
+ *
+ * Use of this source code is governed by an [LICENSE]-style license that can be
+ * found in the LICENSE file at [LICENSEURL]
+ ****************************************************************************************** */
