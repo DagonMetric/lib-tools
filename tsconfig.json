@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
+    "esModuleInterop": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "forceConsistentCasingInFileNames": true,
@@ -17,16 +18,15 @@
     "noUnusedParameters": true,
     "strict": true,
     "strictNullChecks": true,
-    "inlineSourceMap": true,
-    "inlineSources": true,
-    "sourceRoot": ".",
-    "declaration": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
     "lib": ["ESNext"],
     "types": ["node"],
     "baseUrl": "./",
     "rootDir": "./",
-    "outDir": "dist"
+    "outDir": "./dist"
+  },
+  "ts-node": {
+    "esm": true
   }
 }

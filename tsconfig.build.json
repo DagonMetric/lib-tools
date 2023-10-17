@@ -1,7 +1,12 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src"
+    "declaration": false,
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "sourceRoot": ".",
+    "rootDir": "src",
+    "outDir": "./dist"
   },
   "include": ["src"]
 }
