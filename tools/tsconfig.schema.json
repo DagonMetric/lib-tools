@@ -1,8 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "noEmit": true,
-    "strictNullChecks": false
+    "noEmit": true
   },
   "files": ["../src/config-models/lib-config.mts"]
 }

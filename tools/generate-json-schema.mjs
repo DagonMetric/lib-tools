@@ -7,31 +7,34 @@ import { createGenerator } from 'ts-json-schema-generator';
 const thisFile = fileURLToPath(import.meta.url);
 const thisDir = path.dirname(thisFile);
 const defaultSchemaOutFilePath = path.resolve(thisDir, '../dist/schemas/schema.json');
+const defaultTsConfigPath = path.resolve(thisDir, './tsconfig.schema.json');
+const defaultSchemaId = 'lib-tools://schemas/schema.json';
+const defaultTypeName = 'LibConfig';
 
 /**
  * @param {{[key: string]: unknown}} [task]
  * @param {{logger?: { info: (message: string) => void}}} [options]
  */
 export async function generateJsonSchema(task, options) {
+    const { projectRoot, outFile, schemaId, tsconfig, typeName } = task ?? {};
     const { logger } = options ?? {};
-    logger?.info('Generating json schema from typescript file...');
+
+    logger?.info('Generating json schema from typescript files...');
 
     const schema = createGenerator({
         // -i, --id
-        schemaId: 'lib-tools://schemas/schema.json',
+        schemaId: schemaId ?? defaultSchemaId,
         // -p, --path
         // path: '../src/config-models/**/*.mts'
         // -f, --tsconfig
-        tsconfig: path.resolve(thisDir, './tsconfig.schema.json')
+        tsconfig: tsconfig ? path.resolve(projectRoot, tsconfig) : defaultTsConfigPath
         // -t, --type
         // type: '*'
-    }).createSchema('LibConfig');
+    }).createSchema(typeName ?? defaultTypeName);
 
     const schemaString = JSON.stringify(schema, null, 2);
 
     logger?.info('Success.');
-
-    const { projectRoot, outFile } = task ?? {};
 
     let schemaOutFilePath;
     if (projectRoot && outFile) {
