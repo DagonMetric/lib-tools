@@ -3,7 +3,7 @@
  * Copyright (c) DagonMetric. All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ * found in the LICENSE file at https://github.com/dagonmetric/lib-tools
  ****************************************************************************************** */
 import { ScriptTarget } from 'typescript';
 import { TaskOptions } from './task-options.mjs';
@@ -85,6 +85,10 @@ export interface SubstitutionEntry {
      */
     replaceValue: string;
     /**
+     * If true only apply to banner.
+     */
+    bannerOnly?: boolean;
+    /**
      * Start boundary delimiter. Default: `\\b`.
      */
     startDelimiter?: string;
@@ -93,17 +97,9 @@ export interface SubstitutionEntry {
      */
     endDelimiter?: string;
     /**
-     * If true only apply to banner.
+     * List of files to include in substitution.
      */
-    bannerOnly?: boolean;
-    /**
-     * List of files or glob magic paths to exclude from substitution.
-     */
-    exclude?: string[];
-    /**
-     * List of files or glob magic paths to include in substitution.
-     */
-    include?: string[];
+    files?: string[];
 }
 
 /**
@@ -113,7 +109,7 @@ export interface SubstitutionOptions {
     /**
      * Substitution entries.
      */
-    values: SubstitutionEntry[];
+    values?: SubstitutionEntry[];
     /**
      * Start boundary delimiter. Default: `\\b`.
      */
@@ -123,17 +119,9 @@ export interface SubstitutionOptions {
      */
     endDelimiter?: string;
     /**
-     * If true only apply to banner.
+     * List of files to include in substitution.
      */
-    bannerOnly?: boolean;
-    /**
-     * List of files or glob magic paths to exclude from substitution.
-     */
-    exclude?: string[];
-    /**
-     * List of files or glob magic paths to include in substitution.
-     */
-    include?: string[];
+    files?: string[];
 }
 
 /**
@@ -321,7 +309,6 @@ export interface ScriptCompilation {
      * Treeshaking options.
      */
     treeshake?: boolean | TreeshakingOptions;
-
     /**
      * Typescript configuration file for this compilation.
      */
