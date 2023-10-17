@@ -27,16 +27,18 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
         ? { ...options.tsConfigInfo.compilerOptions }
         : {};
 
-    compilerOptions.outDir = path.dirname(options.outFilePath);
-    compilerOptions.rootDir = path.dirname(options.entryFilePath);
+    compilerOptions.outDir = options.outDir;
 
-    if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
-        compilerOptions.allowJs = true;
+    if (options.entryFilePath) {
+        compilerOptions.rootDir = path.dirname(options.entryFilePath);
+
+        if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
+            compilerOptions.allowJs = true;
+        }
     }
 
-    const scriptTarget = ts.ScriptTarget[options.scriptTarget];
-
-    if (compilerOptions.target !== scriptTarget) {
+    if (options.scriptTarget != null) {
+        const scriptTarget = ts.ScriptTarget[options.scriptTarget];
         compilerOptions.target = scriptTarget;
     }
 
@@ -68,11 +70,11 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
                 compilerOptions.module = ts.ModuleKind.NodeNext;
             } else if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
                 compilerOptions.module = ts.ModuleKind.Node16;
-            } else if (scriptTarget > ts.ScriptTarget.ES2022) {
+            } else if (compilerOptions.target && compilerOptions.target > ts.ScriptTarget.ES2022) {
                 compilerOptions.module = ts.ModuleKind.ESNext;
-            } else if (scriptTarget > ts.ScriptTarget.ES2020) {
+            } else if (compilerOptions.target && compilerOptions.target > ts.ScriptTarget.ES2020) {
                 compilerOptions.module = ts.ModuleKind.ES2022;
-            } else if (scriptTarget > ts.ScriptTarget.ES2015) {
+            } else if (compilerOptions.target && compilerOptions.target > ts.ScriptTarget.ES2015) {
                 compilerOptions.module = ts.ModuleKind.ES2020;
             } else {
                 compilerOptions.module = ts.ModuleKind.ES2015;
@@ -82,15 +84,6 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
         if (compilerOptions.module == null) {
             compilerOptions.module = ts.ModuleKind.ES2015;
         }
-
-        // if (compilerOptions.module !== ts.ModuleKind.System && compilerOptions.module !== ts.ModuleKind.UMD) {
-        //     compilerOptions.module = ts.ModuleKind.UMD;
-        // }
-
-        // TODO: To review
-        // if (compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
-        //     compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
-        // }
     }
 
     if (options.declaration != null) {
@@ -112,7 +105,9 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
         }
     } else {
         if (options.sourceMap) {
-            compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+            if (options.entryFilePath) {
+                compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+            }
 
             if (
                 (compilerOptions.sourceMap != null && compilerOptions.inlineSourceMap != null) ||
@@ -146,7 +141,11 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         logger.info(`Compiling with ${colors.lightMagenta('tsc')}...`);
     }
 
-    logger.info(`With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`);
+    if (options.entryFilePath && options.preferredEntryFilePath) {
+        logger.info(
+            `With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`
+        );
+    }
 
     if (options.tsConfigInfo?.configPath) {
         logger.info(
@@ -192,15 +191,19 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         return file;
     };
 
+    const entryFileName = options.entryFilePath ? path.basename(options.entryFilePath) : undefined;
+    const entryOuputPathWithoutExt = entryFileName
+        ? path.resolve(
+              options.outDir,
+              entryFileName.substring(0, entryFileName.length - path.extname(entryFileName).length)
+          )
+        : undefined;
+
     const outFilePath = options.outFilePath;
-    const outDir = compilerOptions.outDir ?? path.dirname(outFilePath);
-    const outFileName = path.basename(outFilePath);
-    const outFileNameWithoutExt = outFileName.substring(0, outFileName.length - path.extname(outFileName).length);
-    const entryFileName = path.basename(options.entryFilePath);
-    const entryOuputPathWithoutExt = path.resolve(
-        outDir,
-        entryFileName.substring(0, entryFileName.length - path.extname(entryFileName).length)
-    );
+    const outFileName = outFilePath ? path.basename(outFilePath) : undefined;
+    const outFileNameWithoutExt = outFileName
+        ? outFileName.substring(0, outFileName.length - path.extname(outFileName).length)
+        : undefined;
 
     const builtAssets: CompileAsset[] = [];
     let hasEntry = false;
@@ -214,43 +217,40 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         sourceFiles?: readonly SourceFile[],
         data?: WriteFileCallbackData
     ) => {
-        const lastExtName = path.extname(filePath);
-        const filePathWithoutExt = filePath.substring(0, filePath.length - lastExtName.length);
-        let testEntryOutPath = entryOuputPathWithoutExt;
-        if (/\.d$/i.test(filePathWithoutExt)) {
-            testEntryOutPath += path.extname(filePathWithoutExt);
-        }
-
         let adjustedOutFilePath = filePath;
         let isEntry = false;
 
-        if (isSamePath(filePath, outFilePath)) {
-            isEntry = true;
-            hasEntry = true;
-        } else if (lastExtName.toLowerCase() === '.map') {
-            const jsExtName = path.extname(filePathWithoutExt);
-            const filePathWithoutAllExt = filePathWithoutExt.substring(0, filePathWithoutExt.length - jsExtName.length);
-
-            if (isSamePath(filePathWithoutAllExt, testEntryOutPath)) {
-                adjustedOutFilePath =
-                    filePath.substring(0, filePath.length - path.basename(filePath).length) +
-                    outFileNameWithoutExt +
-                    jsExtName +
-                    lastExtName;
+        if (entryOuputPathWithoutExt && outFilePath && outFileNameWithoutExt) {
+            const lastExtName = path.extname(filePath);
+            const filePathWithoutExt = filePath.substring(0, filePath.length - lastExtName.length);
+            let testEntryOutPath = entryOuputPathWithoutExt;
+            if (/\.d$/i.test(filePathWithoutExt)) {
+                testEntryOutPath += path.extname(filePathWithoutExt);
             }
-        } else if (isSamePath(filePathWithoutExt, testEntryOutPath)) {
-            isEntry = true;
-            hasEntry = true;
 
-            adjustedOutFilePath =
-                filePath.substring(0, filePath.length - path.basename(filePath).length) +
-                outFileNameWithoutExt +
-                lastExtName;
+            if (isSamePath(filePath, outFilePath)) {
+                isEntry = true;
+                hasEntry = true;
+            } else if (lastExtName.toLowerCase() === '.map') {
+                const jsExtName = path.extname(filePathWithoutExt);
+                const filePathWithoutAllExt = filePathWithoutExt.substring(
+                    0,
+                    filePathWithoutExt.length - jsExtName.length
+                );
+
+                if (isSamePath(filePathWithoutAllExt, testEntryOutPath)) {
+                    adjustedOutFilePath = `${path.dirname(filePath)}${outFileNameWithoutExt}${jsExtName}${lastExtName}`;
+                }
+            } else if (isSamePath(filePathWithoutExt, testEntryOutPath)) {
+                isEntry = true;
+                hasEntry = true;
+
+                adjustedOutFilePath = `${path.dirname(filePath)}${outFileNameWithoutExt}${lastExtName}`;
+            }
         }
 
-        const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), adjustedOutFilePath));
-
         let newContent = content;
+        const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), adjustedOutFilePath));
 
         // TODO: Include / Exclude
         if (options.banner && !content.trimStart().startsWith(options.banner.text.trim())) {
@@ -275,7 +275,18 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         });
     };
 
-    const program = ts.createProgram([options.entryFilePath], compilerOptions, host);
+    let filePaths: string[] = [];
+    if (
+        options.tsConfigInfo?.fileNames &&
+        options.tsConfigInfo?.fileNames.length > 0 &&
+        !options.preferredEntryFilePath
+    ) {
+        filePaths = [...options.tsConfigInfo.fileNames];
+    } else if (options.entryFilePath) {
+        filePaths = [options.entryFilePath];
+    }
+
+    const program = ts.createProgram(filePaths, compilerOptions, host);
 
     const emitResult = program.emit(
         undefined,

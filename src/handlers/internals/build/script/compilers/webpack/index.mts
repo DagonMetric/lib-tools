@@ -108,30 +108,51 @@ function getWebpackLibraryType(options: CompileOptions): string {
 }
 
 function getWebpackTargets(options: CompileOptions): string[] {
-    const targets: string[] = [options.scriptTarget.toLowerCase()];
+    const targets: string[] = [];
+
+    if (options.scriptTarget) {
+        targets.push(options.scriptTarget.toLowerCase());
+    }
+
     if (options.environmentTargets) {
         for (const target of options.environmentTargets) {
-            targets.push(target);
+            if (!targets.includes(target)) {
+                targets.push(target);
+            }
         }
     }
 
     return targets;
 }
 
+// TODO: Sync with rollup
 function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
     const configFileCompilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
 
     const compilerOptions: CompilerOptions = {};
 
-    compilerOptions.outDir = path.dirname(options.outFilePath);
-    compilerOptions.rootDir = path.dirname(options.entryFilePath);
+    compilerOptions.outDir = options.outDir;
 
-    if (options.scriptTarget != null) {
-        compilerOptions.target = ts.ScriptTarget[options.scriptTarget];
+    if (options.entryFilePath) {
+        compilerOptions.rootDir = path.dirname(options.entryFilePath);
+
+        if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
+            compilerOptions.allowJs = true;
+        }
     }
 
-    if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
-        compilerOptions.allowJs = true;
+    let scriptTarget = options.scriptTarget ? ts.ScriptTarget[options.scriptTarget] : configFileCompilerOptions.target;
+
+    if (options.scriptTarget) {
+        scriptTarget = ts.ScriptTarget[options.scriptTarget];
+
+        if (scriptTarget === ts.ScriptTarget.Latest) {
+            compilerOptions.target = ts.ScriptTarget.ESNext;
+        } else {
+            compilerOptions.target = scriptTarget;
+        }
+    } else if (scriptTarget === ts.ScriptTarget.Latest) {
+        compilerOptions.target = ts.ScriptTarget.ESNext;
     }
 
     if (options.moduleFormat === 'cjs') {
@@ -182,7 +203,10 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
     }
 
     if (options.sourceMap) {
-        compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+        if (options.entryFilePath) {
+            compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+        }
+
         compilerOptions.sourceMap = true;
         compilerOptions.inlineSourceMap = false;
         compilerOptions.inlineSources = true;
@@ -194,6 +218,10 @@ function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
         if (!configFileCompilerOptions.sourceRoot != null) {
             compilerOptions.sourceRoot = '';
         }
+    }
+
+    if (options.preserveSymlinks != null) {
+        compilerOptions.preserveSymlinks = options.preserveSymlinks;
     }
 
     return compilerOptions;
@@ -216,17 +244,32 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         );
     }
 
-    const outDir = path.dirname(options.outFilePath);
     const libraryType = getWebpackLibraryType(options);
     const tsCompilerOptions = getTsCompilerOptions(options);
+
+    let entryPoints: Record<string, string> | string | undefined;
+    if (options.entryFilePath && options.outFilePath) {
+        let outExtLength = path.extname(options.outFilePath).length;
+        if (/\.d\.[mj]?ts$/i.test(options.outFilePath)) {
+            outExtLength += 2;
+        }
+
+        const outFilePathWithoutExt = options.outFilePath.substring(0, options.outFilePath.length - outExtLength);
+
+        const outEntryName = normalizePathToPOSIXStyle(path.relative(options.outDir, outFilePathWithoutExt));
+        entryPoints = {
+            [outEntryName]: options.entryFilePath
+        };
+    } else if (options.entryFilePath && !options.outFilePath) {
+        entryPoints = options.entryFilePath;
+    }
 
     const webpackConfig: Configuration = {
         devtool: options.sourceMap ? 'source-map' : false,
         mode: 'production',
-        entry: options.entryFilePath,
+        entry: entryPoints,
         output: {
-            path: outDir,
-            filename: path.basename(options.outFilePath),
+            path: options.outDir,
             iife: options.moduleFormat === 'iife' ? true : undefined,
             module: libraryType === 'module' ? true : undefined,
             // enabledLibraryTypes: ['module'],
@@ -244,7 +287,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         plugins: [
             // new TsconfigPathsPlugin({/* options: see below */})
             new ScriptWebpackPlugin({
-                outDir,
+                outDir: options.outDir,
                 logger,
                 logLevel: options.logLevel,
                 dryRun: options.dryRun,
@@ -296,19 +339,25 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
     logger.info(`Bundling with ${colors.lightMagenta('webpack')}...${dryRunSuffix}`);
 
-    const entryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath));
-    logger.info(`With entry file: ${entryFilePathRel}`);
-    if (options.tsConfigInfo?.configPath) {
-        const tsConfigPathRel = normalizePathToPOSIXStyle(
-            path.relative(process.cwd(), options.tsConfigInfo.configPath)
+    if (options.entryFilePath) {
+        logger.info(
+            `With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`
         );
-
-        logger.info(`With tsconfig file: ${tsConfigPathRel}`);
     }
 
-    logger.info(`With script target: '${options.scriptTarget}', library type: '${libraryType}'`);
+    if (options.tsConfigInfo?.configPath) {
+        logger.info(
+            `With tsconfig file: ${normalizePathToPOSIXStyle(
+                path.relative(process.cwd(), options.tsConfigInfo.configPath)
+            )}`
+        );
+    }
 
-    const result = await runWebpack(webpackConfig, outDir);
+    if (libraryType) {
+        logger.info(`With library type: ${libraryType}`);
+    }
+
+    const result = await runWebpack(webpackConfig, options.outDir);
 
     return result;
 }

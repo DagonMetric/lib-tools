@@ -14,6 +14,7 @@ import {
     LoggerBase,
     colors,
     formatSizeInBytes,
+    isSamePath,
     normalizePathToPOSIXStyle,
     pathExists
 } from '../../../../../../utils/index.mjs';
@@ -23,12 +24,31 @@ import { CompilationError } from '../../../../../exceptions/index.mjs';
 import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.mjs';
 
 function getEsBuildTargets(options: CompileOptions): string[] {
-    const targets: string[] = [options.scriptTarget.toLowerCase()];
+    const targets: string[] = [];
+    if (options.scriptTarget) {
+        targets.push(options.scriptTarget.toLowerCase());
+    }
+
+    // See - https://esbuild.github.io/api/#target for supported targets
+    //
+    // chrome
+    // deno
+    // edge
+    // firefox
+    // hermes
+    // ie
+    // ios
+    // node
+    // opera
+    // rhino
+    // safari
+
     if (options.environmentTargets) {
         for (const target of options.environmentTargets) {
-            if (target === 'web') {
+            if (target === 'web' || target === 'node' || targets.includes(target)) {
                 continue;
             }
+
             targets.push(target);
         }
     }
@@ -37,46 +57,111 @@ function getEsBuildTargets(options: CompileOptions): string[] {
 }
 
 function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefined {
-    if (options.moduleFormat === 'esm') {
-        return 'neutral';
-    } else if (
+    if (
         options.moduleFormat === 'cjs' ||
-        path.extname(options.outFilePath).toLowerCase() === '.cjs' ||
-        options.environmentTargets?.some((t) => t.startsWith('node') || t.startsWith('deno'))
+        (options.outFilePath != null && path.extname(options.outFilePath).toLowerCase() === '.cjs') ||
+        options.environmentTargets?.some(
+            (t) => t === 'node' || t === 'deno' || t.startsWith('node') || t.startsWith('deno')
+        )
     ) {
         return 'node';
-    } else if (options.moduleFormat === 'iife' || options.environmentTargets?.some((t) => t === 'web')) {
+    } else if (
+        options.moduleFormat === 'iife' ||
+        options.environmentTargets?.some(
+            (t) =>
+                t === 'web' ||
+                t.startsWith('chrome') ||
+                t.startsWith('edge') ||
+                t.startsWith('firefox') ||
+                t.startsWith('ie') ||
+                t.startsWith('opera') ||
+                t.startsWith('safari') ||
+                t.startsWith('ios') ||
+                t.startsWith('hermes') ||
+                t.startsWith('rhino')
+        )
+    ) {
         return 'browser';
+    } else if (options.moduleFormat === 'esm') {
+        return 'neutral';
     }
 
     return undefined;
 }
 
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    logger.info(
-        `Bundling with esbuild, module format: ${options.moduleFormat}, script target: ${options.scriptTarget}...`
-    );
+    let entryPoints: { in: string; out: string }[] | string[] | undefined;
+    let outdir: string | undefined;
+
+    if (options.entryFilePath && options.outFilePath) {
+        entryPoints = [
+            {
+                in: options.entryFilePath,
+                out: options.outFilePath
+            }
+        ];
+    } else if (options.entryFilePath && !options.outFilePath) {
+        entryPoints = [options.entryFilePath];
+        outdir = options.outDir;
+    } else {
+        outdir = options.outDir;
+    }
+
+    const moduleFormat = options.moduleFormat === 'umd' ? 'iife' : options.moduleFormat;
+    const platform = getEsBuildPlatform(options);
+    const targets = getEsBuildTargets(options);
 
     try {
+        const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
+        logger.info(`Bundling with ${colors.lightMagenta('esbuild')}...${dryRunSuffix}`);
+
+        if (options.entryFilePath) {
+            logger.info(
+                `With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`
+            );
+        }
+
+        if (options.tsConfigInfo?.configPath) {
+            logger.info(
+                `With tsconfig file: ${normalizePathToPOSIXStyle(
+                    path.relative(process.cwd(), options.tsConfigInfo.configPath)
+                )}`
+            );
+        }
+
+        if (moduleFormat) {
+            logger.info(`With module format: ${moduleFormat}`);
+        }
+
+        if (platform) {
+            logger.info(`With platform: ${platform}`);
+        }
+
+        if (targets.length > 0) {
+            logger.info(`With target: ${targets.join(',')}`);
+        }
+
         const startTime = Date.now();
 
         const esbuildResult = await esbuild.build({
-            entryPoints: [options.entryFilePath],
-            outfile: options.outFilePath,
+            entryPoints,
+            outdir,
             bundle: true,
+            // TODO: Substitutions
             // TODO: Include & Exclude
             banner: options.banner ? { js: options.banner.text } : undefined,
+            // TODO: Include & Exclude
             footer: options.footer ? { js: options.footer.text } : undefined,
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
-            format: options.moduleFormat === 'umd' ? 'iife' : options.moduleFormat,
-            target: getEsBuildTargets(options),
-            platform: getEsBuildPlatform(options),
+            format: moduleFormat,
+            platform,
+            target: targets,
             tsconfig: options.tsConfigInfo?.configPath,
             external: options.externals ? [...options.externals] : undefined,
             globalName: options.globalName,
             write: false,
-            preserveSymlinks: options.tsConfigInfo?.compilerOptions.preserveSymlinks,
+            preserveSymlinks: options.preserveSymlinks,
             logLevel: 'silent'
         });
 
@@ -123,7 +208,12 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
             builtAssets.push({
                 path: outputFile.path,
-                size
+                size,
+                // TODO: Check with entry file path
+                isEntry:
+                    options.entryFilePath && options.outFilePath && isSamePath(outputFile.path, options.outFilePath)
+                        ? true
+                        : false
             });
         }
 

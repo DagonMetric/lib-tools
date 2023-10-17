@@ -28,10 +28,14 @@ export interface TsConfigInfo {
 export interface CompileOptions {
     readonly taskInfo: Readonly<TaskInfo & { readonly compilationIndex: number | undefined }>;
 
-    readonly entryFilePath: string;
-    readonly outFilePath: string;
-    readonly scriptTarget: ScriptTargetStrings;
-    readonly moduleFormat: ScriptModuleFormat;
+    readonly entryFilePath: string | undefined;
+    readonly preferredEntryFilePath: boolean | undefined;
+    readonly outFilePath: string | undefined;
+    readonly outDir: string;
+
+    readonly scriptTarget: ScriptTargetStrings | undefined;
+    readonly moduleFormat: ScriptModuleFormat | undefined;
+
     readonly sourceMap: boolean;
     readonly minify: boolean;
     readonly tsConfigInfo: Readonly<TsConfigInfo> | undefined;

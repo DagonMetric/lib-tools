@@ -17,6 +17,7 @@ import {
     colors,
     dashToCamelCase,
     formatSizeInBytes,
+    isSamePath,
     normalizePathToPOSIXStyle,
     pathExists
 } from '../../../../../../utils/index.mjs';
@@ -40,6 +41,7 @@ const rollupReplace = require('@rollup/plugin-replace') as typeof import('@rollu
 
 type ScriptTargetStrings = keyof typeof ts.ScriptTarget;
 type ModuleKindStrings = keyof typeof ts.ModuleKind;
+type ModuleResolutionKindStrings = keyof typeof ts.ModuleResolutionKind;
 
 interface JsonTsCompilerOptions
     extends Pick<
@@ -56,93 +58,139 @@ interface JsonTsCompilerOptions
     > {
     target?: ScriptTargetStrings;
     module?: ModuleKindStrings;
+    moduleResolution?: ModuleResolutionKindStrings;
 }
 
 function getTsCompilerOptionsOverride(options: CompileOptions): JsonTsCompilerOptions {
     const configFileCompilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
 
-    const compilerOptions: JsonTsCompilerOptions = {};
+    const overrideCompilerOptions: JsonTsCompilerOptions = {};
 
-    compilerOptions.outDir = path.dirname(options.outFilePath);
-    compilerOptions.rootDir = path.dirname(options.entryFilePath);
+    overrideCompilerOptions.outDir = options.outDir;
 
-    const scriptTarget = ts.ScriptTarget[options.scriptTarget];
-    compilerOptions.target = ts.ScriptTarget[scriptTarget] as ScriptTargetStrings;
+    if (options.entryFilePath) {
+        overrideCompilerOptions.rootDir = path.dirname(options.entryFilePath);
 
-    if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
-        compilerOptions.allowJs = true;
+        if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
+            overrideCompilerOptions.allowJs = true;
+        }
     }
 
-    if (options.moduleFormat === 'cjs') {
-        if (
-            configFileCompilerOptions.module == null ||
-            (configFileCompilerOptions.module !== ts.ModuleKind.CommonJS &&
-                configFileCompilerOptions.module !== ts.ModuleKind.Node16 &&
-                configFileCompilerOptions.module !== ts.ModuleKind.NodeNext)
-        ) {
-            if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.NodeNext] as ModuleKindStrings;
-            } else if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.Node16] as ModuleKindStrings;
-            } else {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.CommonJS] as ModuleKindStrings;
+    let scriptTarget = options.scriptTarget ? ts.ScriptTarget[options.scriptTarget] : configFileCompilerOptions.target;
+
+    if (options.scriptTarget) {
+        scriptTarget = ts.ScriptTarget[options.scriptTarget];
+
+        const targetStr = ts.ScriptTarget[scriptTarget] as ScriptTargetStrings;
+        if (targetStr === 'Latest') {
+            // 'latest' is currently incompatible with Rollup typescript
+            overrideCompilerOptions.target = 'ESNext';
+        } else {
+            overrideCompilerOptions.target = targetStr;
+        }
+    } else if (scriptTarget === ts.ScriptTarget.Latest) {
+        // 'latest' is currently incompatible with Rollup typescript
+        overrideCompilerOptions.target = 'ESNext';
+    }
+
+    if (
+        configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext ||
+        configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16
+    ) {
+        // TODO: Warn instead
+        //
+        // 'NodeNext' is currently incompatible with Rollup typescript
+        overrideCompilerOptions.moduleResolution = ts.ModuleResolutionKind[
+            ts.ModuleResolutionKind.Bundler
+        ] as ModuleResolutionKindStrings;
+    }
+
+    if (options.moduleFormat) {
+        if (options.moduleFormat === 'cjs') {
+            if (
+                configFileCompilerOptions.module == null ||
+                (configFileCompilerOptions.module !== ts.ModuleKind.CommonJS &&
+                    configFileCompilerOptions.module !== ts.ModuleKind.Node16 &&
+                    configFileCompilerOptions.module !== ts.ModuleKind.NodeNext)
+            ) {
+                if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                    // TODO: 'NodeNext' is currently incompatible with Rollup
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.NodeNext] as ModuleKindStrings;
+                } else if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                    // TODO: 'Node16' is currently incompatible with Rollup
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.Node16] as ModuleKindStrings;
+                } else {
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.CommonJS] as ModuleKindStrings;
+                }
+            }
+        } else if (options.moduleFormat === 'esm') {
+            if (
+                configFileCompilerOptions.module == null ||
+                configFileCompilerOptions.module === ts.ModuleKind.None ||
+                configFileCompilerOptions.module === ts.ModuleKind.AMD ||
+                configFileCompilerOptions.module === ts.ModuleKind.CommonJS ||
+                configFileCompilerOptions.module === ts.ModuleKind.System ||
+                configFileCompilerOptions.module === ts.ModuleKind.UMD
+            ) {
+                if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                    // 'NodeNext' is currently incompatible with Rollup
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.NodeNext] as ModuleKindStrings;
+                } else if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                    // 'Node16' is currently incompatible with Rollup
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.Node16] as ModuleKindStrings;
+                } else if (scriptTarget && scriptTarget > ts.ScriptTarget.ES2022) {
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.ESNext] as ModuleKindStrings;
+                } else if (scriptTarget && scriptTarget > ts.ScriptTarget.ES2020) {
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2022] as ModuleKindStrings;
+                } else if (scriptTarget && scriptTarget > ts.ScriptTarget.ES2015) {
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2020] as ModuleKindStrings;
+                } else {
+                    overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2015] as ModuleKindStrings;
+                }
+            }
+        } else if (options.moduleFormat === 'iife') {
+            // TODO: To review
+            if (configFileCompilerOptions.module == null) {
+                overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2015] as ModuleKindStrings;
             }
         }
-    } else if (options.moduleFormat === 'esm') {
-        if (
-            configFileCompilerOptions.module == null ||
-            configFileCompilerOptions.module === ts.ModuleKind.None ||
-            configFileCompilerOptions.module === ts.ModuleKind.AMD ||
-            configFileCompilerOptions.module === ts.ModuleKind.CommonJS ||
-            configFileCompilerOptions.module === ts.ModuleKind.System ||
-            configFileCompilerOptions.module === ts.ModuleKind.UMD
-        ) {
-            if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.NodeNext] as ModuleKindStrings;
-            } else if (configFileCompilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.Node16] as ModuleKindStrings;
-            } else if (scriptTarget > ts.ScriptTarget.ES2022) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ESNext] as ModuleKindStrings;
-            } else if (scriptTarget > ts.ScriptTarget.ES2020) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2022] as ModuleKindStrings;
-            } else if (scriptTarget > ts.ScriptTarget.ES2015) {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2020] as ModuleKindStrings;
-            } else {
-                compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2015] as ModuleKindStrings;
-            }
-        }
-    } else if (options.moduleFormat === 'iife') {
-        // TODO: To review
-        if (configFileCompilerOptions.module == null) {
-            compilerOptions.module = ts.ModuleKind[ts.ModuleKind.ES2015] as ModuleKindStrings;
-        }
+    } else if (
+        configFileCompilerOptions.module === ts.ModuleKind.NodeNext ||
+        configFileCompilerOptions.module === ts.ModuleKind.Node16
+    ) {
+        // TODO: Warn instead
+        //
+        // 'NodeNext' is currently incompatible with Rollup typescript
+        overrideCompilerOptions.module = ts.ModuleKind[ts.ModuleKind.ESNext] as ModuleKindStrings;
     }
 
     if (options.declaration != null) {
-        compilerOptions.declaration = options.declaration;
+        overrideCompilerOptions.declaration = options.declaration;
     } else if (configFileCompilerOptions.declaration != null) {
-        compilerOptions.declaration = configFileCompilerOptions.declaration;
+        overrideCompilerOptions.declaration = configFileCompilerOptions.declaration;
     }
 
     if (options.sourceMap) {
-        compilerOptions.sourceMap = true;
-        compilerOptions.inlineSourceMap = false;
-        compilerOptions.inlineSources = true;
-        compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+        overrideCompilerOptions.sourceMap = true;
+        overrideCompilerOptions.inlineSourceMap = false;
+        overrideCompilerOptions.inlineSources = true;
+        if (options.entryFilePath) {
+            overrideCompilerOptions.sourceRoot = path.dirname(options.entryFilePath);
+        }
     } else {
-        compilerOptions.sourceMap = false;
-        compilerOptions.inlineSourceMap = false;
-        compilerOptions.inlineSources = false;
+        overrideCompilerOptions.sourceMap = false;
+        overrideCompilerOptions.inlineSourceMap = false;
+        overrideCompilerOptions.inlineSources = false;
         if (!configFileCompilerOptions.sourceRoot != null) {
-            compilerOptions.sourceRoot = '';
+            overrideCompilerOptions.sourceRoot = '';
         }
     }
 
     if (options.preserveSymlinks != null) {
-        compilerOptions.preserveSymlinks = options.preserveSymlinks;
+        overrideCompilerOptions.preserveSymlinks = options.preserveSymlinks;
     }
 
-    return compilerOptions;
+    return overrideCompilerOptions;
 }
 
 export function getGlobalVariable(moduleId: string, globalsRecord: Record<string, string> = {}): string {
@@ -169,7 +217,7 @@ export function getGlobalVariable(moduleId: string, globalsRecord: Record<string
 }
 
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    const moduleFormat: ModuleFormat = options.moduleFormat;
+    const moduleFormat: ModuleFormat | undefined = options.moduleFormat;
     const externals = options.externals ?? [];
     let treeshake = options.treeshake;
     if (treeshake == null) {
@@ -186,7 +234,10 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
         plugins.push(
             rollupTypescript({
+                // TODO:
                 tsconfig: options.tsConfigInfo.configPath,
+                // TODO:
+                // tsconfigDefaults: options.tsConfigInfo.compilerOptions,
                 tsconfigOverride: { compilerOptions }
                 // include: [],
                 // exclude: [],
@@ -234,8 +285,25 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         );
     }
 
+    let entryPoints: Record<string, string> | string | undefined;
+    if (options.entryFilePath && options.outFilePath) {
+        let outExtLength = path.extname(options.outFilePath).length;
+        if (/\.d\.[mj]?ts$/i.test(options.outFilePath)) {
+            outExtLength += 2;
+        }
+
+        const outFilePathWithoutExt = options.outFilePath.substring(0, options.outFilePath.length - outExtLength);
+
+        const outEntryName = normalizePathToPOSIXStyle(path.relative(options.outDir, outFilePathWithoutExt));
+        entryPoints = {
+            [outEntryName]: options.entryFilePath
+        };
+    } else if (options.entryFilePath && !options.outFilePath) {
+        entryPoints = options.entryFilePath;
+    }
+
     const inputOptions: InputOptions = {
-        input: options.entryFilePath,
+        input: entryPoints,
         external: (moduleId: string): boolean => {
             if (moduleId.startsWith('.') || moduleId.startsWith('/') || path.isAbsolute(moduleId)) {
                 return false;
@@ -246,6 +314,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         plugins,
         preserveSymlinks: options.preserveSymlinks,
         treeshake,
+        // TODO:
         logLevel: options.logLevel === 'debug' ? 'debug' : 'warn',
         onLog: (logLevel, log) => {
             if (typeof log === 'string') {
@@ -277,7 +346,9 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     };
 
     const outputOptions: OutputOptions = {
-        file: options.outFilePath,
+        dir: options.outDir,
+        // TODO:
+        // file: options.outFilePath,
         format: moduleFormat,
         name: options.globalName,
         extend: true,
@@ -295,15 +366,32 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
     const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
     logger.info(`Bundling with ${colors.lightMagenta('rollup')}...${dryRunSuffix}`);
-    const entryFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath));
-    logger.info(`With entry file: ${entryFilePathRel}`);
-    if (options.tsConfigInfo?.configPath) {
-        const tsConfigPathRel = normalizePathToPOSIXStyle(
-            path.relative(process.cwd(), options.tsConfigInfo.configPath)
-        );
 
-        logger.info(`With tsconfig file: ${tsConfigPathRel}`);
+    if (options.entryFilePath) {
+        logger.info(
+            `With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`
+        );
     }
+
+    if (options.tsConfigInfo?.configPath) {
+        logger.info(
+            `With tsconfig file: ${normalizePathToPOSIXStyle(
+                path.relative(process.cwd(), options.tsConfigInfo.configPath)
+            )}`
+        );
+    }
+
+    if (moduleFormat) {
+        logger.info(`With module format: ${moduleFormat}`);
+    }
+
+    // if (platform) {
+    //     logger.info(`With platform: ${platform}`);
+    // }
+
+    // if (targets.length > 0) {
+    //     logger.info(`With target: ${targets.join(',')}`);
+    // }
 
     let bundle: RollupBuild | undefined;
 
@@ -320,9 +408,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         const builtAssets: CompileAsset[] = [];
 
         for (const chunkOrAsset of output) {
-            const outputFilePath = path.resolve(path.dirname(options.outFilePath), chunkOrAsset.fileName);
-            const outputFilePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), outputFilePath));
-
+            const outputFilePath = path.resolve(options.outDir, chunkOrAsset.fileName);
             const source = chunkOrAsset.type === 'asset' ? chunkOrAsset.source : chunkOrAsset.code;
 
             if (!options.dryRun) {
@@ -339,12 +425,19 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
             builtAssets.push({
                 path: outputFilePath,
-                size
+                size,
+                // TODO:
+                isEntry:
+                    options.outFilePath && options.entryFilePath && isSamePath(outputFilePath, options.outFilePath)
+                        ? true
+                        : false
             });
 
             const prefix = options.dryRun ? 'Built: ' : 'Emitted: ';
             const sizeSuffix = size ? ` - size: ${formatSizeInBytes(size)}` : '';
-            logger.info(`${prefix}${outputFilePathRel}${sizeSuffix}`);
+            logger.info(
+                `${prefix}${normalizePathToPOSIXStyle(path.relative(process.cwd(), outputFilePath))}${sizeSuffix}`
+            );
         }
 
         if (bundle) {
