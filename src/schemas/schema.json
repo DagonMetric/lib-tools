@@ -1,4 +1,881 @@
 {
+  "$id": "lib-tools://schemas/schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "lib-tools://schemas/schema.json"
+  "$ref": "#/definitions/LibConfig",
+  "definitions": {
+    "LibConfig": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string",
+          "description": "Link to schema file."
+        },
+        "projects": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ProjectConfig"
+          },
+          "description": "Project configuration collection."
+        }
+      },
+      "required": ["projects"],
+      "additionalProperties": false,
+      "description": "Library workflow configuration."
+    },
+    "ProjectConfig": {
+      "type": "object",
+      "properties": {
+        "extends": {
+          "type": "string",
+          "description": "Base project name to inherit from."
+        },
+        "root": {
+          "type": "string",
+          "description": "Root directory of this project."
+        },
+        "tasks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/CustomTaskConfig"
+          },
+          "properties": {
+            "build": {
+              "$ref": "#/definitions/BuildTaskConfig",
+              "description": "Build task configuration."
+            }
+          },
+          "description": "Task configuration collection."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Project configuration."
+    },
+    "BuildTaskConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "envOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "outDir": {
+                "type": "string",
+                "description": "The output directory for build results. Default: `dist`."
+              },
+              "clean": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "$ref": "#/definitions/CleanOptions"
+                  }
+                ],
+                "description": "Clean options for deleting build output files and directories."
+              },
+              "copy": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/definitions/CopyEntry"
+                    }
+                  ]
+                },
+                "description": "List of files to copy to output directory."
+              },
+              "style": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "$ref": "#/definitions/StyleOptions"
+                  }
+                ],
+                "description": "Style compilation / bundling options."
+              },
+              "script": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  {
+                    "$ref": "#/definitions/ScriptOptions"
+                  }
+                ],
+                "description": "Script compilation / bundle options."
+              },
+              "packageJson": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/PackageJsonOptions"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ],
+                "description": "Options for package.json file updating."
+              },
+              "priority": {
+                "type": "number",
+                "description": "Priority order to run."
+              },
+              "skip": {
+                "type": "boolean",
+                "description": "If true, this task will be ignored to run."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "To override task options based on env value passed in command line."
+        },
+        "priority": {
+          "type": "number",
+          "description": "Priority order to run."
+        },
+        "skip": {
+          "type": "boolean",
+          "description": "If true, this task will be ignored to run."
+        },
+        "outDir": {
+          "type": "string",
+          "description": "The output directory for build results. Default: `dist`."
+        },
+        "clean": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/CleanOptions"
+            }
+          ],
+          "description": "Clean options for deleting build output files and directories."
+        },
+        "copy": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/CopyEntry"
+              }
+            ]
+          },
+          "description": "List of files to copy to output directory."
+        },
+        "style": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "$ref": "#/definitions/StyleOptions"
+            }
+          ],
+          "description": "Style compilation / bundling options."
+        },
+        "script": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "$ref": "#/definitions/ScriptOptions"
+            }
+          ],
+          "description": "Script compilation / bundle options."
+        },
+        "packageJson": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PackageJsonOptions"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Options for package.json file updating."
+        }
+      },
+      "description": "Build task configuration."
+    },
+    "CleanOptions": {
+      "type": "object",
+      "properties": {
+        "beforeBuild": {
+          "$ref": "#/definitions/BeforeBuildCleanOptions",
+          "description": "Clean options for before build task run."
+        },
+        "afterBuild": {
+          "$ref": "#/definitions/AfterBuildCleanOptions",
+          "description": "Clean options after build task run."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Clean options."
+    },
+    "BeforeBuildCleanOptions": {
+      "type": "object",
+      "properties": {
+        "cleanOutDir": {
+          "type": "boolean",
+          "description": "If true, delete output directory before build task run."
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Extra list of files or directories or glob magic paths to delete before build task run."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or directories or glob magic paths to exclude from clean."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Before build clean options."
+    },
+    "AfterBuildCleanOptions": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or directories or glob magic paths to delete after build task run."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or directories or glob magic paths to exclude from clean."
+        }
+      },
+      "required": ["paths"],
+      "additionalProperties": false,
+      "description": "After build clean options."
+    },
+    "CopyEntry": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Source file, directory or glob magic path to copy from."
+        },
+        "to": {
+          "type": "string",
+          "description": "Custom output file or directory name."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or directories or glob magic paths to exclude from copy."
+        }
+      },
+      "required": ["from"],
+      "additionalProperties": false,
+      "description": "Copy entry options."
+    },
+    "StyleOptions": {
+      "type": "object",
+      "properties": {
+        "compilations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StyleCompilation"
+          },
+          "description": "List of style compilations / bundle entries."
+        },
+        "sourceMap": {
+          "type": "boolean",
+          "description": "If true, enable the outputing of sourcemap. Default is `true`.",
+          "default": true
+        },
+        "includePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths in which to look for stylesheets loaded by rules like"
+        },
+        "minify": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/StyleMinifyOptions"
+            }
+          ],
+          "description": "Boolean value or minify object options to generate minify file. Default is `true`.",
+          "default": true
+        },
+        "target": {
+          "$ref": "#/definitions/CssTargetOptions",
+          "description": "Css bundle target options."
+        },
+        "substitutions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SubstitutionEntry"
+          },
+          "description": "Substitution entries."
+        },
+        "banner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/BannerOptions"
+            }
+          ],
+          "description": "Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated style files."
+        },
+        "footer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/FooterOptions"
+            }
+          ],
+          "description": "Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated style files."
+        }
+      },
+      "required": ["compilations"],
+      "additionalProperties": false,
+      "description": "Style compilation / bundle options."
+    },
+    "StyleCompilation": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": "string",
+          "description": "The entry style file. Supported formats are .scss, .sass, .less or .css."
+        },
+        "out": {
+          "type": "string",
+          "description": "The output bundle name for generated .css file. It can be a bundle name or a directory path relative to project `outDir`."
+        },
+        "sourceMap": {
+          "type": "boolean",
+          "description": "If true, enable the outputing of sourcemap. Default is `true`.",
+          "default": true
+        },
+        "includePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths in which to look for stylesheets loaded by rules like"
+        },
+        "minify": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/StyleMinifyOptions"
+            }
+          ],
+          "description": "Boolean value or minify object options to generate minify file. Default is `true`.",
+          "default": true
+        },
+        "target": {
+          "$ref": "#/definitions/CssTargetOptions",
+          "description": "Css bundle target options."
+        }
+      },
+      "required": ["entry"],
+      "additionalProperties": false,
+      "description": "Style compilation / bundle options."
+    },
+    "StyleMinifyOptions": {
+      "type": "object",
+      "properties": {
+        "separateMinifyFile": {
+          "type": "boolean",
+          "description": "If true, both minified and unminified files will be generated. Default is `true`.",
+          "default": true
+        },
+        "sourceMapInMinifyFile": {
+          "type": "boolean",
+          "description": "If true, source file will be generated for separate minified .min.css file. Default is `false`.",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "description": "Css minify options."
+    },
+    "CssTargetOptions": {
+      "type": "object",
+      "properties": {
+        "browers": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "List of queries for target browsers."
+        },
+        "stage": {
+          "type": ["number", "boolean"],
+          "enum": [0, 1, 2, 3, 4, false],
+          "description": "Determine which CSS features to polyfill, based upon their process of becoming implemented web standards. Default value is `3`.",
+          "default": 3
+        },
+        "minimumVendorImplementations": {
+          "type": "number",
+          "enum": [0, 1, 2, 3],
+          "description": "Determine which CSS features to polyfill, based their implementation status. Default value is `0`.",
+          "default": ": 0"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Css bundle target options."
+    },
+    "SubstitutionEntry": {
+      "type": "object",
+      "properties": {
+        "searchValue": {
+          "type": "string",
+          "description": "Search text."
+        },
+        "replaceValue": {
+          "type": "string",
+          "description": "Replace value."
+        },
+        "startDelimiter": {
+          "type": "string",
+          "description": "Start boundary delimiter. Default: `\\\\b`."
+        },
+        "endDelimiter": {
+          "type": "string",
+          "description": "End boundary delimiter. Default: `\\\\b(?!\\\\.)`."
+        },
+        "bannerOnly": {
+          "type": "boolean",
+          "description": "If true only apply to banner."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to exclude from substitution."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to include in substitution."
+        }
+      },
+      "required": ["searchValue", "replaceValue"],
+      "additionalProperties": false,
+      "description": "Substitution entry."
+    },
+    "BannerOptions": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": ["string", "boolean"],
+          "description": "Set `true` value to search banner file automatically or set file path to add banner content to the generated files."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to exclude."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to include."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Banner options."
+    },
+    "FooterOptions": {
+      "type": "object",
+      "properties": {
+        "entry": {
+          "type": ["string", "boolean"],
+          "description": "Set `true` value to search footer file automatically or set file path to add footer content to the generated files."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to exclude."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of files or glob magic paths to include."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Footer options."
+    },
+    "ScriptOptions": {
+      "type": "object",
+      "properties": {
+        "compilations": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ScriptCompilation"
+              }
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Specify list of script compilation / bundle options. Set true for automatic compilations based on project structure."
+        },
+        "tsconfig": {
+          "type": "string",
+          "description": "Specify typescript configuration file."
+        },
+        "environmentTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specify target environments."
+        },
+        "packageDependenciesAsExternals": {
+          "type": "boolean",
+          "description": "If true, all package dependency fields in package.json are marked as externals. Default is 'true'."
+        },
+        "externals": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "description": "List of external modules."
+        },
+        "externalExclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specify exclude list for externals."
+        },
+        "preserveSymlinks": {
+          "type": "boolean",
+          "description": "Enable or disable resolving symlinks to their realpaths."
+        },
+        "substitutions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SubstitutionEntry"
+          },
+          "description": "Substitution entries."
+        },
+        "banner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/BannerOptions"
+            }
+          ],
+          "description": "Set `true` value to search banner file automatically, or set file path or object options to add banner content to the generated script files."
+        },
+        "footer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/FooterOptions"
+            }
+          ],
+          "description": "Set `true` value to search footer file automatically, or set file path or object options to add footer content to the generated script files."
+        }
+      },
+      "required": ["compilations"],
+      "additionalProperties": false,
+      "description": "Script compilation / bundle options."
+    },
+    "ScriptCompilation": {
+      "type": "object",
+      "properties": {
+        "compiler": {
+          "type": "string",
+          "description": "Preferred compiler / bundler tool for this compilation. By default, it will be selected automatically."
+        },
+        "bundle": {
+          "type": "boolean",
+          "description": "If true, all imported dependencies will be inlined into the generated output file."
+        },
+        "entry": {
+          "type": "string",
+          "description": "Entry file."
+        },
+        "out": {
+          "type": "string",
+          "description": "Custom output bundle file name or directory path relative to project `outDir`."
+        },
+        "moduleFormat": {
+          "$ref": "#/definitions/ScriptModuleFormat",
+          "description": "Module format."
+        },
+        "scriptTarget": {
+          "$ref": "#/definitions/ScriptTargetStrings",
+          "description": "Script target."
+        },
+        "globalName": {
+          "type": "string",
+          "description": "Global name for iife module format."
+        },
+        "declaration": {
+          "type": "boolean",
+          "description": "If true, d.ts files will be generated. This will override `declaration` options in tsconfig."
+        },
+        "emitDeclarationOnly": {
+          "type": "boolean",
+          "description": "If true, only output d.ts files not javascript files. This will override `emitDeclarationOnly` options in tsconfig."
+        },
+        "sourceMap": {
+          "type": "boolean",
+          "description": "If true, sourcemap file will be generated. This will override `sourceMap` and 'inlineSourceMap' options in tsconfig."
+        },
+        "minify": {
+          "type": "boolean",
+          "description": "If true, minify file will be generated."
+        },
+        "treeshake": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/TreeshakingOptions"
+            }
+          ],
+          "description": "Treeshaking options."
+        },
+        "tsconfig": {
+          "type": "string",
+          "description": "Typescript configuration file for this compilation."
+        },
+        "environmentTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Target environments for this compilation."
+        },
+        "externalExclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Exclude list for externals for this compilation."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Script compilation / bundle options."
+    },
+    "ScriptModuleFormat": {
+      "type": "string",
+      "enum": ["cjs", "esm", "iife", "umd"],
+      "description": "Script module format."
+    },
+    "ScriptTargetStrings": {
+      "type": "string",
+      "enum": ["ES5", "ES2015", "ES2016", "ES2017", "ES2018", "ES2019", "ES2020", "ES2021", "ES2022", "ESNext"],
+      "description": "Script target."
+    },
+    "TreeshakingOptions": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "boolean"
+        },
+        "correctVarValueBeforeDeclaration": {
+          "type": "boolean"
+        },
+        "manualPureFunctions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "moduleSideEffects": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "no-external"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "propertyReadSideEffects": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "always"
+            }
+          ]
+        },
+        "tryCatchDeoptimization": {
+          "type": "boolean"
+        },
+        "unknownGlobalSideEffects": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Treeshaking options."
+    },
+    "PackageJsonOptions": {
+      "type": "object",
+      "properties": {
+        "packageVersion": {
+          "type": "string",
+          "description": "Set version to override the version field of the package.json file."
+        },
+        "updateFields": {
+          "type": "boolean",
+          "description": "Boolean value whether to update package.json file fields with generated build result paths."
+        },
+        "removeFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of field names to be removed from package.json file."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Options for package.json file updating."
+    },
+    "CustomTaskConfig": {
+      "type": "object",
+      "additionalProperties": {
+        "description": "Options for this task."
+      },
+      "properties": {
+        "envOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "handler": {
+                "type": "string",
+                "description": "Handler script or module to run this task."
+              },
+              "priority": {
+                "description": "Options for this task."
+              },
+              "skip": {
+                "description": "Options for this task."
+              }
+            },
+            "additionalProperties": {
+              "description": "Options for this task."
+            }
+          },
+          "description": "To override task options based on env value passed in command line."
+        },
+        "priority": {
+          "type": "number",
+          "description": "Priority order to run."
+        },
+        "skip": {
+          "type": "boolean",
+          "description": "If true, this task will be ignored to run."
+        },
+        "handler": {
+          "type": "string",
+          "description": "Handler script or module to run this task."
+        }
+      },
+      "required": ["handler"],
+      "description": "Custom task configuration."
+    }
+  }
 }
