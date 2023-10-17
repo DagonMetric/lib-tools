@@ -1,6 +1,8 @@
 {
   "extends": "../tsconfig.json",
-  "compilerOptions": {},
-  "include": ["../src/config-models"],
+  "compilerOptions": {
+    "noEmit": true,
+    "strictNullChecks": false
+  },
   "files": ["../src/config-models/lib-config.mts"]
 }
