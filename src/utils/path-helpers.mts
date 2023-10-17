@@ -232,7 +232,7 @@ export async function findUp(
     const cacheKey = `${pathToFind}!${startDirs.join('!')}!${endDir}`;
     if (useCache) {
         const cached = findUpCache.get(cacheKey);
-        if (cached != null) {
+        if (cached !== undefined) {
             return cached.length ? cached : null;
         }
     }
