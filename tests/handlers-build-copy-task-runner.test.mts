@@ -3,10 +3,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
-import { CopyEntry } from '../src/config-models/index.js';
-import { BuildTask } from '../src/handlers/build-task.js';
-import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/internals/build/copy/index.js';
-import { Logger } from '../src/utils/index.js';
+import { CopyEntry } from '../src/config-models/index.mjs';
+import { BuildTask } from '../src/handlers/build-task.mjs';
+import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/internals/build/copy/index.mjs';
+import { Logger } from '../src/utils/index.mjs';
 
 void describe('handlers/internals/build/copy', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/copy');
@@ -262,7 +262,7 @@ void describe('handlers/internals/build/copy', () => {
 
                 const copyResult = await runner.run();
 
-                const expectedPaths = [path.resolve(runner.options.outDir, 'p3.js')];
+                const expectedPaths = [path.resolve(runner.options.outDir, 'p3.mjs')];
 
                 assert.deepStrictEqual(
                     copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
@@ -296,9 +296,9 @@ void describe('handlers/internals/build/copy', () => {
                 const copyResult = await runner.run();
 
                 const expectedPaths = [
-                    path.resolve(runner.options.outDir, 'p2.js'),
+                    path.resolve(runner.options.outDir, 'p2.mjs'),
                     path.resolve(runner.options.outDir, 'note.md'),
-                    path.resolve(runner.options.outDir, 'path-3/p3.js')
+                    path.resolve(runner.options.outDir, 'path-3/p3.mjs')
                 ];
 
                 assert.deepStrictEqual(
@@ -333,7 +333,7 @@ void describe('handlers/internals/build/copy', () => {
 
                 const copyResult = await runner.run();
 
-                const expectedPaths = [path.resolve(runner.options.outDir, 'p1/p1.js')];
+                const expectedPaths = [path.resolve(runner.options.outDir, 'p1/p1.mjs')];
 
                 assert.deepStrictEqual(
                     copyResult.copiedFileInfoes.map((fileInfo) => fileInfo.to).sort(),
@@ -482,9 +482,9 @@ void describe('handlers/internals/build/copy', () => {
                 const copyResult = await runner.run();
 
                 const expectedPaths = [
-                    path.resolve(runner.options.outDir, 'path-1/p1.js'),
-                    path.resolve(runner.options.outDir, 'path-2/p2.js'),
-                    path.resolve(runner.options.outDir, 'path-2/path-3/p3.js')
+                    path.resolve(runner.options.outDir, 'path-1/p1.mjs'),
+                    path.resolve(runner.options.outDir, 'path-2/p2.mjs'),
+                    path.resolve(runner.options.outDir, 'path-2/path-3/p3.mjs')
                 ];
 
                 assert.deepStrictEqual(

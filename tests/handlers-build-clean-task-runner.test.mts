@@ -3,10 +3,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
-import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.js';
-import { BuildTask } from '../src/handlers/build-task.js';
-import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/internals/build/clean/index.js';
-import { Logger } from '../src/utils/index.js';
+import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.mjs';
+import { BuildTask } from '../src/handlers/build-task.mjs';
+import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/internals/build/clean/index.mjs';
+import { Logger } from '../src/utils/index.mjs';
 
 void describe('handlers/internals/build/clean', () => {
     const workspaceRoot = path.resolve(process.cwd(), 'tests/test-data/clean');
@@ -503,7 +503,7 @@ void describe('handlers/internals/build/clean', () => {
                 const runner = new CleanTaskRunner({
                     runFor: 'before',
                     beforeOrAfterCleanOptions: {
-                        paths: ['src', 'path-1/**/*.js', 'path-2/**', '**/index.js']
+                        paths: ['src', 'path-1/**/*.mjs', 'path-2/**', '**/index.mjs']
                     },
                     buildTask: {
                         workspaceRoot,
@@ -526,13 +526,13 @@ void describe('handlers/internals/build/clean', () => {
 
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'src'),
-                    path.resolve(runner.options.outDir, 'path-1/p1.js'),
+                    path.resolve(runner.options.outDir, 'path-1/p1.mjs'),
                     path.resolve(runner.options.outDir, 'path-2'),
-                    path.resolve(runner.options.outDir, 'path-2/p2.js'),
+                    path.resolve(runner.options.outDir, 'path-2/p2.mjs'),
                     path.resolve(runner.options.outDir, 'path-2/note.md'),
                     path.resolve(runner.options.outDir, 'path-2/path-3'),
-                    path.resolve(runner.options.outDir, 'path-2/path-3/p3.js'),
-                    path.resolve(runner.options.outDir, 'index.js')
+                    path.resolve(runner.options.outDir, 'path-2/path-3/p3.mjs'),
+                    path.resolve(runner.options.outDir, 'index.mjs')
                 ].sort();
 
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);
@@ -633,7 +633,7 @@ void describe('handlers/internals/build/clean', () => {
                 const expectedPaths: string[] = [
                     path.resolve(runner.options.outDir, 'LICENSE'),
                     path.resolve(runner.options.outDir, 'README.md'),
-                    path.resolve(runner.options.outDir, 'index.js'),
+                    path.resolve(runner.options.outDir, 'index.mjs'),
                     path.resolve(runner.options.outDir, 'src/a.ts'),
                     path.resolve(runner.options.outDir, 'src/b.ts'),
                     path.resolve(runner.options.outDir, 'src/c.ts'),
@@ -706,7 +706,7 @@ void describe('handlers/internals/build/clean', () => {
 
                 const expectedPaths = [
                     path.resolve(runner.options.outDir, 'path-2/note.md'),
-                    path.resolve(runner.options.outDir, 'path-2/p2.js')
+                    path.resolve(runner.options.outDir, 'path-2/p2.mjs')
                 ].sort();
 
                 assert.deepStrictEqual(cleanedPaths, expectedPaths);

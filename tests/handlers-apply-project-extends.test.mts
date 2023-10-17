@@ -1,9 +1,11 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { BuildTaskConfig, CustomTaskConfig, ProjectConfig } from '../src/config-models/internals/index.js';
-import { InvalidConfigError } from '../src/handlers/exceptions/index.js';
-import { applyProjectExtends } from '../src/handlers/internals/apply-project-extends.js';
+import { BuildTaskConfig } from '../src/config-models/build-task-config.mjs';
+import { CustomTaskConfig } from '../src/config-models/custom-task-config.mjs';
+import { ProjectConfig } from '../src/config-models/project-config.mjs';
+import { InvalidConfigError } from '../src/handlers/exceptions/index.mjs';
+import { applyProjectExtends } from '../src/handlers/internals/apply-project-extends.mjs';
 
 void describe('handlers/internals/apply-project-extends', () => {
     void describe('applyProjectExtends', () => {
@@ -19,7 +21,7 @@ void describe('handlers/internals/apply-project-extends', () => {
             };
 
             const buildTaskProjectC: BuildTaskConfig = {
-                script: ['a.js']
+                script: ['a.mjs']
             };
 
             const projects: (ProjectConfig & { name: string })[] = [

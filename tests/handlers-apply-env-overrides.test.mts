@@ -1,8 +1,9 @@
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { BuildTaskConfig, CustomTaskConfig } from '../src/config-models/internals/index.js';
-import { applyEnvOverrides } from '../src/handlers/internals/apply-env-overrides.js';
+import { BuildTaskConfig } from '../src/config-models/build-task-config.mjs';
+import { CustomTaskConfig } from '../src/config-models/custom-task-config.mjs';
+import { applyEnvOverrides } from '../src/handlers/internals/apply-env-overrides.mjs';
 
 void describe('handlers/internals/apply-env-overrides', () => {
     void describe('applyEnvOverrides', () => {
@@ -40,11 +41,11 @@ void describe('handlers/internals/apply-env-overrides', () => {
 
         void it('should override with env value to external task', () => {
             const config: CustomTaskConfig = {
-                handler: 'a.js',
+                handler: 'a.mjs',
                 custom: 'custom-1',
                 envOverrides: {
                     prod: {
-                        handler: 'b.js',
+                        handler: 'b.mjs',
                         skip: true,
                         custom: 'custom-2'
                     }
@@ -54,12 +55,12 @@ void describe('handlers/internals/apply-env-overrides', () => {
             applyEnvOverrides(config, ['prod']);
 
             const expectedConfig: CustomTaskConfig = {
-                handler: 'b.js',
+                handler: 'b.mjs',
                 custom: 'custom-2',
                 skip: true,
                 envOverrides: {
                     prod: {
-                        handler: 'b.js',
+                        handler: 'b.mjs',
                         skip: true,
                         custom: 'custom-2'
                     }

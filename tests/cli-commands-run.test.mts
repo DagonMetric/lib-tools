@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import yargs from 'yargs';
 
-import * as runCommand from '../src/cli/commands/run.js';
+import * as runCommand from '../src/cli/commands/run.mjs';
 
 void describe('cli/commands/run', () => {
     void it(`should parse yargs command builder options`, async () => {

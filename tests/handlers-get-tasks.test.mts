@@ -2,9 +2,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { CommandOptions } from '../src/config-models/index.js';
-import { BuildTask } from '../src/handlers/build-task.js';
-import { getTasksFromCommandOptions } from '../src/handlers/get-tasks.js';
+import { CommandOptions } from '../src/config-models/index.mjs';
+import { BuildTask } from '../src/handlers/build-task.mjs';
+import { getTasksFromCommandOptions } from '../src/handlers/get-tasks.mjs';
 
 void describe('handlers/get-tasks', () => {
     void describe('getTasksFromCommandOptions', () => {
@@ -69,7 +69,7 @@ void describe('handlers/get-tasks', () => {
                 projectRoot: path.resolve(process.cwd(), workspaceRel, './packages/package-1'),
                 outDir: path.resolve(process.cwd(), workspaceRel, './packages/package-1/dist'),
                 clean: true,
-                copy: ['**/*.js', 'README.md'],
+                copy: ['**/*.mjs', 'README.md'],
                 style: ['style.scss'],
                 script: ['index.ts'],
                 packageJson: {
