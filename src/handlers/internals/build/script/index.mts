@@ -3,7 +3,7 @@
  * Copyright (c) DagonMetric. All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ * found in the LICENSE file at https://github.com/dagonmetric/lib-tools
  ****************************************************************************************** */
 import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -440,12 +440,10 @@ export class ScriptTaskRunner {
                     compilation: typesCompilation,
                     compilationIndex: undefined,
                     entryFilePath,
-                    tsConfigInfo,
                     forTypesOutput: true,
                     bundle: false,
-                    multiOutputsFormat: true,
                     moduleFormat,
-                    scriptTarget,
+                    tsConfigInfo,
                     packageJsonInfo
                 });
 
@@ -486,12 +484,10 @@ export class ScriptTaskRunner {
                     compilation: esmCompilation,
                     compilationIndex: undefined,
                     entryFilePath,
-                    tsConfigInfo,
                     forTypesOutput: false,
                     bundle: false,
-                    multiOutputsFormat: true,
                     moduleFormat,
-                    scriptTarget,
+                    tsConfigInfo,
                     packageJsonInfo
                 });
 
@@ -544,10 +540,8 @@ export class ScriptTaskRunner {
                     entryFilePath,
                     forTypesOutput: false,
                     bundle: true,
-                    multiOutputsFormat: true,
-                    tsConfigInfo,
                     moduleFormat,
-                    scriptTarget,
+                    tsConfigInfo,
                     packageJsonInfo
                 });
 
@@ -591,6 +585,7 @@ export class ScriptTaskRunner {
                     entryFilePath,
                     packageJsonInfo
                 });
+
                 if (!moduleFormat) {
                     moduleFormat = emitDeclarationOnly ? 'esm' : 'iife';
                 }
@@ -599,9 +594,10 @@ export class ScriptTaskRunner {
                     compilation: null,
                     tsConfigInfo
                 });
+
                 if (!scriptTarget) {
                     scriptTarget =
-                        (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? 'ES5' : 'ESNext';
+                        (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? 'ES5' : 'ES2015';
                 }
 
                 const compilation: ScriptCompilation = {
@@ -618,12 +614,10 @@ export class ScriptTaskRunner {
                     compilation,
                     compilationIndex: undefined,
                     entryFilePath,
-                    tsConfigInfo,
                     forTypesOutput: emitDeclarationOnly,
                     bundle: true,
-                    multiOutputsFormat: false,
                     moduleFormat,
-                    scriptTarget,
+                    tsConfigInfo,
                     packageJsonInfo
                 });
 
@@ -697,6 +691,7 @@ export class ScriptTaskRunner {
                     compilation,
                     compilationIndex: i
                 });
+
                 const tsConfigInfo = tsConfigPath
                     ? await this.getTsConfigInfo({
                           compilation,
@@ -704,17 +699,20 @@ export class ScriptTaskRunner {
                           tsConfigPath
                       })
                     : undefined;
+
                 const entryFilePath = await this.getEntryFilePath({
                     compilation,
                     compilationIndex: i,
                     tsConfigInfo,
                     packageJsonInfo
                 });
+
                 const scriptTarget =
                     this.getScriptTarget({
                         compilation,
                         tsConfigInfo
                     }) ?? 'ES2015';
+
                 const moduleFormat = this.getModuleFormat({
                     compilation,
                     tsConfigInfo,
@@ -740,22 +738,23 @@ export class ScriptTaskRunner {
                     declaration = tsConfigInfo.compilerOptions.declaration;
                 }
 
+                // TODO:
                 // bundle
                 let bundle = emitDeclarationOnly ? false : true;
                 if (compilation.bundle != null) {
                     bundle = compilation.bundle;
+                } else if (compilation.compiler === 'tsc' || compilation.compiler === 'typescript') {
+                    bundle = false;
                 }
 
                 const outFilePath = await this.getOutputFilePath({
                     compilation,
                     compilationIndex: i,
                     entryFilePath,
-                    tsConfigInfo,
                     forTypesOutput: emitDeclarationOnly,
                     bundle,
-                    multiOutputsFormat: this.options.scriptOptions.compilations.length > 0 ? true : false,
                     moduleFormat,
-                    scriptTarget,
+                    tsConfigInfo,
                     packageJsonInfo
                 });
 
@@ -1102,25 +1101,12 @@ export class ScriptTaskRunner {
             entryFilePath: string | undefined;
             forTypesOutput: boolean;
             bundle: boolean;
-            multiOutputsFormat: boolean;
             moduleFormat: ScriptModuleFormat | undefined;
             tsConfigInfo: Readonly<TsConfigInfo> | undefined;
-            scriptTarget: ScriptTargetStrings | undefined;
             packageJsonInfo: Readonly<PackageJsonInfo> | null;
         }>
     ): Promise<string | undefined> {
-        const {
-            compilation,
-            compilationIndex,
-            entryFilePath,
-            tsConfigInfo,
-            forTypesOutput,
-            bundle,
-            multiOutputsFormat,
-            moduleFormat,
-            scriptTarget,
-            packageJsonInfo
-        } = options;
+        const { compilation, compilationIndex, entryFilePath, forTypesOutput, tsConfigInfo, packageJsonInfo } = options;
 
         if (!entryFilePath) {
             return undefined;
@@ -1239,42 +1225,6 @@ export class ScriptTaskRunner {
                 const relToWorkspaceRoot = normalizePathToPOSIXStyle(path.relative(workspaceRoot, projectRoot));
                 if (relToWorkspaceRoot.split('/').length > 1) {
                     customOutDir = resolvePath(outDir, relToWorkspaceRoot);
-                }
-            }
-
-            if (multiOutputsFormat) {
-                if (forTypesOutput) {
-                    customOutDir = path.resolve(customOutDir, `types`);
-                } else {
-                    if (moduleFormat === 'esm') {
-                        if (scriptTarget && scriptTarget !== 'ES5') {
-                            const year = getYearFromScriptTarget(scriptTarget);
-
-                            if (year > 2014) {
-                                customOutDir = bundle
-                                    ? path.resolve(customOutDir, `fesm${year}`)
-                                    : path.resolve(customOutDir, `esm${year}`);
-                            } else {
-                                customOutDir = bundle
-                                    ? path.resolve(customOutDir, 'fesm')
-                                    : path.resolve(customOutDir, 'esm');
-                            }
-                        } else {
-                            customOutDir = bundle
-                                ? path.resolve(customOutDir, 'fesm5')
-                                : path.resolve(customOutDir, 'esm5');
-                        }
-                    } else if (moduleFormat === 'cjs') {
-                        customOutDir = bundle
-                            ? path.resolve(customOutDir, `bundles`)
-                            : path.resolve(customOutDir, `cjs`);
-                    } else {
-                        customOutDir = bundle
-                            ? path.resolve(customOutDir, `bundles`)
-                            : moduleFormat === 'umd'
-                            ? path.resolve(customOutDir, `umd`)
-                            : path.resolve(customOutDir, `iife`);
-                    }
                 }
             }
 

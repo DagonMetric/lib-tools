@@ -3,7 +3,7 @@
  * Copyright (c) DagonMetric. All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ * found in the LICENSE file at https://github.com/dagonmetric/lib-tools
  ****************************************************************************************** */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -73,7 +73,8 @@ function applySubstitutions(str: string, substitutions: readonly SubstitutionEnt
     for (const substitution of substitutions) {
         const escapedPattern = substitution.searchValue.replace(regExpEscapePattern, '\\$&'); // $& means the whole matched string
         const searchRegExp = new RegExp(
-            `${substitution.startDelimiter ?? '\\b'}${escapedPattern}${substitution.endDelimiter ?? '\\b(?!\\.)'}`,
+            // `${substitution.startDelimiter ?? '\\b'}${escapedPattern}${substitution.endDelimiter ?? '\\b(?!\\.)'}`,
+            `${escapedPattern}`,
             'g'
         );
         str = str.replace(searchRegExp, substitution.replaceValue);
@@ -165,5 +166,11 @@ export async function getBannerText(
     bannerText = wrapComment(bannerText, location);
     bannerText = applySubstitutions(bannerText, substitutions);
 
-    return bannerText;
+    const normalizedBannerText = bannerText
+        .split(/[\r\n]/)
+        .filter((l) => l.trim().length > 0)
+        .join('\n')
+        .trim();
+
+    return normalizedBannerText;
 }

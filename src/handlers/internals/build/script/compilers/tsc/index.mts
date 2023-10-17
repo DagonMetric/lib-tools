@@ -3,7 +3,7 @@
  * Copyright (c) DagonMetric. All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
- * found in the LICENSE file at https://github.com/DagonMetric/lib-tools/blob/main/LICENSE
+ * found in the LICENSE file at https://github.com/dagonmetric/lib-tools
  ****************************************************************************************** */
 import * as path from 'node:path';
 
@@ -21,6 +21,8 @@ import { CompilationError } from '../../../../../exceptions/index.mjs';
 
 import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.mjs';
 import { ts } from '../tsproxy.mjs';
+
+const regExpEscapePattern = /[.*+?^${}()|[\]\\]/g;
 
 function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
     const compilerOptions: CompilerOptions = options.tsConfigInfo?.compilerOptions
@@ -155,13 +157,14 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         );
     }
 
-    let infoMsg = `With script target: '${options.scriptTarget}'`;
-    if (compilerOptions.module != null) {
-        infoMsg += `, module format: '${ts.ModuleKind[compilerOptions.module]}'`;
+    if (options.scriptTarget != null) {
+        logger.info(`With script target: '${options.scriptTarget}'`);
     }
-    logger.info(infoMsg);
 
-    const startTime = Date.now();
+    if (compilerOptions.module != null) {
+        logger.info(`With module format: '${ts.ModuleKind[compilerOptions.module]}'`);
+    }
+
     const host = ts.createCompilerHost(compilerOptions);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -171,21 +174,36 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         const filePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), filePath));
         if (file && isInFolder(projectRoot, filePath) && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
             if (!compilerOptions.emitDeclarationOnly && options.substitutions) {
-                for (const substitution of options.substitutions.filter((s) => !s.bannerOnly)) {
-                    const escapedPattern = substitution.searchValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    // TODO: start and end delimiter
-                    const searchRegExp = new RegExp(escapedPattern, 'g');
+                for (const substitution of options.substitutions.filter(
+                    (s) => !s.bannerOnly && (!s.files || s.files.some((sf) => isSamePath(filePath, sf)))
+                )) {
+                    const escapedPattern = substitution.searchValue.replace(regExpEscapePattern, '\\$&'); // $& means the whole matched string
+                    const searchRegExp = new RegExp(
+                        `${substitution.startDelimiter ?? '\\b'}${escapedPattern}${
+                            substitution.endDelimiter ?? '\\b(?!\\.)'
+                        }`,
+                        'g'
+                    );
 
                     const m = file.match(searchRegExp);
                     if (m != null && m.length > 0) {
                         const matchedText = m[0];
                         logger.debug(
-                            `Substituting ${matchedText} with value '${substitution.replaceValue}' in file ${filePathRel}`
+                            `Substituting '${matchedText}' with value '${substitution.replaceValue}' in file ${filePathRel}`
                         );
                         file = file.replace(searchRegExp, substitution.replaceValue);
                     }
                 }
             }
+
+            // if (
+            //     options.banner &&
+            //     !file.trimStart().startsWith(options.banner.trim()) &&
+            //     !file.startsWith('#!/usr/bin/env')
+            // ) {
+            //     logger.debug(`Adding banner to file ${filePathRel}`);
+            //     file = `${options.banner.trim()}\n${host.getNewLine()}${file}`;
+            // }
         }
 
         return file;
@@ -249,22 +267,38 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             }
         }
 
-        let newContent = content;
-        const pathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), adjustedOutFilePath));
+        const filePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), adjustedOutFilePath));
 
-        if (options.banner && !content.trimStart().startsWith(options.banner.trim())) {
-            logger.debug(`Adding banner to file ${pathRel}`);
-            newContent = `${options.banner}\n${host.getNewLine()}${content}`;
+        let newContent = content;
+
+        if (options.banner && !content.startsWith('#!/usr/bin/env') && !content.startsWith(options.banner.trim())) {
+            let shouldAddBanner = true;
+
+            if ((content.startsWith('/*') || content.startsWith('//')) && content.length >= options.banner.length) {
+                const normalizedContent = content
+                    .split(/[\r\n]/)
+                    .filter((l) => l.trim().length > 0)
+                    .join('\n');
+
+                if (normalizedContent.startsWith(options.banner)) {
+                    shouldAddBanner = false;
+                }
+            }
+
+            if (shouldAddBanner) {
+                logger.debug(`Adding banner to file ${filePathRel}`);
+                newContent = `${options.banner.trim()}${host.getNewLine()}${content}`;
+            }
         }
 
         const size = Buffer.byteLength(newContent, 'utf-8');
 
         if (options.dryRun) {
-            logger.info(`Built: ${pathRel}`);
+            logger.info(`Built: ${filePathRel}`);
         } else {
             baseWriteFile.call(host, adjustedOutFilePath, newContent, writeByteOrderMark, onError, sourceFiles, data);
 
-            logger.info(`Emitted: ${pathRel}`);
+            logger.info(`Emitted: ${filePathRel}`);
         }
 
         builtAssets.push({
@@ -286,6 +320,8 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     }
 
     const program = ts.createProgram(filePaths, compilerOptions, host);
+
+    const startTime = Date.now();
 
     const emitResult = program.emit(
         undefined,
@@ -318,7 +354,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     }
 
     if (!hasEntry) {
-        logger.warn('No exportable entry found in generated output paths.');
+        logger.warn('No exportable entry found in the generated output paths.');
     }
 
     const result: CompileResult = {
