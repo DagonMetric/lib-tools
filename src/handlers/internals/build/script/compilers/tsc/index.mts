@@ -107,7 +107,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     };
 
     const builtAssets: CompileAsset[] = [];
-    const hasEntry = false;
+    let hasEntry = false;
     const projectRoot = options.taskInfo.projectRoot;
     const entryRoot = compilerOptions.rootDir;
 
@@ -146,7 +146,10 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         ) {
             let shouldAddBanner = true;
 
-            if ((content.startsWith('/*') || content.startsWith('//')) && content.length >= options.banner.length) {
+            if (
+                (content.trimStart().startsWith('/*') || content.trimStart().startsWith('//')) &&
+                content.length >= options.banner.length
+            ) {
                 const normalizedContent = content
                     .split(/[\r\n]/)
                     .filter((l) => l.trim().length > 0)
@@ -171,6 +174,10 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             baseWriteFile.call(host, outFilePath, newContent, writeByteOrderMark, onError, sourceFiles, data);
 
             logger.info(`Emitted: ${filePathRel}`);
+        }
+
+        if (isEntry) {
+            hasEntry = true;
         }
 
         builtAssets.push({
