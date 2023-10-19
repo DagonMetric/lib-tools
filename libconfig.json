@@ -1,12 +1,48 @@
 {
-  "$schema": "./dist/schemas/schema.json",
+  "$schema": "./src/schemas/schema.json",
   "projects": {
     "lib-tools": {
       "root": ".",
       "tasks": {
+        "generate-json-schema": {
+          "handler": "tools/generate-json-schema.mjs",
+          "outFile": "src/schemas/schema.json"
+        },
         "build": {
           "outDir": "dist",
-          "copy": ["README.md", "LICENSE"]
+          "copy": ["README.md", "LICENSE"],
+          "script": {
+            "banner": true,
+            "substitutions": {
+              "files": []
+            },
+            "compilations": [
+              {
+                "compiler": "tsc",
+                "entry": "src/public-api.mts",
+                "tsconfig": "tsconfig.build.json",
+                "emitDeclarationOnly": true,
+                "outDir": "types"
+              },
+              {
+                "compiler": "tsc",
+                "tsconfig": "tsconfig.build.json",
+                "declaration": false
+              },
+              {
+                "compiler": "esbuild",
+                "entry": "src/public-api.mts",
+                "tsconfig": "tsconfig.build.json",
+                "moduleFormat": "esm",
+                "bundle": true,
+                "environmentTargets": ["esnext", "node18.16"],
+                "assetLoaders": {
+                  ".json": "copy"
+                },
+                "assetOut": "schemas/[name]"
+              }
+            ]
+          }
         },
         "test": {
           "handler": "exec: glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\""
