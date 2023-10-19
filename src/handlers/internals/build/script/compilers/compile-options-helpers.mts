@@ -7,22 +7,18 @@
  ****************************************************************************************** */
 import * as path from 'node:path';
 
-import { isSamePath } from '../../../../../utils/index.mjs';
+import { isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.mjs';
 
-import { CompileOptions } from './compile-interfaces.mjs';
-
-export function getEntryOutFileInfo(
-    currentOutFilePath: string,
-    outBase: string,
-    options: CompileOptions,
-    fromEntryFileName: boolean
-): { isEntry: boolean; outFilePath: string } {
-    if (!options.entryPoints) {
-        return {
-            isEntry: false,
-            outFilePath: currentOutFilePath
-        };
-    }
+export function getEntryOutFileInfo(options: {
+    currentOutFilePath: string;
+    outDir: string;
+    outBase: string | undefined;
+    entryPoints: string[] | Record<string, string>;
+    fromEntryFileName: boolean;
+    projectRoot: string;
+    entryRoot: string | undefined;
+}): { isEntry: boolean; outFilePath: string } {
+    const { currentOutFilePath, entryPoints, outDir, outBase, fromEntryFileName, projectRoot, entryRoot } = options;
 
     const currentOutLastExtName = path.extname(currentOutFilePath);
     let currentOutFilePathWithoutExt = currentOutFilePath.substring(
@@ -39,17 +35,31 @@ export function getEntryOutFileInfo(
         );
     }
 
-    for (const [outName, entryFilePath] of Object.entries(options.entryPoints)) {
+    for (const [outName, entryFilePath] of Object.entries(entryPoints)) {
         const entryFileName = path.basename(entryFilePath);
         const entryNameWithoutExt = entryFileName.substring(
             0,
             entryFileName.length - path.extname(entryFileName).length
         );
+        const entryPathRelToEntryRoot = normalizePathToPOSIXStyle(
+            path.relative(entryRoot ?? projectRoot, entryFilePath)
+        );
+        let subDirPath =
+            entryPathRelToEntryRoot.length > entryFileName.length
+                ? entryPathRelToEntryRoot.substring(0, entryPathRelToEntryRoot.length - entryFileName.length)
+                : '';
 
-        const preferredOutPathWiithoutExt = path.resolve(options.outDir, outBase, outName);
+        const outBaseNormalized = outBase ? normalizePathToPOSIXStyle(outBase) : '';
+        if (outBaseNormalized && (subDirPath === outBaseNormalized || subDirPath.startsWith(outBaseNormalized))) {
+            subDirPath = subDirPath.substring(outBaseNormalized.length);
+        }
+
+        const preferredOutPathWiithoutExt = path.resolve(outDir, outBaseNormalized, subDirPath, outName);
+
         const testPathWithoutExt = path.resolve(
-            options.outDir,
-            outBase,
+            outDir,
+            outBaseNormalized,
+            subDirPath,
             fromEntryFileName ? entryNameWithoutExt : outName
         );
 
