@@ -107,7 +107,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     };
 
     const builtAssets: CompileAsset[] = [];
-    let hasEntry = false;
     const projectRoot = options.taskInfo.projectRoot;
     const entryRoot = compilerOptions.rootDir;
 
@@ -176,10 +175,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             logger.info(`Emitted: ${filePathRel}`);
         }
 
-        if (isEntry) {
-            hasEntry = true;
-        }
-
         builtAssets.push({
             path: path.resolve(outFilePath),
             size,
@@ -214,10 +209,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         errorMessage += errorLines.join('\n');
 
         throw new CompilationError(errorMessage);
-    }
-
-    if (!hasEntry) {
-        logger.warn('No exportable entry found in the generated output paths.');
     }
 
     const result: CompileResult = {
