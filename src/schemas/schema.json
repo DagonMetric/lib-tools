@@ -18,9 +18,7 @@
           "description": "Project configuration collection."
         }
       },
-      "required": [
-        "projects"
-      ],
+      "required": ["projects"],
       "additionalProperties": false,
       "description": "Library workflow configuration."
     },
@@ -279,9 +277,7 @@
           "description": "List of files or directories or glob magic paths to exclude from clean."
         }
       },
-      "required": [
-        "paths"
-      ],
+      "required": ["paths"],
       "additionalProperties": false,
       "description": "After build clean options."
     },
@@ -304,9 +300,7 @@
           "description": "List of files or directories or glob magic paths to exclude from copy."
         }
       },
-      "required": [
-        "from"
-      ],
+      "required": ["from"],
       "additionalProperties": false,
       "description": "Copy entry options."
     },
@@ -360,23 +354,15 @@
           "description": "Substitution options."
         },
         "banner": {
-          "type": [
-            "string",
-            "boolean"
-          ],
+          "type": ["string", "boolean"],
           "description": "Set `true` value to search banner file automatically, or set file path to add banner content to the generated style files."
         },
         "footer": {
-          "type": [
-            "string",
-            "boolean"
-          ],
+          "type": ["string", "boolean"],
           "description": "Set `true` value to search footer file automatically, or set file path to add footer content to the generated style files."
         }
       },
-      "required": [
-        "compilations"
-      ],
+      "required": ["compilations"],
       "additionalProperties": false,
       "description": "Style compilation / bundle options."
     },
@@ -420,9 +406,7 @@
           "description": "Css bundle target options."
         }
       },
-      "required": [
-        "entry"
-      ],
+      "required": ["entry"],
       "additionalProperties": false,
       "description": "Style compilation / bundle options."
     },
@@ -461,29 +445,14 @@
           "description": "List of queries for target browsers."
         },
         "stage": {
-          "type": [
-            "number",
-            "boolean"
-          ],
-          "enum": [
-            0,
-            1,
-            2,
-            3,
-            4,
-            false
-          ],
+          "type": ["number", "boolean"],
+          "enum": [0, 1, 2, 3, 4, false],
           "description": "Determine which CSS features to polyfill, based upon their process of becoming implemented web standards. Default value is `3`.",
           "default": 3
         },
         "minimumVendorImplementations": {
           "type": "number",
-          "enum": [
-            0,
-            1,
-            2,
-            3
-          ],
+          "enum": [0, 1, 2, 3],
           "description": "Determine which CSS features to polyfill, based their implementation status. Default value is `0`.",
           "default": ": 0"
         }
@@ -551,10 +520,7 @@
           "description": "List of files to include in substitution."
         }
       },
-      "required": [
-        "searchValue",
-        "replaceValue"
-      ],
+      "required": ["searchValue", "replaceValue"],
       "additionalProperties": false,
       "description": "Substitution entry."
     },
@@ -567,6 +533,9 @@
               "type": "array",
               "items": {
                 "anyOf": [
+                  {
+                    "$ref": "#/definitions/ScriptCompilation"
+                  },
                   {
                     "$ref": "#/definitions/TypescriptScriptCompilation"
                   },
@@ -646,25 +615,244 @@
           "description": "Substitution options."
         },
         "banner": {
-          "type": [
-            "string",
-            "boolean"
-          ],
+          "type": ["string", "boolean"],
           "description": "Set `true` value to search banner file automatically, or set file path to add banner content to the generated script files."
         },
         "footer": {
-          "type": [
-            "string",
-            "boolean"
-          ],
+          "type": ["string", "boolean"],
           "description": "Set `true` value to search footer file automatically, or set file path to add footer content to the generated script files."
         }
       },
-      "required": [
-        "compilations"
-      ],
+      "required": ["compilations"],
       "additionalProperties": false,
       "description": "Script compilation / bundle options."
+    },
+    "ScriptCompilation": {
+      "type": "object",
+      "properties": {
+        "compiler": {
+          "type": "string",
+          "enum": ["tsc", "esbuild", "rollup", "webpack", "custom"],
+          "description": "Preferred compiler / bundler tool for this compilation. By default, it will be selected automatically."
+        },
+        "entry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Entry points."
+        },
+        "outDir": {
+          "type": "string",
+          "description": "Custom output directory path relative to project `outDir`."
+        },
+        "moduleFormat": {
+          "$ref": "#/definitions/ScriptModuleFormat",
+          "description": "Module format."
+        },
+        "scriptTarget": {
+          "$ref": "#/definitions/ScriptTarget",
+          "description": "Script target."
+        },
+        "sourceMap": {
+          "type": "boolean",
+          "description": "If true, sourcemap file will be generated. This will override `sourceMap` and 'inlineSourceMap' options in tsconfig."
+        },
+        "tsconfig": {
+          "type": "string",
+          "description": "Typescript configuration file for this compilation."
+        },
+        "emitDeclarationOnly": {
+          "type": "boolean",
+          "description": "If true, only output d.ts files not javascript files. This will override `emitDeclarationOnly` options in tsconfig."
+        },
+        "declaration": {
+          "type": "boolean",
+          "description": "If true, d.ts files will be generated. This will override `declaration` options in tsconfig."
+        },
+        "bundle": {
+          "type": "boolean",
+          "description": "If true, all imported dependencies will be inlined into the generated output file."
+        },
+        "assetLoaders": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/AssetLoader"
+          },
+          "description": "Loader options for assets."
+        },
+        "assetOut": {
+          "type": "string",
+          "description": "Custom output name of the additional output files generated by asset loaders."
+        },
+        "globalName": {
+          "type": "string",
+          "description": "Global name for iife module format."
+        },
+        "minify": {
+          "type": "boolean",
+          "description": "If true, minify file will be generated."
+        },
+        "treeshake": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/TreeshakingOptions"
+            }
+          ],
+          "description": "Treeshaking options."
+        },
+        "environmentTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Target environments for this compilation."
+        },
+        "externalExclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Exclude list for externals for this compilation."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Script compilation / bundle options."
+    },
+    "ScriptModuleFormat": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TypescriptScriptModuleFormat"
+        },
+        {
+          "$ref": "#/definitions/EsBuildScriptModuleFormat"
+        },
+        {
+          "$ref": "#/definitions/RollupScriptModuleFormat"
+        },
+        {
+          "$ref": "#/definitions/WebpackScriptModuleFormat"
+        }
+      ],
+      "description": "Script module format."
+    },
+    "TypescriptScriptModuleFormat": {
+      "type": "string",
+      "enum": ["commonjs", "amd", "umd", "system", "es2015", "es2020", "es2022", "esnext", "node16", "nodenext"],
+      "description": "Script module format for typescript compiler tool."
+    },
+    "EsBuildScriptModuleFormat": {
+      "type": "string",
+      "enum": ["cjs", "esm", "iife"],
+      "description": "Script module format for esbuild bundler tool."
+    },
+    "RollupScriptModuleFormat": {
+      "type": "string",
+      "enum": ["cjs", "esm", "iife", "umd", "amd", "system"],
+      "description": "Script module format for rollup bundler tool."
+    },
+    "WebpackScriptModuleFormat": {
+      "type": "string",
+      "enum": [
+        "iife",
+        "umd",
+        "amd",
+        "amd-require",
+        "var",
+        "module",
+        "assign",
+        "assign-properties",
+        "this",
+        "window",
+        "self",
+        "global",
+        "commonjs",
+        "commonjs2",
+        "commonjs-module",
+        "commonjs-static",
+        "umd2",
+        "system"
+      ],
+      "description": "Script module format for webpack bundler tool."
+    },
+    "ScriptTarget": {
+      "type": "string",
+      "enum": ["ES5", "ES2015", "ES2016", "ES2017", "ES2018", "ES2019", "ES2020", "ES2021", "ES2022", "ESNext"],
+      "description": "Script target."
+    },
+    "AssetLoader": {
+      "type": "string",
+      "enum": ["base64", "binary", "copy", "dataurl", "default", "file", "json", "text"],
+      "description": "Asset loader."
+    },
+    "TreeshakingOptions": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "boolean"
+        },
+        "correctVarValueBeforeDeclaration": {
+          "type": "boolean"
+        },
+        "manualPureFunctions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "moduleSideEffects": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "no-external"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "propertyReadSideEffects": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "always"
+            }
+          ]
+        },
+        "tryCatchDeoptimization": {
+          "type": "boolean"
+        },
+        "unknownGlobalSideEffects": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Treeshaking options."
     },
     "TypescriptScriptCompilation": {
       "type": "object",
@@ -771,110 +959,9 @@
           "description": "Exclude list for externals for this compilation."
         }
       },
-      "required": [
-        "compiler"
-      ],
+      "required": ["compiler"],
       "additionalProperties": false,
       "description": "Script compilation options for typescript compiler tool."
-    },
-    "TypescriptScriptModuleFormat": {
-      "type": "string",
-      "enum": [
-        "commonjs",
-        "amd",
-        "umd",
-        "system",
-        "es2015",
-        "es2020",
-        "es2022",
-        "esnext",
-        "node16",
-        "nodenext"
-      ],
-      "description": "Script module format for typescript compiler tool."
-    },
-    "ScriptTarget": {
-      "type": "string",
-      "enum": [
-        "ES5",
-        "ES2015",
-        "ES2016",
-        "ES2017",
-        "ES2018",
-        "ES2019",
-        "ES2020",
-        "ES2021",
-        "ES2022",
-        "ESNext"
-      ],
-      "description": "Script target."
-    },
-    "AssetLoader": {
-      "type": "string",
-      "enum": [
-        "base64",
-        "binary",
-        "copy",
-        "dataurl",
-        "default",
-        "file",
-        "json",
-        "text"
-      ],
-      "description": "Asset loader."
-    },
-    "TreeshakingOptions": {
-      "type": "object",
-      "properties": {
-        "annotations": {
-          "type": "boolean"
-        },
-        "correctVarValueBeforeDeclaration": {
-          "type": "boolean"
-        },
-        "manualPureFunctions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "moduleSideEffects": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string",
-              "const": "no-external"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "propertyReadSideEffects": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string",
-              "const": "always"
-            }
-          ]
-        },
-        "tryCatchDeoptimization": {
-          "type": "boolean"
-        },
-        "unknownGlobalSideEffects": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Treeshaking options."
     },
     "EsBuildScriptCompilation": {
       "type": "object",
@@ -966,20 +1053,9 @@
           "description": "Exclude list for externals for this compilation."
         }
       },
-      "required": [
-        "compiler"
-      ],
+      "required": ["compiler"],
       "additionalProperties": false,
       "description": "Script compilation options for esbuild bundler tool."
-    },
-    "EsBuildScriptModuleFormat": {
-      "type": "string",
-      "enum": [
-        "cjs",
-        "esm",
-        "iife"
-      ],
-      "description": "Script module format for esbuild bundler tool."
     },
     "RollupScriptCompilation": {
       "type": "object",
@@ -1086,23 +1162,9 @@
           "description": "Exclude list for externals for this compilation."
         }
       },
-      "required": [
-        "compiler"
-      ],
+      "required": ["compiler"],
       "additionalProperties": false,
       "description": "Script compilation options for rollup bundler tool."
-    },
-    "RollupScriptModuleFormat": {
-      "type": "string",
-      "enum": [
-        "cjs",
-        "esm",
-        "iife",
-        "umd",
-        "amd",
-        "system"
-      ],
-      "description": "Script module format for rollup bundler tool."
     },
     "WebpackScriptCompilation": {
       "type": "object",
@@ -1202,35 +1264,9 @@
           "description": "Exclude list for externals for this compilation."
         }
       },
-      "required": [
-        "compiler"
-      ],
+      "required": ["compiler"],
       "additionalProperties": false,
       "description": "Script compilation options for webpack bundler tool."
-    },
-    "WebpackScriptModuleFormat": {
-      "type": "string",
-      "enum": [
-        "iife",
-        "umd",
-        "amd",
-        "amd-require",
-        "var",
-        "module",
-        "assign",
-        "assign-properties",
-        "this",
-        "window",
-        "self",
-        "global",
-        "commonjs",
-        "commonjs2",
-        "commonjs-module",
-        "commonjs-static",
-        "umd2",
-        "system"
-      ],
-      "description": "Script module format for webpack bundler tool."
     },
     "CustomScriptCompilation": {
       "type": "object",
@@ -1341,28 +1377,8 @@
           "description": "Custom compiler module."
         }
       },
-      "required": [
-        "compiler",
-        "compilerModule"
-      ],
+      "required": ["compiler", "compilerModule"],
       "additionalProperties": false
-    },
-    "ScriptModuleFormat": {
-      "anyOf": [
-        {
-          "$ref": "#/definitions/TypescriptScriptModuleFormat"
-        },
-        {
-          "$ref": "#/definitions/EsBuildScriptModuleFormat"
-        },
-        {
-          "$ref": "#/definitions/RollupScriptModuleFormat"
-        },
-        {
-          "$ref": "#/definitions/WebpackScriptModuleFormat"
-        }
-      ],
-      "description": "Script module format."
     },
     "PackageJsonOptions": {
       "type": "object",
@@ -1427,9 +1443,7 @@
           "description": "Handler script or module to run this task."
         }
       },
-      "required": [
-        "handler"
-      ],
+      "required": ["handler"],
       "description": "Custom task configuration."
     }
   }
