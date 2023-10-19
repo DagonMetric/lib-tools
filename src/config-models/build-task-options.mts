@@ -466,6 +466,7 @@ export interface ScriptOptions {
      */
     compilations:
         | (
+              | ScriptCompilation
               | TypescriptScriptCompilation
               | EsBuildScriptCompilation
               | RollupScriptCompilation
