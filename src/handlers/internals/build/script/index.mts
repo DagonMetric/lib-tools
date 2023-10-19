@@ -481,7 +481,12 @@ export class ScriptTaskRunner {
 
             totalTime += compileResult.time;
 
+            let hasEntry = false;
             for (const builtAsset of compileResult.builtAssets) {
+                if (builtAsset.isEntry) {
+                    hasEntry = true;
+                }
+
                 outputAssets.push({
                     ...builtAsset,
                     moduleFormat: compileOptions.moduleFormat
@@ -492,6 +497,10 @@ export class ScriptTaskRunner {
             const msgSuffix = this.options.dryRun ? 'built [dry run]' : 'emitted';
             const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
             this.logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
+
+            if (!hasEntry) {
+                this.logger.warn('No exportable entry found in the generated output paths.');
+            }
 
             if (compilations.length > 1) {
                 this.logger.groupEnd();
