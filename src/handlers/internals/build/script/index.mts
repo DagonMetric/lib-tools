@@ -10,13 +10,15 @@ import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// import defaultTs from 'typescript';
+import { CompilerOptions } from 'typescript';
 
 import {
+    AssetLoader,
     ScriptCompilation,
     ScriptModuleFormat,
     ScriptOptions,
-    ScriptTargetStrings
+    ScriptTarget,
+    TreeshakingOptions
 } from '../../../../config-models/index.mjs';
 import {
     LogLevelStrings,
@@ -24,6 +26,7 @@ import {
     colors,
     dashToCamelCase,
     findUp,
+    getRootBasePath,
     isInFolder,
     isSamePath,
     normalizePathToPOSIXStyle,
@@ -34,12 +37,13 @@ import {
 import { BuildTask } from '../../../build-task.mjs';
 import { InvalidCommandOptionError, InvalidConfigError } from '../../../exceptions/index.mjs';
 import { HandlerOptions } from '../../../handler-options.mjs';
+import { TaskInfo } from '../../../task-info.mjs';
 
 import { getBannerText } from '../../get-banner-text.mjs';
 import { PackageJsonInfo, getPackageJsonInfo } from '../../get-package-json-info.mjs';
 import { getSubstitutions } from '../../get-substitutions.mjs';
 
-import { CompileAsset, CompileOptions, CompileResult, TsConfigInfo } from './compilers/interfaces.mjs';
+import { CompileAsset, CompileOptions, CompileResult, TsConfigInfo } from './compilers/compile-interfaces.mjs';
 import { setTypescriptModule, ts } from './compilers/tsproxy.mjs';
 
 export type CompilerFn = (options: CompileOptions, logger: LoggerBase) => Promise<CompileResult>;
@@ -86,7 +90,7 @@ function getLastPartPackageName(packageName: string): string {
     return lastPartPackageName;
 }
 
-function getYearFromScriptTarget(scriptTarget: ScriptTargetStrings): number {
+function getYearFromScriptTarget(scriptTarget: ScriptTarget): number {
     if (scriptTarget === 'ESNext') {
         const year = new Date().getFullYear() - 1;
         const esmVerson = year - 2013;
@@ -108,15 +112,146 @@ function getYearFromScriptTarget(scriptTarget: ScriptTargetStrings): number {
     return 0;
 }
 
-interface ParsedCompilation extends ScriptCompilation {
-    readonly _entryFilePath: string | undefined;
-    readonly _outFilePath: string | undefined;
+export function getTsCompilerOptionsOverride(
+    tsConfigInfo: TsConfigInfo,
+    compilation: ParsedCompilation,
+    taskInfo: TaskInfo
+): CompilerOptions {
+    const compilerOptions: CompilerOptions = JSON.parse(
+        JSON.stringify(tsConfigInfo.compilerOptions)
+    ) as CompilerOptions;
+
+    compilerOptions.outDir = compilation._outDir;
+
+    let entryFilePaths: string[];
+    if (compilation._entryPoints) {
+        entryFilePaths = Object.entries(compilation._entryPoints).map((pair) => pair[1]);
+    } else {
+        entryFilePaths = [...tsConfigInfo.fileNames];
+    }
+
+    let rootBasePath: string | null = null;
+
+    if (entryFilePaths.length > 0) {
+        const { projectRoot } = taskInfo;
+
+        rootBasePath = getRootBasePath(entryFilePaths);
+        if (rootBasePath && (isSamePath(projectRoot, rootBasePath) || isInFolder(projectRoot, rootBasePath))) {
+            compilerOptions.rootDir = rootBasePath;
+        }
+
+        if (entryFilePaths.some((entryFilePath) => /\.(jsx|mjs|cjs|js)$/i.test(entryFilePath))) {
+            compilerOptions.allowJs = true;
+        }
+    }
+
+    if (compilation._scriptTarget != null) {
+        const scriptTarget = ts.ScriptTarget[compilation._scriptTarget];
+        compilerOptions.target = scriptTarget;
+    }
+
+    if (compilerOptions.target === ts.ScriptTarget.Latest) {
+        compilerOptions.target = ts.ScriptTarget.ESNext;
+    }
+
+    if (compilation._moduleFormat === 'cjs') {
+        if (
+            compilerOptions.module == null ||
+            (compilerOptions.module !== ts.ModuleKind.CommonJS &&
+                compilerOptions.module !== ts.ModuleKind.Node16 &&
+                compilerOptions.module !== ts.ModuleKind.NodeNext)
+        ) {
+            if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                compilerOptions.module = ts.ModuleKind.NodeNext;
+            } else if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                compilerOptions.module = ts.ModuleKind.Node16;
+            } else {
+                compilerOptions.module = ts.ModuleKind.CommonJS;
+            }
+        }
+    } else if (compilation._moduleFormat === 'esm') {
+        if (
+            compilerOptions.module == null ||
+            compilerOptions.module === ts.ModuleKind.None ||
+            compilerOptions.module === ts.ModuleKind.AMD ||
+            compilerOptions.module === ts.ModuleKind.CommonJS ||
+            compilerOptions.module === ts.ModuleKind.System ||
+            compilerOptions.module === ts.ModuleKind.UMD
+        ) {
+            if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext) {
+                compilerOptions.module = ts.ModuleKind.NodeNext;
+            } else if (compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16) {
+                compilerOptions.module = ts.ModuleKind.Node16;
+            } else if (compilerOptions.target && compilerOptions.target > ts.ScriptTarget.ES2022) {
+                compilerOptions.module = ts.ModuleKind.ESNext;
+            } else if (compilerOptions.target && compilerOptions.target > ts.ScriptTarget.ES2020) {
+                compilerOptions.module = ts.ModuleKind.ES2022;
+            } else if (compilerOptions.target && compilerOptions.target > ts.ScriptTarget.ES2015) {
+                compilerOptions.module = ts.ModuleKind.ES2020;
+            } else {
+                compilerOptions.module = ts.ModuleKind.ES2015;
+            }
+        }
+    } else if (compilation._moduleFormat === 'umd' || compilation._moduleFormat === 'iife') {
+        compilerOptions.module = ts.ModuleKind.UMD;
+    }
+
+    if (compilation._declaration != null) {
+        compilerOptions.declaration = compilation._declaration;
+    }
+
+    if (compilation._emitDeclarationOnly != null) {
+        compilerOptions.emitDeclarationOnly = compilation._emitDeclarationOnly;
+    }
+
+    if (compilerOptions.emitDeclarationOnly) {
+        compilerOptions.declaration = true;
+        compilerOptions.sourceMap = undefined;
+        compilerOptions.inlineSourceMap = undefined;
+        compilerOptions.inlineSources = undefined;
+        compilerOptions.sourceRoot = undefined;
+        if (compilerOptions.types && !compilerOptions.types.length) {
+            compilerOptions.types = undefined;
+        }
+    } else {
+        if (compilation._sourceMap) {
+            if (rootBasePath && compilerOptions.sourceRoot == null) {
+                compilerOptions.sourceRoot = rootBasePath;
+            }
+
+            if (
+                (compilerOptions.sourceMap != null && compilerOptions.inlineSourceMap != null) ||
+                (!compilerOptions.sourceMap && !compilerOptions.inlineSourceMap)
+            ) {
+                compilerOptions.sourceMap = true;
+                compilerOptions.inlineSourceMap = false;
+            }
+        } else {
+            compilerOptions.sourceMap = false;
+            compilerOptions.inlineSourceMap = false;
+            compilerOptions.inlineSources = false;
+            compilerOptions.sourceRoot = undefined;
+        }
+    }
+
+    if (compilation._preserveSymlinks != null) {
+        compilerOptions.preserveSymlinks = compilation._preserveSymlinks;
+    }
+
+    return compilerOptions;
+}
+
+interface ParsedCompilation extends Readonly<Pick<ScriptCompilation, 'compiler' | 'entry'>> {
+    compiler: 'tsc' | 'esbuild' | 'rollup' | 'webpack' | 'custom' | undefined;
+    entry: string | string[] | Record<string, string> | undefined;
+
     readonly _outDir: string;
+    readonly _entryPoints: string[] | Record<string, string> | undefined;
     readonly _moduleFormat: ScriptModuleFormat | undefined;
-    readonly _scriptTarget: ScriptTargetStrings | undefined;
-    readonly _bundle: boolean;
-    readonly _sourceMap: boolean;
-    readonly _minify: boolean;
+    readonly _scriptTarget: ScriptTarget | undefined;
+    readonly _bundle: boolean | undefined;
+    readonly _sourceMap: boolean | undefined;
+    readonly _minify: boolean | undefined;
     readonly _environmentTargets: readonly string[] | undefined;
     readonly _externals: readonly string[] | undefined;
     readonly _tsConfigInfo: Readonly<TsConfigInfo> | undefined;
@@ -124,6 +259,10 @@ interface ParsedCompilation extends ScriptCompilation {
     readonly _emitDeclarationOnly: boolean | undefined;
     readonly _globals: Readonly<Record<string, string>> | undefined;
     readonly _preserveSymlinks: boolean | undefined;
+    readonly _globalName: string | undefined;
+    readonly _treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
+    readonly _assetLoaders: Record<string, AssetLoader> | undefined;
+    readonly _assetOut: string | undefined;
 }
 
 export interface ScriptTaskRunnerOptions {
@@ -191,32 +330,55 @@ export class ScriptTaskRunner {
                 this.logger.group(`\u25B7 compilations/${i}`);
             }
 
+            const taskInfo: TaskInfo = {
+                taskName,
+                workspaceRoot,
+                projectRoot,
+                projectName,
+                configPath
+            };
+
+            const entryPointsPreferred =
+                compilation._entryPoints &&
+                ((compilation.entry ?? compilation.compiler === 'esbuild') ||
+                    compilation.compiler === 'rollup' ||
+                    compilation.compiler === 'webpack' ||
+                    !compilation._tsConfigInfo?.fileNames.length)
+                    ? true
+                    : undefined;
+
+            let tsConfigInfo: TsConfigInfo | undefined;
+            if (compilation._tsConfigInfo) {
+                const compilerOptions = getTsCompilerOptionsOverride(compilation._tsConfigInfo, compilation, taskInfo);
+                tsConfigInfo = {
+                    compilerOptions,
+                    fileNames: [...compilation._tsConfigInfo.fileNames],
+                    configPath: compilation._tsConfigInfo.configPath
+                };
+            }
+
             const compileOptions: CompileOptions = {
                 taskInfo: {
-                    taskName,
-                    workspaceRoot,
-                    projectRoot,
-                    projectName,
-                    configPath,
+                    ...taskInfo,
                     compilationIndex: Array.isArray(this.options.scriptOptions.compilations) ? i : undefined
                 },
-                entryFilePath: compilation._entryFilePath,
-                preferredEntryFilePath: compilation._entryFilePath && compilation.entry ? true : false,
+                entryPoints: compilation._entryPoints,
+                entryPointsPreferred,
                 outDir: compilation._outDir,
-                outFilePath: compilation._outFilePath,
                 moduleFormat: compilation._moduleFormat,
                 scriptTarget: compilation._scriptTarget,
                 sourceMap: compilation._sourceMap,
                 minify: compilation._minify,
-                tsConfigInfo: compilation._tsConfigInfo,
-                emitDeclarationOnly: compilation._emitDeclarationOnly,
-                declaration: compilation._declaration,
+                tsConfigInfo,
                 environmentTargets: compilation._environmentTargets,
                 externals: compilation._externals,
                 globals: compilation._globals,
                 preserveSymlinks: compilation._preserveSymlinks,
-                globalName: compilation.globalName,
-                treeshake: compilation.treeshake,
+                globalName: compilation._globalName,
+                treeshake: compilation._treeshake,
+                bundle: compilation._bundle,
+                assetLoaders: compilation._assetLoaders,
+                assetOut: compilation._assetOut,
                 banner: bannerText,
                 footer: footerText,
                 substitutions,
@@ -398,9 +560,6 @@ export class ScriptTaskRunner {
             const entry = entryFilePath
                 ? normalizePathToPOSIXStyle(path.relative(projectRoot, entryFilePath))
                 : undefined;
-            const tsconfig = tsConfigInfo?.configPath
-                ? normalizePathToPOSIXStyle(path.relative(projectRoot, tsConfigInfo.configPath))
-                : undefined;
 
             const preserveSymlinks =
                 this.options.scriptOptions.preserveSymlinks ?? tsConfigInfo?.compilerOptions.preserveSymlinks;
@@ -425,89 +584,56 @@ export class ScriptTaskRunner {
 
                 // types
                 //
-                const typesCompilation: ScriptCompilation = {
-                    bundle: false,
-                    entry,
-                    tsconfig,
-                    scriptTarget,
-                    moduleFormat,
-                    emitDeclarationOnly: true,
-                    declaration: true,
-                    out: 'types'
-                };
-
-                const typesOutFilePath = await this.getOutputFilePath({
-                    compilation: typesCompilation,
-                    compilationIndex: undefined,
-                    entryFilePath,
-                    forTypesOutput: true,
-                    bundle: false,
-                    moduleFormat,
-                    tsConfigInfo,
-                    packageJsonInfo
-                });
-
                 parsedScriptCompilations.push({
-                    ...typesCompilation,
-                    _entryFilePath: entryFilePath,
-                    _outDir: typesOutFilePath ? path.dirname(typesOutFilePath) : this.options.buildTask.outDir,
-                    _outFilePath: typesOutFilePath,
+                    compiler: 'tsc',
+                    entry,
+
+                    _entryPoints: entryFilePath ? [entryFilePath] : undefined,
+                    _outDir: path.resolve(this.options.buildTask.outDir, 'types'),
                     _moduleFormat: moduleFormat,
                     _scriptTarget: scriptTarget,
                     _tsConfigInfo: tsConfigInfo,
                     _emitDeclarationOnly: true,
                     _declaration: true,
-                    _bundle: false,
                     _sourceMap: false,
-                    _minify: false,
                     _preserveSymlinks: preserveSymlinks,
+
+                    _bundle: undefined,
+                    _minify: undefined,
                     _environmentTargets: undefined,
                     _externals: undefined,
-                    _globals: undefined
+                    _globals: undefined,
+                    _assetLoaders: undefined,
+                    _assetOut: undefined,
+                    _globalName: undefined,
+                    _treeshake: undefined
                 });
 
                 // esm
                 //
-                const esmCompilation: ScriptCompilation = {
-                    bundle: false,
-                    entry,
-                    tsconfig,
-                    scriptTarget,
-                    moduleFormat,
-                    emitDeclarationOnly: false,
-                    declaration: false,
-                    sourceMap: true,
-                    out: `esm${year}`
-                };
-
-                const esmOutFilePath = await this.getOutputFilePath({
-                    compilation: esmCompilation,
-                    compilationIndex: undefined,
-                    entryFilePath,
-                    forTypesOutput: false,
-                    bundle: false,
-                    moduleFormat,
-                    tsConfigInfo,
-                    packageJsonInfo
-                });
-
                 parsedScriptCompilations.push({
-                    ...esmCompilation,
-                    _entryFilePath: entryFilePath,
-                    _outDir: esmOutFilePath ? path.dirname(esmOutFilePath) : this.options.buildTask.outDir,
-                    _outFilePath: esmOutFilePath,
+                    compiler: 'tsc',
+                    entry,
+
+                    _entryPoints: entryFilePath ? [entryFilePath] : undefined,
+                    _outDir: path.resolve(this.options.buildTask.outDir, `esm${year}`),
                     _moduleFormat: moduleFormat,
                     _scriptTarget: scriptTarget,
                     _tsConfigInfo: tsConfigInfo,
                     _emitDeclarationOnly: false,
                     _declaration: false,
-                    _bundle: false,
                     _sourceMap: true,
-                    _minify: false,
                     _preserveSymlinks: preserveSymlinks,
+
+                    _bundle: undefined,
+                    _minify: undefined,
                     _environmentTargets: undefined,
                     _externals: undefined,
-                    _globals: undefined
+                    _globals: undefined,
+                    _assetLoaders: undefined,
+                    _assetOut: undefined,
+                    _globalName: undefined,
+                    _treeshake: undefined
                 });
 
                 // fesm
@@ -521,112 +647,64 @@ export class ScriptTaskRunner {
                     packageJsonInfo
                 });
 
-                const fesmCompilation: ScriptCompilation = {
-                    bundle: true,
-                    entry,
-                    tsconfig,
-                    scriptTarget,
-                    moduleFormat,
-                    emitDeclarationOnly: false,
-                    declaration: false,
-                    sourceMap: true,
-                    minify: false,
-                    out: `fesm${year}`
-                };
-
-                const fesmOutFilePath = await this.getOutputFilePath({
-                    compilation: fesmCompilation,
-                    compilationIndex: undefined,
-                    entryFilePath,
-                    forTypesOutput: false,
-                    bundle: true,
-                    moduleFormat,
-                    tsConfigInfo,
-                    packageJsonInfo
-                });
-
                 parsedScriptCompilations.push({
-                    ...fesmCompilation,
-                    _entryFilePath: entryFilePath,
-                    _outDir: fesmOutFilePath ? path.dirname(fesmOutFilePath) : this.options.buildTask.outDir,
-                    _outFilePath: fesmOutFilePath,
+                    compiler: 'esbuild',
+                    entry,
+
+                    _entryPoints: entryFilePath ? [entryFilePath] : undefined,
+                    _outDir: path.resolve(this.options.buildTask.outDir, `fesm${year}`),
                     _moduleFormat: moduleFormat,
                     _scriptTarget: scriptTarget,
                     _tsConfigInfo: tsConfigInfo,
                     _emitDeclarationOnly: false,
                     _declaration: false,
-                    _bundle: true,
-                    _minify: false,
                     _sourceMap: true,
+                    _preserveSymlinks: preserveSymlinks,
+
+                    _bundle: true,
+                    _minify: undefined,
                     _environmentTargets: [...environmentTargets],
                     _externals: [...externals],
                     _globals: globals,
-                    _preserveSymlinks: preserveSymlinks
+                    _assetLoaders: undefined,
+                    _assetOut: undefined,
+                    _globalName: undefined,
+                    _treeshake: undefined
                 });
             } else {
                 // emitDeclarationOnly
-                let emitDeclarationOnly = false;
+                let emitDeclarationOnly: boolean | undefined;
                 if (tsConfigInfo?.compilerOptions.emitDeclarationOnly != null) {
                     emitDeclarationOnly = tsConfigInfo.compilerOptions.emitDeclarationOnly;
                 }
 
                 // declaration
-                let declaration = false;
+                let declaration: boolean | undefined;
                 if (emitDeclarationOnly) {
                     declaration = true;
                 } else if (tsConfigInfo?.compilerOptions.declaration != null) {
                     declaration = tsConfigInfo.compilerOptions.declaration;
                 }
 
+                const entryPoints = entryFilePath ? [entryFilePath] : undefined;
+
                 // moduleFormat
-                let moduleFormat = this.getModuleFormat({
+                const moduleFormat = this.getModuleFormat({
                     compilation: null,
                     tsConfigInfo,
-                    entryFilePath,
+                    entryPoints,
                     packageJsonInfo
                 });
 
-                if (!moduleFormat) {
-                    moduleFormat = emitDeclarationOnly ? 'esm' : 'iife';
-                }
-
-                let scriptTarget = this.getScriptTarget({
+                // scriptTarget
+                const scriptTarget = this.getScriptTarget({
                     compilation: null,
                     tsConfigInfo
                 });
 
-                if (!scriptTarget) {
-                    scriptTarget =
-                        (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? 'ES5' : 'ES2015';
-                }
-
-                const compilation: ScriptCompilation = {
-                    bundle: true,
-                    entry,
-                    tsconfig,
-                    emitDeclarationOnly,
-                    declaration,
-                    moduleFormat,
-                    scriptTarget
-                };
-
-                const outFilePath = await this.getOutputFilePath({
-                    compilation,
-                    compilationIndex: undefined,
-                    entryFilePath,
-                    forTypesOutput: emitDeclarationOnly,
-                    bundle: true,
-                    moduleFormat,
-                    tsConfigInfo,
-                    packageJsonInfo
-                });
-
-                // environmentTargets
-                const environmentTargets: string[] = this.options.scriptOptions.environmentTargets ?? [];
-
                 // minify
                 const minify =
-                    (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? true : false;
+                    (moduleFormat === 'iife' || moduleFormat === 'umd') && !emitDeclarationOnly ? true : undefined;
 
                 // sourceMap
                 let sourceMap = true;
@@ -645,22 +723,26 @@ export class ScriptTaskRunner {
                 });
 
                 parsedScriptCompilations.push({
-                    ...compilation,
-                    _entryFilePath: entryFilePath,
-                    _outDir: outFilePath ? path.dirname(outFilePath) : this.options.buildTask.outDir,
-                    _outFilePath: outFilePath,
+                    entry,
+                    compiler: emitDeclarationOnly ?? !entryPoints ? 'tsc' : 'esbuild',
+                    _entryPoints: entryPoints,
+                    _outDir: this.options.buildTask.outDir,
                     _moduleFormat: moduleFormat,
                     _scriptTarget: scriptTarget,
                     _tsConfigInfo: tsConfigInfo,
                     _emitDeclarationOnly: emitDeclarationOnly,
                     _declaration: declaration,
-                    _bundle: true,
                     _sourceMap: sourceMap,
+                    _preserveSymlinks: preserveSymlinks,
+                    _bundle: emitDeclarationOnly ?? !entryPoints ? false : true,
                     _minify: minify,
-                    _environmentTargets: [...environmentTargets],
+                    _environmentTargets: this.options.scriptOptions.environmentTargets,
                     _externals: [...externals],
                     _globals: globals,
-                    _preserveSymlinks: preserveSymlinks
+                    _assetLoaders: undefined,
+                    _assetOut: undefined,
+                    _globalName: undefined,
+                    _treeshake: undefined
                 });
             }
 
@@ -700,37 +782,36 @@ export class ScriptTaskRunner {
                       })
                     : undefined;
 
-                const entryFilePath = await this.getEntryFilePath({
+                const entryPoints = await this.getEntryPoints({
                     compilation,
                     compilationIndex: i,
                     tsConfigInfo,
                     packageJsonInfo
                 });
 
-                const scriptTarget =
-                    this.getScriptTarget({
-                        compilation,
-                        tsConfigInfo
-                    }) ?? 'ES2015';
+                const scriptTarget = this.getScriptTarget({
+                    compilation,
+                    tsConfigInfo
+                });
 
                 const moduleFormat = this.getModuleFormat({
                     compilation,
                     tsConfigInfo,
-                    entryFilePath,
+                    entryPoints,
                     packageJsonInfo
                 });
 
                 // emitDeclarationOnly
-                let emitDeclarationOnly = false;
-                if (compilation.emitDeclarationOnly != null) {
+                let emitDeclarationOnly: boolean | undefined;
+                if (compilation.compiler === 'tsc' && compilation.emitDeclarationOnly != null) {
                     emitDeclarationOnly = compilation.emitDeclarationOnly;
                 } else if (tsConfigInfo?.compilerOptions.emitDeclarationOnly != null) {
                     emitDeclarationOnly = tsConfigInfo.compilerOptions.emitDeclarationOnly;
                 }
 
                 // declaration
-                let declaration = false;
-                if (compilation.declaration != null) {
+                let declaration: boolean | undefined;
+                if (compilation.compiler === 'tsc' && compilation.declaration != null) {
                     declaration = compilation.declaration;
                 } else if (emitDeclarationOnly) {
                     declaration = true;
@@ -738,32 +819,22 @@ export class ScriptTaskRunner {
                     declaration = tsConfigInfo.compilerOptions.declaration;
                 }
 
-                // TODO:
                 // bundle
-                let bundle = emitDeclarationOnly ? false : true;
-                if (compilation.bundle != null) {
-                    bundle = compilation.bundle;
-                } else if (compilation.compiler === 'tsc' || compilation.compiler === 'typescript') {
+                let bundle = emitDeclarationOnly ? false : undefined;
+                if (compilation.compiler === 'tsc') {
                     bundle = false;
+                } else if (compilation.compiler === 'esbuild' && compilation.bundle != null) {
+                    bundle = compilation.bundle;
+                } else if (compilation.compiler === 'rollup' || compilation.compiler === 'webpack') {
+                    bundle = true;
                 }
-
-                const outFilePath = await this.getOutputFilePath({
-                    compilation,
-                    compilationIndex: i,
-                    entryFilePath,
-                    forTypesOutput: emitDeclarationOnly,
-                    bundle,
-                    moduleFormat,
-                    tsConfigInfo,
-                    packageJsonInfo
-                });
 
                 // environmentTargets
                 const environmentTargets: string[] =
                     compilation.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
 
                 // minify
-                let minify = false;
+                let minify: boolean | undefined;
                 if (compilation.minify != null) {
                     minify = compilation.minify;
                 } else {
@@ -783,20 +854,34 @@ export class ScriptTaskRunner {
                 }
 
                 // externals
-                const { externals, globals } = this.getExternalsAndGlobals({
-                    compilation,
-                    packageJsonInfo
-                });
+                let externals: string[] | undefined;
+                let globals: Record<string, string> | undefined;
+
+                if (
+                    compilation.compiler === 'esbuild' ||
+                    compilation.compiler === 'rollup' ||
+                    compilation.compiler === 'webpack'
+                ) {
+                    const externalsAndGlobalsOptions = this.getExternalsAndGlobals({
+                        compilation,
+                        packageJsonInfo
+                    });
+
+                    externals = externalsAndGlobalsOptions.externals;
+                    globals = externalsAndGlobalsOptions.globals;
+                }
 
                 // preserveSymlinks
                 const preserveSymlinks =
                     this.options.scriptOptions.preserveSymlinks ?? tsConfigInfo?.compilerOptions.preserveSymlinks;
 
                 parsedScriptCompilations.push({
-                    ...compilation,
-                    _entryFilePath: entryFilePath,
-                    _outDir: outFilePath ? path.dirname(outFilePath) : this.options.buildTask.outDir,
-                    _outFilePath: outFilePath,
+                    entry: compilation.entry,
+                    compiler: compilation.compiler,
+                    _entryPoints: entryPoints,
+                    _outDir: compilation.outDir
+                        ? path.resolve(this.options.buildTask.outDir, compilation.outDir)
+                        : this.options.buildTask.outDir,
                     _moduleFormat: moduleFormat,
                     _scriptTarget: scriptTarget,
                     _tsConfigInfo: tsConfigInfo,
@@ -806,9 +891,14 @@ export class ScriptTaskRunner {
                     _minify: minify,
                     _sourceMap: sourceMap,
                     _environmentTargets: [...environmentTargets],
-                    _externals: [...externals],
+                    _externals: externals ? [...externals] : undefined,
                     _globals: globals,
-                    _preserveSymlinks: preserveSymlinks
+                    _preserveSymlinks: preserveSymlinks,
+
+                    _assetLoaders: compilation.assetLoaders,
+                    _assetOut: compilation.assetOut,
+                    _globalName: compilation.globalName,
+                    _treeshake: compilation.treeshake
                 });
             }
 
@@ -938,10 +1028,11 @@ export class ScriptTaskRunner {
         const detectedTsConfigFilePath = await this.detectTsConfigPath();
 
         if (detectedTsConfigFilePath) {
-            const detectedTsConfigFilePathRel = normalizePathToPOSIXStyle(
-                path.relative(process.cwd(), detectedTsConfigFilePath)
+            this.logger.debug(
+                `Tsconfig file detected: ${normalizePathToPOSIXStyle(
+                    path.relative(process.cwd(), detectedTsConfigFilePath)
+                )}`
             );
-            this.logger.debug(`Tsconfig file detected: ${detectedTsConfigFilePathRel}`);
         }
 
         return detectedTsConfigFilePath;
@@ -983,47 +1074,69 @@ export class ScriptTaskRunner {
         return foundPath;
     }
 
-    private async getEntryFilePath(
+    private async resolveEntryFilePath(entry: string, compilationIndex: number): Promise<string> {
+        const { projectRoot, projectName, configPath } = this.options.buildTask;
+
+        const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/entry`;
+
+        const normalizedEntry = normalizePathToPOSIXStyle(entry);
+
+        if (
+            !normalizedEntry ||
+            normalizedEntry.length < 4 ||
+            !/\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$/i.test(normalizedEntry)
+        ) {
+            const errMsg = `Unsupported script entry file extension '${entry}'.`;
+            if (projectName) {
+                throw new InvalidConfigError(errMsg, configPath, configLocation);
+            } else {
+                throw new InvalidCommandOptionError('script', entry, errMsg);
+            }
+        }
+
+        const entryFilePath = resolvePath(projectRoot, normalizedEntry);
+
+        if (!(await pathExists(entryFilePath, true))) {
+            const errMsg = `The entry file ${entry} doesn't exist.`;
+            if (projectName) {
+                throw new InvalidConfigError(errMsg, configPath, configLocation);
+            } else {
+                throw new InvalidCommandOptionError('script', entry, errMsg);
+            }
+        }
+
+        return entryFilePath;
+    }
+
+    private async getEntryPoints(
         options: Readonly<{
             compilation: Readonly<ScriptCompilation>;
             compilationIndex: number;
             tsConfigInfo: Readonly<TsConfigInfo> | undefined;
             packageJsonInfo: Readonly<PackageJsonInfo> | null;
         }>
-    ): Promise<string | undefined> {
-        const { projectRoot, projectName, configPath } = this.options.buildTask;
+    ): Promise<string[] | Record<string, string> | undefined> {
         const { compilation, compilationIndex, tsConfigInfo, packageJsonInfo } = options;
 
-        const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/entry`;
-
         if (compilation.entry) {
-            const normalizedEntry = normalizePathToPOSIXStyle(compilation.entry);
-
-            if (
-                !normalizedEntry ||
-                normalizedEntry.length < 4 ||
-                !/\.(tsx|mts|cts|ts|jsx|mjs|cjs|js)$/i.test(normalizedEntry)
-            ) {
-                const errMsg = `Unsupported script entry file extension '${compilation.entry}'.`;
-                if (projectName) {
-                    throw new InvalidConfigError(errMsg, configPath, configLocation);
-                } else {
-                    throw new InvalidCommandOptionError('script', compilation.entry, errMsg);
+            if (Array.isArray(compilation.entry) || typeof compilation.entry === 'string') {
+                const enties = Array.isArray(compilation.entry) ? [...compilation.entry] : [compilation.entry];
+                const entryFilePaths: string[] = [];
+                for (const entry of enties) {
+                    const entryFilePath = await this.resolveEntryFilePath(entry, compilationIndex);
+                    entryFilePaths.push(entryFilePath);
                 }
-            }
 
-            const entryFilePath = resolvePath(projectRoot, normalizedEntry);
-
-            if (!(await pathExists(entryFilePath, true))) {
-                const errMsg = `The entry file ${compilation.entry} doesn't exist.`;
-                if (projectName) {
-                    throw new InvalidConfigError(errMsg, configPath, configLocation);
-                } else {
-                    throw new InvalidCommandOptionError('script', compilation.entry, errMsg);
+                return entryFilePaths;
+            } else {
+                for (const outName of Object.keys(compilation.entry)) {
+                    const entry = compilation.entry[outName];
+                    const entryFilePath = await this.resolveEntryFilePath(entry, compilationIndex);
+                    compilation.entry[outName] = entryFilePath;
                 }
-            }
 
-            return entryFilePath;
+                return compilation.entry;
+            }
         }
 
         this.logger.debug(`Detecting entry file for compilation/${compilationIndex}...`);
@@ -1037,9 +1150,11 @@ export class ScriptTaskRunner {
             this.logger.debug(
                 `Entry file detected: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), detectedEntryFilePath))}`
             );
+
+            return [detectedEntryFilePath];
         }
 
-        return detectedEntryFilePath;
+        return undefined;
     }
 
     private async detectEntryFilePath(
@@ -1094,328 +1209,337 @@ export class ScriptTaskRunner {
         }
     }
 
-    private async getOutputFilePath(
-        options: Readonly<{
-            compilation: Readonly<ScriptCompilation>;
-            compilationIndex: number | undefined;
-            entryFilePath: string | undefined;
-            forTypesOutput: boolean;
-            bundle: boolean;
-            moduleFormat: ScriptModuleFormat | undefined;
-            tsConfigInfo: Readonly<TsConfigInfo> | undefined;
-            packageJsonInfo: Readonly<PackageJsonInfo> | null;
-        }>
-    ): Promise<string | undefined> {
-        const { compilation, compilationIndex, entryFilePath, forTypesOutput, tsConfigInfo, packageJsonInfo } = options;
+    // TODO:
+    // private async getOutputFilePath(
+    //     options: Readonly<{
+    //         compilation: Readonly<ScriptCompilation>;
+    //         compilationIndex: number | undefined;
+    //         entryFilePath: string | undefined;
+    //         forTypesOutput: boolean;
+    //         bundle: boolean;
+    //         moduleFormat: ScriptModuleFormat | undefined;
+    //         tsConfigInfo: Readonly<TsConfigInfo> | undefined;
+    //         packageJsonInfo: Readonly<PackageJsonInfo> | null;
+    //     }>
+    // ): Promise<string | undefined> {
+    //     const { compilation, compilationIndex, entryFilePath, forTypesOutput, tsConfigInfo, packageJsonInfo } = options;
 
-        if (!entryFilePath) {
-            return undefined;
-        }
+    //     if (!entryFilePath) {
+    //         return undefined;
+    //     }
 
-        const { configPath, outDir, workspaceRoot, projectRoot } = this.options.buildTask;
+    //     const { configPath, outDir, workspaceRoot, projectRoot } = this.options.buildTask;
 
-        const lastPartPackageName = packageJsonInfo?.packageName
-            ? getLastPartPackageName(packageJsonInfo.packageName)
-            : null;
+    //     const lastPartPackageName = packageJsonInfo?.packageName
+    //         ? getLastPartPackageName(packageJsonInfo.packageName)
+    //         : null;
 
-        const entryFileName = path.basename(entryFilePath);
-        const entryFileExt = path.extname(entryFileName);
-        const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
+    //     const entryFileName = path.basename(entryFilePath);
+    //     const entryFileExt = path.extname(entryFileName);
+    //     const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
 
-        if (compilation.out?.trim().length) {
-            const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/out`;
+    //     if (compilation.out?.trim().length) {
+    //         const configLocation = `${this.configLocationPrefix}/compilations/${compilationIndex}/out`;
 
-            let outFilePath: string;
+    //         let outFilePath: string;
 
-            let normalizedOut = normalizePathToPOSIXStyle(compilation.out);
-            const normalizedOutExt = path.extname(normalizedOut);
+    //         let normalizedOut = normalizePathToPOSIXStyle(compilation.out);
+    //         const normalizedOutExt = path.extname(normalizedOut);
 
-            normalizedOut = normalizedOut.replace(/\[name\]/gi, entryFileNameWithoutExt);
-            if (lastPartPackageName) {
-                normalizedOut = normalizedOut.replace(/\[package_?name\]/gi, lastPartPackageName);
-            }
+    //         normalizedOut = normalizedOut.replace(/\[name\]/gi, entryFileNameWithoutExt);
+    //         if (lastPartPackageName) {
+    //             normalizedOut = normalizedOut.replace(/\[package_?name\]/gi, lastPartPackageName);
+    //         }
 
-            if (
-                !compilation.out?.trim().endsWith('/') &&
-                normalizedOutExt &&
-                /^\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(normalizedOutExt)
-            ) {
-                // Validation
-                //
-                if (forTypesOutput) {
-                    if (!/^\.d\.[cm]?ts$/i.test(normalizedOutExt)) {
-                        throw new InvalidConfigError(
-                            'Invalid file extension for declaration output.',
-                            configPath,
-                            configLocation
-                        );
-                    }
-                } else {
-                    if (/^\.d\.[cm]?ts$/i.test(normalizedOutExt)) {
-                        throw new InvalidConfigError(
-                            'Invalid file extension for non-declaration output.',
-                            configPath,
-                            configLocation
-                        );
-                    }
-                }
+    //         if (
+    //             !compilation.out?.trim().endsWith('/') &&
+    //             normalizedOutExt &&
+    //             /^\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(normalizedOutExt)
+    //         ) {
+    //             // Validation
+    //             //
+    //             if (forTypesOutput) {
+    //                 if (!/^\.d\.[cm]?ts$/i.test(normalizedOutExt)) {
+    //                     throw new InvalidConfigError(
+    //                         'Invalid file extension for declaration output.',
+    //                         configPath,
+    //                         configLocation
+    //                     );
+    //                 }
+    //             } else {
+    //                 if (/^\.d\.[cm]?ts$/i.test(normalizedOutExt)) {
+    //                     throw new InvalidConfigError(
+    //                         'Invalid file extension for non-declaration output.',
+    //                         configPath,
+    //                         configLocation
+    //                     );
+    //                 }
+    //             }
 
-                outFilePath = resolvePath(outDir, normalizedOut);
-            } else {
-                if (compilationIndex != null) {
-                    this.logger.debug(`Detecting output file name for compilation/${compilationIndex}...`);
-                } else {
-                    this.logger.debug('Detecting output file name...');
-                }
+    //             outFilePath = resolvePath(outDir, normalizedOut);
+    //         } else {
+    //             if (compilationIndex != null) {
+    //                 this.logger.debug(`Detecting output file name for compilation/${compilationIndex}...`);
+    //             } else {
+    //                 this.logger.debug('Detecting output file name...');
+    //             }
 
-                const outFileName = await this.detectOutputFileName(options);
+    //             const outFileName = await this.detectOutputFileName(options);
 
-                if (!outFileName) {
-                    return undefined;
-                }
+    //             if (!outFileName) {
+    //                 return undefined;
+    //             }
 
-                this.logger.debug(`Output file detected: ${outFileName}`);
+    //             this.logger.debug(`Output file detected: ${outFileName}`);
 
-                outFilePath = resolvePath(outDir, path.join(normalizedOut, outFileName));
-            }
+    //             outFilePath = resolvePath(outDir, path.join(normalizedOut, outFileName));
+    //         }
 
-            if (isSamePath(outFilePath, entryFilePath)) {
-                throw new InvalidConfigError(
-                    'The compilation output path must not be the same as entry file path.',
-                    configPath,
-                    configLocation
-                );
-            }
+    //         if (isSamePath(outFilePath, entryFilePath)) {
+    //             throw new InvalidConfigError(
+    //                 'The compilation output path must not be the same as entry file path.',
+    //                 configPath,
+    //                 configLocation
+    //             );
+    //         }
 
-            if (!isInFolder(outDir, outFilePath)) {
-                throw new InvalidConfigError(
-                    'The compilation output path must not be outside of project outDir.',
-                    configPath,
-                    configLocation
-                );
-            }
+    //         if (!isInFolder(outDir, outFilePath)) {
+    //             throw new InvalidConfigError(
+    //                 'The compilation output path must not be outside of project outDir.',
+    //                 configPath,
+    //                 configLocation
+    //             );
+    //         }
 
-            return outFilePath;
-        } else {
-            if (compilationIndex != null) {
-                this.logger.debug(`Detecting output file name for compilation/${compilationIndex}...`);
-            } else {
-                this.logger.debug('Detecting output file name...');
-            }
+    //         return outFilePath;
+    //     } else {
+    //         if (compilationIndex != null) {
+    //             this.logger.debug(`Detecting output file name for compilation/${compilationIndex}...`);
+    //         } else {
+    //             this.logger.debug('Detecting output file name...');
+    //         }
 
-            const outFileName = await this.detectOutputFileName(options);
+    //         const outFileName = await this.detectOutputFileName(options);
 
-            if (!outFileName) {
-                return undefined;
-            }
+    //         if (!outFileName) {
+    //             return undefined;
+    //         }
 
-            this.logger.debug(`Output file detected: ${outFileName}`);
+    //         this.logger.debug(`Output file detected: ${outFileName}`);
 
-            let customOutDir = outDir;
+    //         let customOutDir = outDir;
 
-            if (
-                tsConfigInfo?.configPath &&
-                tsConfigInfo?.compilerOptions.outDir != null &&
-                isInFolder(projectRoot, tsConfigInfo.configPath) &&
-                (isInFolder(outDir, tsConfigInfo.compilerOptions.outDir) ||
-                    isSamePath(outDir, tsConfigInfo.compilerOptions.outDir))
-            ) {
-                customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);
-            } else if (!isSamePath(projectRoot, workspaceRoot)) {
-                const relToWorkspaceRoot = normalizePathToPOSIXStyle(path.relative(workspaceRoot, projectRoot));
-                if (relToWorkspaceRoot.split('/').length > 1) {
-                    customOutDir = resolvePath(outDir, relToWorkspaceRoot);
-                }
-            }
+    //         if (
+    //             tsConfigInfo?.configPath &&
+    //             tsConfigInfo?.compilerOptions.outDir != null &&
+    //             isInFolder(projectRoot, tsConfigInfo.configPath) &&
+    //             (isInFolder(outDir, tsConfigInfo.compilerOptions.outDir) ||
+    //                 isSamePath(outDir, tsConfigInfo.compilerOptions.outDir))
+    //         ) {
+    //             customOutDir = path.resolve(tsConfigInfo.compilerOptions.outDir);
+    //         } else if (!isSamePath(projectRoot, workspaceRoot)) {
+    //             const relToWorkspaceRoot = normalizePathToPOSIXStyle(path.relative(workspaceRoot, projectRoot));
+    //             if (relToWorkspaceRoot.split('/').length > 1) {
+    //                 customOutDir = resolvePath(outDir, relToWorkspaceRoot);
+    //             }
+    //         }
 
-            const outputPath = resolvePath(customOutDir, outFileName);
+    //         const outputPath = resolvePath(customOutDir, outFileName);
 
-            return outputPath;
-        }
-    }
+    //         return outputPath;
+    //     }
+    // }
 
-    private async detectOutputFileName(
-        options: Readonly<{
-            entryFilePath: string | undefined;
-            forTypesOutput: boolean;
-            bundle: boolean;
-            moduleFormat: ScriptModuleFormat | undefined;
-            packageJsonInfo: Readonly<PackageJsonInfo> | null;
-        }>
-    ): Promise<string | undefined> {
-        const { entryFilePath, forTypesOutput, moduleFormat, bundle, packageJsonInfo } = options;
+    // private async detectOutputFileName(
+    //     options: Readonly<{
+    //         entryPoints: string[] | Record<string, string> | undefined;
+    //         forTypesOutput: boolean;
+    //         bundle: boolean | undefined;
+    //         moduleFormat: ScriptModuleFormat | undefined;
+    //         packageJsonInfo: Readonly<PackageJsonInfo> | null;
+    //     }>
+    // ): Promise<string | undefined> {
+    //     const { entryPoints, forTypesOutput, moduleFormat, bundle, packageJsonInfo } = options;
 
-        if (!entryFilePath) {
-            return undefined;
-        }
+    //     if (!entryPoints) {
+    //         return undefined;
+    //     }
 
-        if (packageJsonInfo?.packageJsonConfig) {
-            const packageJsonConfig = packageJsonInfo.packageJsonConfig;
+    //     let entryFilePath: string | undefined;
+    //     if (Array.isArray(entryPoints)) {
+    //         if (entryPoints.length > 1) {
+    //             return undefined;
+    //         }
 
-            let entryFromPackageJson: string | undefined;
+    //         entryFilePath = entryPoints[0];
+    //     } else {
+    //         return undefined;
+    //     }
 
-            if (forTypesOutput) {
-                if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
-                    const exports = packageJsonConfig.exports as Record<
-                        string,
-                        | {
-                              types?: unknown;
-                              import?: string | { types?: unknown };
-                              require?: string | { types?: unknown };
-                          }
-                        | undefined
-                    >;
+    //     if (!entryFilePath) {
+    //         return undefined;
+    //     }
 
-                    if (
-                        moduleFormat === 'esm' &&
-                        exports['.']?.import &&
-                        typeof exports['.'].import === 'object' &&
-                        exports['.'].import.types &&
-                        typeof exports['.'].import.types === 'string'
-                    ) {
-                        entryFromPackageJson = exports['.'].import.types.trim();
-                    } else if (
-                        moduleFormat === 'cjs' &&
-                        exports['.']?.require &&
-                        typeof exports['.'].require === 'object' &&
-                        exports['.'].require.types &&
-                        typeof exports['.'].require.types === 'string'
-                    ) {
-                        entryFromPackageJson = exports['.'].require.types.trim();
-                    } else if (exports['.']?.types && typeof exports['.'].types === 'string') {
-                        entryFromPackageJson = exports['.']?.types.trim();
-                    }
-                }
+    //     if (packageJsonInfo?.packageJsonConfig) {
+    //         const packageJsonConfig = packageJsonInfo.packageJsonConfig;
 
-                if (!entryFromPackageJson && packageJsonConfig.types && typeof packageJsonConfig.types === 'string') {
-                    entryFromPackageJson = packageJsonConfig.types.trim();
-                }
+    //         let entryFromPackageJson: string | undefined;
 
-                if (
-                    !entryFromPackageJson &&
-                    packageJsonConfig.typings &&
-                    typeof packageJsonConfig.typings === 'string'
-                ) {
-                    entryFromPackageJson = packageJsonConfig.typings.trim();
-                }
-            } else {
-                if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
-                    const exports = packageJsonConfig.exports as Record<
-                        string,
-                        | {
-                              import?: string | { default?: unknown };
-                              require?: string | { default?: unknown };
-                              esm?: unknown;
-                              default?: unknown;
-                          }
-                        | undefined
-                    >;
+    //         if (forTypesOutput) {
+    //             if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
+    //                 const exports = packageJsonConfig.exports as Record<
+    //                     string,
+    //                     | {
+    //                           types?: unknown;
+    //                           import?: string | { types?: unknown };
+    //                           require?: string | { types?: unknown };
+    //                       }
+    //                     | undefined
+    //                 >;
 
-                    if (
-                        moduleFormat === 'esm' &&
-                        !bundle &&
-                        exports['.']?.esm &&
-                        typeof exports['.'].esm === 'string'
-                    ) {
-                        entryFromPackageJson = exports['.']?.esm.trim();
-                    } else if (
-                        moduleFormat === 'esm' &&
-                        exports['.']?.import &&
-                        typeof exports['.'].import === 'object' &&
-                        exports['.'].import.default &&
-                        typeof exports['.'].import.default === 'string'
-                    ) {
-                        entryFromPackageJson = exports['.'].import.default.trim();
-                    } else if (
-                        moduleFormat === 'cjs' &&
-                        exports['.']?.require &&
-                        typeof exports['.'].require === 'object' &&
-                        exports['.'].require.default &&
-                        typeof exports['.'].require.default === 'string'
-                    ) {
-                        entryFromPackageJson = exports['.'].require.default.trim();
-                    }
+    //                 if (
+    //                     moduleFormat === 'esm' &&
+    //                     exports['.']?.import &&
+    //                     typeof exports['.'].import === 'object' &&
+    //                     exports['.'].import.types &&
+    //                     typeof exports['.'].import.types === 'string'
+    //                 ) {
+    //                     entryFromPackageJson = exports['.'].import.types.trim();
+    //                 } else if (
+    //                     moduleFormat === 'cjs' &&
+    //                     exports['.']?.require &&
+    //                     typeof exports['.'].require === 'object' &&
+    //                     exports['.'].require.types &&
+    //                     typeof exports['.'].require.types === 'string'
+    //                 ) {
+    //                     entryFromPackageJson = exports['.'].require.types.trim();
+    //                 } else if (exports['.']?.types && typeof exports['.'].types === 'string') {
+    //                     entryFromPackageJson = exports['.']?.types.trim();
+    //                 }
+    //             }
 
-                    if (!entryFromPackageJson && exports['.']?.default && typeof exports['.'].default === 'string') {
-                        entryFromPackageJson = exports['.']?.default.trim();
-                    }
-                }
+    //             if (!entryFromPackageJson && packageJsonConfig.types && typeof packageJsonConfig.types === 'string') {
+    //                 entryFromPackageJson = packageJsonConfig.types.trim();
+    //             }
 
-                if (!entryFromPackageJson && packageJsonConfig.module && typeof packageJsonConfig.module === 'string') {
-                    entryFromPackageJson = packageJsonConfig.module.trim();
-                }
+    //             if (
+    //                 !entryFromPackageJson &&
+    //                 packageJsonConfig.typings &&
+    //                 typeof packageJsonConfig.typings === 'string'
+    //             ) {
+    //                 entryFromPackageJson = packageJsonConfig.typings.trim();
+    //             }
+    //         } else {
+    //             if (packageJsonConfig.exports && typeof packageJsonConfig.exports === 'object') {
+    //                 const exports = packageJsonConfig.exports as Record<
+    //                     string,
+    //                     | {
+    //                           import?: string | { default?: unknown };
+    //                           require?: string | { default?: unknown };
+    //                           esm?: unknown;
+    //                           default?: unknown;
+    //                       }
+    //                     | undefined
+    //                 >;
 
-                if (!entryFromPackageJson && packageJsonConfig.main && typeof packageJsonConfig.main === 'string') {
-                    entryFromPackageJson = packageJsonConfig.main.trim();
-                }
-            }
+    //                 if (
+    //                     moduleFormat === 'esm' &&
+    //                     exports['.']?.import &&
+    //                     typeof exports['.'].import === 'object' &&
+    //                     exports['.'].import.default &&
+    //                     typeof exports['.'].import.default === 'string'
+    //                 ) {
+    //                     entryFromPackageJson = exports['.'].import.default.trim();
+    //                 } else if (
+    //                     moduleFormat === 'cjs' &&
+    //                     exports['.']?.require &&
+    //                     typeof exports['.'].require === 'object' &&
+    //                     exports['.'].require.default &&
+    //                     typeof exports['.'].require.default === 'string'
+    //                 ) {
+    //                     entryFromPackageJson = exports['.'].require.default.trim();
+    //                 }
 
-            if (entryFromPackageJson) {
-                const baseFileName = path.basename(normalizePathToPOSIXStyle(entryFromPackageJson));
-                if (baseFileName && /\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(baseFileName)) {
-                    return baseFileName;
-                }
-            }
-        }
+    //                 if (!entryFromPackageJson && exports['.']?.default && typeof exports['.'].default === 'string') {
+    //                     entryFromPackageJson = exports['.']?.default.trim();
+    //                 }
+    //             }
 
-        const entryFileName = path.basename(entryFilePath);
-        const entryFileExt = path.extname(entryFileName);
-        const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
+    //             if (!entryFromPackageJson && packageJsonConfig.module && typeof packageJsonConfig.module === 'string') {
+    //                 entryFromPackageJson = packageJsonConfig.module.trim();
+    //             }
 
-        let suggestedOutFileExt = '.mjs';
-        if (forTypesOutput) {
-            if (/^\.mts$/i.test(entryFileExt)) {
-                suggestedOutFileExt = '.d.mts';
-            } else if (/^\.cts$/i.test(entryFileExt)) {
-                suggestedOutFileExt = '.d.cts';
-            } else {
-                suggestedOutFileExt = '.d.ts';
-            }
-        } else if (moduleFormat === 'esm' && /^\.m(t|j)s$/i.test(entryFileExt)) {
-            suggestedOutFileExt = '.mjs';
-        } else if (moduleFormat === 'cjs' && /^\.c(t|j)s$/i.test(entryFileExt)) {
-            suggestedOutFileExt = '.cjs';
-        } else if (/^\.(t|j)sx$/i.test(entryFileExt)) {
-            suggestedOutFileExt = '.jsx';
-        }
+    //             if (!entryFromPackageJson && packageJsonConfig.main && typeof packageJsonConfig.main === 'string') {
+    //                 entryFromPackageJson = packageJsonConfig.main.trim();
+    //             }
+    //         }
 
-        const lastPartPackageName = packageJsonInfo?.packageName
-            ? getLastPartPackageName(packageJsonInfo.packageName)
-            : null;
+    //         if (entryFromPackageJson) {
+    //             const baseFileName = path.basename(normalizePathToPOSIXStyle(entryFromPackageJson));
+    //             if (baseFileName && /\.(d\.[cm]?ts|mjs|cjs|jsx?)$/i.test(baseFileName)) {
+    //                 return baseFileName;
+    //             }
+    //         }
+    //     }
 
-        if (
-            lastPartPackageName &&
-            bundle &&
-            lastPartPackageName.toLowerCase() !== entryFileNameWithoutExt.toLowerCase() &&
-            entryFileNameWithoutExt.toLocaleLowerCase() !== 'index'
-        ) {
-            const searchExtNames = ['.mts', '.cts', '.ts', '.tsx', '.mjs', '.cjs', '.js', '.jsx'];
-            const entryRoot = path.dirname(entryFilePath);
+    //     const entryFileName = path.basename(entryFilePath);
+    //     const entryFileExt = path.extname(entryFileName);
+    //     const entryFileNameWithoutExt = entryFileName.substring(0, entryFileName.length - entryFileExt.length);
 
-            for (const extName of searchExtNames) {
-                const fileNameWithExt = lastPartPackageName + extName;
-                const found = await findUp(
-                    fileNameWithExt,
-                    [path.resolve(entryRoot, 'src'), path.resolve(entryRoot, 'lib')],
-                    entryRoot,
-                    true
-                );
+    //     let suggestedOutFileExt = '.js';
+    //     if (forTypesOutput) {
+    //         if (/^\.mts$/i.test(entryFileExt)) {
+    //             suggestedOutFileExt = '.d.mts';
+    //         } else if (/^\.cts$/i.test(entryFileExt)) {
+    //             suggestedOutFileExt = '.d.cts';
+    //         } else {
+    //             suggestedOutFileExt = '.d.ts';
+    //         }
+    //     } else if (moduleFormat === 'esm' && /^\.m(t|j)s$/i.test(entryFileExt)) {
+    //         suggestedOutFileExt = '.mjs';
+    //     } else if (moduleFormat === 'cjs' && /^\.c(t|j)s$/i.test(entryFileExt)) {
+    //         suggestedOutFileExt = '.cjs';
+    //     } else if (/^\.(t|j)sx$/i.test(entryFileExt)) {
+    //         suggestedOutFileExt = '.jsx';
+    //     }
 
-                if (found) {
-                    return lastPartPackageName + suggestedOutFileExt;
-                }
-            }
-        }
+    //     const lastPartPackageName = packageJsonInfo?.packageName
+    //         ? getLastPartPackageName(packageJsonInfo.packageName)
+    //         : null;
 
-        return entryFileNameWithoutExt + suggestedOutFileExt;
-    }
+    //     if (
+    //         lastPartPackageName &&
+    //         bundle &&
+    //         lastPartPackageName.toLowerCase() !== entryFileNameWithoutExt.toLowerCase() &&
+    //         entryFileNameWithoutExt.toLocaleLowerCase() !== 'index'
+    //     ) {
+    //         const searchExtNames = ['.mts', '.cts', '.ts', '.tsx', '.mjs', '.cjs', '.js', '.jsx'];
+    //         const entryRoot = path.dirname(entryFilePath);
+
+    //         for (const extName of searchExtNames) {
+    //             const fileNameWithExt = lastPartPackageName + extName;
+    //             const found = await findUp(
+    //                 fileNameWithExt,
+    //                 [path.resolve(entryRoot, 'src'), path.resolve(entryRoot, 'lib')],
+    //                 entryRoot,
+    //                 true
+    //             );
+
+    //             if (found) {
+    //                 return lastPartPackageName + suggestedOutFileExt;
+    //             }
+    //         }
+    //     }
+
+    //     return entryFileNameWithoutExt + suggestedOutFileExt;
+    // }
 
     private getScriptTarget(
         options: Readonly<{
             compilation: Readonly<ScriptCompilation> | null;
             tsConfigInfo: Readonly<TsConfigInfo> | undefined;
         }>
-    ): ScriptTargetStrings | undefined {
+    ): ScriptTarget | undefined {
         const { compilation, tsConfigInfo } = options;
 
         if (compilation?.scriptTarget) {
@@ -1423,7 +1547,7 @@ export class ScriptTaskRunner {
         }
 
         if (tsConfigInfo?.compilerOptions.target) {
-            return ts.ScriptTarget[tsConfigInfo.compilerOptions.target] as ScriptTargetStrings;
+            return ts.ScriptTarget[tsConfigInfo.compilerOptions.target] as ScriptTarget;
         }
 
         return undefined;
@@ -1433,27 +1557,14 @@ export class ScriptTaskRunner {
         options: Readonly<{
             compilation: Readonly<ScriptCompilation> | null;
             tsConfigInfo: Readonly<TsConfigInfo> | undefined;
-            entryFilePath: string | undefined;
+            entryPoints: string[] | Record<string, string> | undefined;
             packageJsonInfo: Readonly<PackageJsonInfo> | null;
         }>
     ): ScriptModuleFormat | undefined {
-        const { compilation, tsConfigInfo, entryFilePath, packageJsonInfo } = options;
+        const { compilation, tsConfigInfo, packageJsonInfo, entryPoints } = options;
 
         if (compilation?.moduleFormat) {
             return compilation.moduleFormat;
-        }
-
-        if (compilation?.out?.trim().length) {
-            const trimedOut = compilation.out.trim();
-            const outExt = path.extname(trimedOut);
-
-            if (outExt && /\.cjs$/i.test(outExt)) {
-                return 'cjs';
-            }
-
-            if (outExt && /\.mjs$/i.test(outExt)) {
-                return 'esm';
-            }
         }
 
         if (tsConfigInfo?.compilerOptions.module != null) {
@@ -1470,7 +1581,7 @@ export class ScriptTaskRunner {
                 return 'iife';
             }
 
-            if ((moduleKind as number) > 4) {
+            if (moduleKind > ts.ModuleKind.System) {
                 return 'esm';
             }
         }
@@ -1482,16 +1593,45 @@ export class ScriptTaskRunner {
         const environmentTargets: string[] =
             compilation?.environmentTargets ?? this.options.scriptOptions.environmentTargets ?? [];
 
-        if (
-            (entryFilePath != null && /\.c[tj]s$/i.test(entryFilePath)) ||
-            (!environmentTargets.includes('web') &&
-                !environmentTargets.includes('browser') &&
-                environmentTargets.some((e) => e.startsWith('node')) &&
-                tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.NodeNext &&
-                tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node16 &&
-                (!entryFilePath || (entryFilePath && !/\.m[tj]s$/i.test(entryFilePath))))
-        ) {
-            return 'cjs';
+        let entryFilePaths: string[] = [];
+        if (entryPoints) {
+            if (Array.isArray(entryPoints)) {
+                entryFilePaths = [...entryPoints];
+            } else {
+                for (const [outName, entry] of Object.entries(entryPoints)) {
+                    const outExt = path.extname(outName);
+
+                    if (outExt && /\.cjs$/i.test(outExt)) {
+                        return 'cjs';
+                    }
+
+                    if (outExt && /\.mjs$/i.test(outExt)) {
+                        return 'esm';
+                    }
+
+                    entryFilePaths.push(entry);
+                }
+            }
+        } else if (tsConfigInfo?.fileNames) {
+            entryFilePaths = [...tsConfigInfo.fileNames];
+        }
+
+        for (const entryFilePath of entryFilePaths) {
+            if (
+                /\.c[tj]s$/i.test(entryFilePath) ||
+                (!environmentTargets.includes('web') &&
+                    !environmentTargets.includes('browser') &&
+                    environmentTargets.some((e) => e.startsWith('node')) &&
+                    tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.NodeNext &&
+                    tsConfigInfo?.compilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node16 &&
+                    !/\.m[tj]s$/i.test(entryFilePath))
+            ) {
+                return 'cjs';
+            }
+
+            if (/\.m[tj]s$/i.test(entryFilePath)) {
+                return 'esm';
+            }
         }
 
         if (
@@ -1637,11 +1777,12 @@ export function getScriptTaskRunner(
             }
         }
 
-        scriptOptions.compilations = entries.map((e) => {
-            return {
-                entry: e
-            };
-        });
+        scriptOptions.compilations = [
+            {
+                compiler: 'esbuild',
+                entry: entries
+            }
+        ];
     } else {
         scriptOptions = {
             ...buildTask.script
