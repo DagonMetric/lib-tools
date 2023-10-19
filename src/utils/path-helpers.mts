@@ -261,6 +261,34 @@ export async function findUp(
     return null;
 }
 
+export function getRootBasePath(paths: readonly string[]): string | null {
+    if (!paths.length) {
+        return null;
+    }
+
+    const firstItemRoot = path.parse(path.resolve(paths[0])).root;
+
+    const allPathsAreEquals = (checkPaths: string[]): boolean => checkPaths.every((p) => p === checkPaths[0]);
+    const allPathsAreValid = (checkPaths: string[]): boolean =>
+        checkPaths.every((p) => p && p !== firstItemRoot && p !== path.parse(p).root);
+
+    let checkPaths = paths.map((p) => path.resolve(p));
+
+    if (!allPathsAreValid(checkPaths)) {
+        return null;
+    }
+
+    do {
+        if (allPathsAreEquals(checkPaths)) {
+            return checkPaths[0];
+        }
+
+        checkPaths = checkPaths.map((p) => path.dirname(p));
+    } while (allPathsAreValid(checkPaths));
+
+    return null;
+}
+
 export async function getAbsolutePathInfoes(
     globPatternsOrRelativePaths: string[],
     cwd: string,
