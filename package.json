@@ -30,7 +30,7 @@
     "rollup"
   ],
   "bin": {
-    "lib": "./dist/bin/lib.mjs"
+    "lib": "./src/bin/lib.mts"
   },
   "type": "module",
   "engines": {
