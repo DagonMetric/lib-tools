@@ -266,6 +266,10 @@ export function getRootBasePath(paths: readonly string[]): string | null {
         return null;
     }
 
+    if (paths.length === 1) {
+        return paths[0];
+    }
+
     const firstItemRoot = path.parse(path.resolve(paths[0])).root;
 
     const allPathsAreEquals = (checkPaths: string[]): boolean => checkPaths.every((p) => p === checkPaths[0]);
