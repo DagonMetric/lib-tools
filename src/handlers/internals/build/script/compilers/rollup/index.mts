@@ -377,7 +377,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 isEntry: entryPoints
                     ? getEntryOutFileInfo({
                           currentOutFilePath: outputFilePath,
-                          fromEntryFileName: false,
                           outDir: options.outDir,
                           outBase,
                           entryPoints,

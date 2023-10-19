@@ -123,7 +123,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         const entryOutFileInfo = options.entryPoints
             ? getEntryOutFileInfo({
                   currentOutFilePath: filePath,
-                  fromEntryFileName: true,
                   outDir: options.outDir,
                   outBase: undefined,
                   entryPoints: options.entryPoints,

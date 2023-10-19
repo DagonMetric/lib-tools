@@ -14,11 +14,10 @@ export function getEntryOutFileInfo(options: {
     outDir: string;
     outBase: string | undefined;
     entryPoints: string[] | Record<string, string>;
-    fromEntryFileName: boolean;
     projectRoot: string;
     entryRoot: string | undefined;
 }): { isEntry: boolean; outFilePath: string } {
-    const { currentOutFilePath, entryPoints, outDir, outBase, fromEntryFileName, projectRoot, entryRoot } = options;
+    const { currentOutFilePath, entryPoints, outDir, outBase, projectRoot, entryRoot } = options;
 
     const currentOutLastExtName = path.extname(currentOutFilePath);
     let currentOutFilePathWithoutExt = currentOutFilePath.substring(
@@ -35,7 +34,7 @@ export function getEntryOutFileInfo(options: {
         );
     }
 
-    for (const [outName, entryFilePath] of Object.entries(entryPoints)) {
+    for (const [index, entryFilePath] of Object.entries(entryPoints)) {
         const entryFileName = path.basename(entryFilePath);
         const entryNameWithoutExt = entryFileName.substring(
             0,
@@ -54,19 +53,14 @@ export function getEntryOutFileInfo(options: {
             subDirPath = subDirPath.substring(outBaseNormalized.length);
         }
 
-        const preferredOutPathWiithoutExt = path.resolve(outDir, outBaseNormalized, subDirPath, outName);
+        const outName = Array.isArray(entryPoints) ? entryNameWithoutExt : index;
 
-        const testPathWithoutExt = path.resolve(
-            outDir,
-            outBaseNormalized,
-            subDirPath,
-            fromEntryFileName ? entryNameWithoutExt : outName
-        );
+        const testPathWithoutExt = path.resolve(outDir, outBaseNormalized, subDirPath, outName);
 
         if (isSamePath(currentOutFilePathWithoutExt, testPathWithoutExt)) {
             return {
                 isEntry: currentOutLastExtName.toLowerCase() !== '.map' ? true : false,
-                outFilePath: `${preferredOutPathWiithoutExt}${currentOutSecondLastExtName}${currentOutLastExtName}`
+                outFilePath: `${testPathWithoutExt}${currentOutSecondLastExtName}${currentOutLastExtName}`
             };
         }
     }
