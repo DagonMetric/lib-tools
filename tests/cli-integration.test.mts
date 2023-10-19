@@ -1,8 +1,8 @@
 import * as assert from 'node:assert';
-import { exec, spawn } from 'node:child_process';
-import * as fs from 'node:fs/promises';
+import { exec } from 'node:child_process';
+
 import * as path from 'node:path';
-import { beforeEach, describe, it } from 'node:test';
+import { describe, it } from 'node:test';
 import { promisify } from 'node:util';
 
 import packageJson from '../package.json' assert { type: 'json' };
@@ -14,7 +14,9 @@ const libCli = packageJson.bin.lib;
 
 const runCli = async (args: string) => {
     try {
-        const { stderr, stdout } = await execAsync(`node --no-warnings ${libCli} ${args}`);
+        const { stderr, stdout } = await execAsync(
+            `node --no-warnings --enable-source-maps --loader ts-node/esm ${libCli} ${args}`
+        );
 
         return stderr ? stderr.toString().trim() : stdout.toString().trim();
     } catch (err) {
@@ -25,24 +27,24 @@ const runCli = async (args: string) => {
 };
 
 void describe('cli-integration', () => {
-    beforeEach(async () => {
-        const cliExists = await fs
-            .access(path.resolve(process.cwd(), libCli))
-            .then(() => true)
-            .catch(() => false);
+    // beforeEach(async () => {
+    //     const cliExists = await fs
+    //         .access(path.resolve(process.cwd(), libCli))
+    //         .then(() => true)
+    //         .catch(() => false);
 
-        if (!cliExists) {
-            await new Promise((resolve, reject) => {
-                const proc = spawn('npm run build', { stdio: 'inherit', shell: true });
-                proc.on('exit', (exitCode) => {
-                    resolve(exitCode);
-                });
-                proc.on('error', (error) => {
-                    reject(error);
-                });
-            });
-        }
-    });
+    //     if (!cliExists) {
+    //         await new Promise((resolve, reject) => {
+    //             const proc = spawn('npm run build', { stdio: 'inherit', shell: true });
+    //             proc.on('exit', (exitCode) => {
+    //                 resolve(exitCode);
+    //             });
+    //             proc.on('error', (error) => {
+    //                 reject(error);
+    //             });
+    //         });
+    //     }
+    // });
 
     void describe('lib --help', () => {
         void it(`should show help if '--help' option is passed`, async () => {
