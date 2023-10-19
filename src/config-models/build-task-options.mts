@@ -238,14 +238,17 @@ export interface StyleOptions {
  * Script module format for typescript compiler tool.
  */
 export type TypescriptScriptModuleFormat = Lowercase<Exclude<keyof typeof TsModuleKind, 'None'>>;
+
 /**
  * Script module format for esbuild bundler tool.
  */
 export type EsBuildScriptModuleFormat = 'cjs' | 'esm' | 'iife';
+
 /**
  * Script module format for rollup bundler tool.
  */
 export type RollupScriptModuleFormat = 'cjs' | 'esm' | 'iife' | 'umd' | 'amd' | 'system';
+
 /**
  * Script module format for webpack bundler tool.
  */
