@@ -223,33 +223,41 @@ export async function validateBuildTask(
             });
         } else {
             if (buildTask.script.compilations && Array.isArray(buildTask.script.compilations)) {
-                const entryPaths = buildTask.script.compilations
-                    .filter((compilation) => compilation.entry)
-                    .map((compilation) => {
-                        return compilation.entry!;
-                    });
+                for (let i = 0; i < buildTask.script.compilations.length; i++) {
+                    const compilation = buildTask.script.compilations[i];
+                    const entryPoints = compilation.entry;
+                    if (entryPoints) {
+                        if (Array.isArray(entryPoints) || typeof entryPoints === 'string') {
+                            const entryPaths = Array.isArray(entryPoints) ? entryPoints : [entryPoints];
+                            await validateInputPaths(entryPaths, {
+                                rootDir: projectRoot,
+                                acceptGlobMagic: false,
+                                acceptDir: false,
+                                configPath,
+                                configLocation: `${configLocationPrefix}/script/compilations/${i}/entry`
+                            });
+                        } else {
+                            const entryPaths = Object.entries(entryPoints).map((pair) => pair[1]);
+                            await validateInputPaths(entryPaths, {
+                                rootDir: projectRoot,
+                                acceptGlobMagic: false,
+                                acceptDir: false,
+                                configPath,
+                                configLocation: `${configLocationPrefix}/script/compilations/${i}/entry`
+                            });
+                        }
+                    }
 
-                await validateInputPaths(entryPaths, {
-                    rootDir: projectRoot,
-                    acceptGlobMagic: false,
-                    acceptDir: false,
-                    configPath,
-                    configLocation: `${configLocationPrefix}/script/compilations/[i]/entry`
-                });
-
-                const tsconfigPaths = buildTask.script.compilations
-                    .filter((compilation) => compilation.tsconfig)
-                    .map((compilation) => {
-                        return compilation.tsconfig!;
-                    });
-
-                await validateInputPaths(tsconfigPaths, {
-                    rootDir: projectRoot,
-                    acceptGlobMagic: false,
-                    acceptDir: false,
-                    configPath,
-                    configLocation: `${configLocationPrefix}/script/compilations/[i]/tsconfig`
-                });
+                    if (compilation.tsconfig) {
+                        await validateInputPaths([compilation.tsconfig], {
+                            rootDir: projectRoot,
+                            acceptGlobMagic: false,
+                            acceptDir: false,
+                            configPath,
+                            configLocation: `${configLocationPrefix}/script/compilations/${i}/tsconfig`
+                        });
+                    }
+                }
             }
 
             if (buildTask.script.tsconfig) {
