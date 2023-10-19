@@ -20,16 +20,25 @@ import {
     pathExists
 } from '../../../../../../utils/index.mjs';
 
-import { CompilationError, InvalidConfigError } from '../../../../../exceptions/index.mjs';
+import { CompilationError } from '../../../../../exceptions/index.mjs';
 
 import { CompileAsset, CompileOptions, CompileResult } from '../compile-interfaces.mjs';
 import { getEntryOutFileInfo } from '../compile-options-helpers.mjs';
 
-function getEsBuildTargets(options: CompileOptions): string[] {
-    const targets: string[] = [];
-    if (options.scriptTarget) {
-        targets.push(options.scriptTarget.toLowerCase());
+function getEsBuildModuleFormat(options: CompileOptions): esbuild.Format | undefined {
+    if (options.moduleFormat === 'esm') {
+        return 'esm';
+    } else if (options.moduleFormat === 'cjs') {
+        return 'cjs';
+    } else if (options.moduleFormat === 'iife' || options.moduleFormat === 'umd') {
+        return 'iife';
+    } else {
+        return undefined;
     }
+}
+
+function getEsBuildTargets(options: CompileOptions): string[] {
+    const targets: string[] = ['esnext'];
 
     // See - https://esbuild.github.io/api/#target for supported targets
     //
@@ -90,55 +99,9 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     return undefined;
 }
 
-function getTsConfigRaw(options: CompileOptions): esbuild.TsconfigRaw | undefined {
-    if (!options.scriptTarget) {
-        return undefined;
-    }
-
-    const tsconfigRaw: esbuild.TsconfigRaw = {
-        compilerOptions: {
-            target: options.scriptTarget.toLowerCase()
-        }
-    };
-
-    return tsconfigRaw;
-}
-
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    if (options.tsConfigInfo?.compilerOptions.emitDeclarationOnly) {
-        throw new InvalidConfigError(
-            `Typescript compiler options 'emitDeclarationOnly' is currently not supported in esbuild compiler tool.`,
-            null,
-            null
-        );
-    }
-
-    if (options.tsConfigInfo?.compilerOptions.noEmit) {
-        throw new InvalidConfigError(
-            `Typescript compiler options 'noEmit' is currently not supported in esbuild compiler tool.`,
-            null,
-            null
-        );
-    }
-
-    if (options.tsConfigInfo?.compilerOptions.declaration) {
-        logger.warn(`Typescript compiler options 'declaration' is currently not supported in esbuild compiler tool.`);
-    }
-
-    if (options.treeshake && typeof options.treeshake === 'object') {
-        logger.warn(
-            `Treeshake object options is currently not supported in esbuild compiler tool. The sytem will use treeshake=true instead.`
-        );
-    }
-
-    let moduleFormat: esbuild.Format | undefined;
-    if (options.moduleFormat === 'esm') {
-        moduleFormat = 'esm';
-    } else if (options.moduleFormat === 'cjs') {
-        moduleFormat = 'cjs';
-    } else if (options.moduleFormat === 'iife' || options.moduleFormat === 'umd') {
-        moduleFormat = 'iife';
-    } else {
+    const moduleFormat = getEsBuildModuleFormat(options);
+    if (!moduleFormat) {
         logger.warn(`Module format '${options.moduleFormat}' is currently not supported in esbuild compiler tool.`);
     }
 
@@ -155,7 +118,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     const { projectRoot } = options.taskInfo;
     let entryRoot: string | undefined;
     let outBase: string | undefined;
-
     let suggestedJsOutExt = '.js';
 
     if (entryPoints) {
@@ -177,8 +139,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         } else if (entryFilePaths.some((e) => /\.[tj]sx$/i.test(e))) {
             suggestedJsOutExt = '.jsx';
         }
-    } else {
-        // throw?
     }
 
     const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
@@ -213,28 +173,28 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             entryPoints,
             outdir: options.outDir,
             outbase: outBase,
+            // TODO: configuraable
             outExtension: { '.js': suggestedJsOutExt },
             assetNames: options.assetOut ? options.assetOut : '[dir]/[name]',
             bundle: options.bundle,
             // TODO: Substitutions
             banner: options.banner ? { js: options.banner } : undefined,
             footer: options.footer ? { js: options.footer } : undefined,
-            // TODO: To check
+            // TODO: configuraable
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
             format: moduleFormat,
             platform,
             target: targets,
             tsconfig: options.tsConfigInfo?.configPath,
-            tsconfigRaw: getTsConfigRaw(options),
-            external: options.externals ? [...options.externals] : undefined,
-            packages: options.externals ? undefined : 'external',
+            external: options.bundle && options.externals ? [...options.externals] : undefined,
+            packages: options.externals ?? !options.bundle ? undefined : 'external',
             globalName: options.globalName,
+            loader: options.assetLoaders,
+            treeShaking: options.treeshake != null ? options.treeshake !== false : undefined,
             write: false,
             preserveSymlinks: options.preserveSymlinks,
-            logLevel: 'silent',
-            loader: options.assetLoaders,
-            treeShaking: options.treeshake != null ? options.treeshake !== false : undefined
+            logLevel: 'silent'
         });
 
         if (esbuildResult.errors.length > 0) {
@@ -294,11 +254,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             });
         }
 
-        const builtAssetsCount = builtAssets.length;
-        const msgSuffix = options.dryRun ? 'built' : 'emitted';
-        const fileverb = builtAssetsCount > 1 ? 'files are' : 'file is';
-        logger.info(`Total ${builtAssetsCount} ${fileverb} ${msgSuffix}.`);
-
         return {
             time: duration,
             builtAssets
@@ -309,6 +264,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         }
 
         let errorMessage = colors.lightRed('Running esbuild compilation task failed with errors:');
+        let formattedMessage = '';
 
         if ((err as esbuild.BuildResult)?.errors && (err as esbuild.BuildResult).errors.length > 0) {
             const formattedMessages = await esbuild.formatMessages((err as esbuild.BuildResult).errors, {
@@ -316,14 +272,33 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 color: true
             });
 
-            errorMessage += '\n' + formattedMessages.join('\n').trim();
+            formattedMessage = formattedMessages.join('\n').trim();
         } else if ((err as esbuild.BuildResult)?.warnings && (err as esbuild.BuildResult).warnings.length > 0) {
             const formattedMessages = await esbuild.formatMessages((err as esbuild.BuildResult).warnings, {
                 kind: 'warning',
                 color: true
             });
 
-            errorMessage += '\n' + formattedMessages.join('\n').trim();
+            formattedMessage = formattedMessages.join('\n').trim();
+        }
+
+        if (formattedMessage) {
+            errorMessage += '\n' + formattedMessage;
+        } else {
+            if ((err as Error).message && typeof (err as Error).message === 'string') {
+                formattedMessage = (err as Error).message;
+            } else if ((err as Error).stack && typeof (err as Error).stack === 'string') {
+                formattedMessage = (err as Error).stack!;
+            } else if (typeof err !== 'object') {
+                formattedMessage = String(err);
+            } else {
+                // errMsg = unknownErrorPrefix + '\n' + util.format('%o', err);
+                formattedMessage = JSON.stringify(err, null, 2);
+            }
+
+            if (formattedMessage.trim().length) {
+                errorMessage += '\n' + formattedMessage.trim();
+            }
         }
 
         throw new CompilationError(errorMessage);
