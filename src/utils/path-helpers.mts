@@ -261,6 +261,7 @@ export async function findUp(
     return null;
 }
 
+// TODO:
 export function getRootBasePath(paths: readonly string[]): string | null {
     if (!paths.length) {
         return null;
@@ -290,7 +291,7 @@ export function getRootBasePath(paths: readonly string[]): string | null {
         checkPaths = checkPaths.map((p) => path.dirname(p));
     } while (allPathsAreValid(checkPaths));
 
-    return null;
+    throw new Error('TODO: getRootBasePath');
 }
 
 export async function getAbsolutePathInfoes(
