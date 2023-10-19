@@ -31,7 +31,7 @@
               },
               {
                 "compiler": "esbuild",
-                "entry": "src/public-api.mts",
+                "entry": ["src/public-api.mts", "src/cli/index.mts"],
                 "tsconfig": "tsconfig.build.json",
                 "moduleFormat": "esm",
                 "bundle": true,
