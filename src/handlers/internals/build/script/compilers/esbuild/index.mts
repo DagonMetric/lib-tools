@@ -123,6 +123,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     if (entryPoints) {
         const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
         if (entryFilePaths.length > 1) {
+            // TODO:
             const rootBasePath = getRootBasePath(entryFilePaths);
             if (rootBasePath && isInFolder(projectRoot, rootBasePath)) {
                 entryRoot = rootBasePath;
