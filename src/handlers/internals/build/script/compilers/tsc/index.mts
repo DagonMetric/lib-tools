@@ -21,6 +21,7 @@ const regExpEscapePattern = /[.*+?^${}()|[\]\\]/g;
 
 export default function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
     const compilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
+    const { emitDeclarationOnly } = compilerOptions;
 
     let entryFilePaths: string[];
     if (options.entryPoints && (options.entryPointsPreferred === true || !options.tsConfigInfo?.fileNames)) {
@@ -39,7 +40,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         );
     }
 
-    if (compilerOptions.emitDeclarationOnly) {
+    if (emitDeclarationOnly) {
         logger.info(`Generating typing declaration files with ${colors.lightMagenta('tsc')}...`);
     } else {
         logger.info(`Compiling with ${colors.lightMagenta('tsc')}...`);
@@ -69,7 +70,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         let file: string | undefined = baseReadFile.call(host, filePath);
         const filePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), filePath));
         if (file && /\.(m[tj]s|c[tj]s|[tj]sx?)$/.test(filePath)) {
-            if (!compilerOptions.emitDeclarationOnly && options.substitutions) {
+            if (!emitDeclarationOnly && options.substitutions) {
                 for (const substitution of options.substitutions.filter(
                     (s) => !s.bannerOnly && (!s.files || s.files.some((sf) => isSamePath(filePath, sf)))
                 )) {
@@ -107,6 +108,8 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
 
     const builtAssets: CompileAsset[] = [];
     const hasEntry = false;
+    const projectRoot = options.taskInfo.projectRoot;
+    const entryRoot = compilerOptions.rootDir;
 
     const baseWriteFile = host.writeFile;
     host.writeFile = (
@@ -117,7 +120,20 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
         sourceFiles?: readonly SourceFile[],
         data?: WriteFileCallbackData
     ) => {
-        const { isEntry, outFilePath } = getEntryOutFileInfo(filePath, options, true);
+        const entryOutFileInfo = options.entryPoints
+            ? getEntryOutFileInfo({
+                  currentOutFilePath: filePath,
+                  fromEntryFileName: true,
+                  outDir: options.outDir,
+                  outBase: undefined,
+                  entryPoints: options.entryPoints,
+                  projectRoot,
+                  entryRoot
+              })
+            : undefined;
+
+        const outFilePath = entryOutFileInfo?.outFilePath ?? filePath;
+        const isEntry = entryOutFileInfo?.isEntry ?? false;
 
         const filePathRel = normalizePathToPOSIXStyle(path.relative(process.cwd(), outFilePath));
 
@@ -169,12 +185,7 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
 
     const startTime = Date.now();
 
-    const emitResult = program.emit(
-        undefined,
-        undefined,
-        undefined,
-        compilerOptions.emitDeclarationOnly ? true : undefined
-    );
+    const emitResult = program.emit(undefined, undefined, undefined, emitDeclarationOnly);
 
     // const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
     const allDiagnostics = emitResult.diagnostics;

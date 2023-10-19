@@ -222,23 +222,28 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     }
 
     let entryPoints: Record<string, string> | string[] | undefined;
-    if (options.entryPoints && (!options.tsConfigInfo?.fileNames?.length || options.entryPointsPreferred !== false)) {
+    if (options.entryPoints && options.entryPointsPreferred !== false) {
         entryPoints = options.entryPoints;
     } else {
         entryPoints = options.tsConfigInfo?.fileNames ? [...options.tsConfigInfo.fileNames] : undefined;
     }
 
+    const { projectRoot } = options.taskInfo;
+    let entryRoot: string | undefined;
     let outBase: string | undefined;
+
     let suggestedJsOutExt = '.js';
 
     if (entryPoints) {
-        const { projectRoot } = options.taskInfo;
         const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
         if (entryFilePaths.length > 1) {
-            const entryRootDir = getRootBasePath(entryFilePaths);
-            if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
-                outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRootDir));
+            const rootBasePath = getRootBasePath(entryFilePaths);
+            if (rootBasePath && isInFolder(projectRoot, rootBasePath)) {
+                entryRoot = rootBasePath;
+                outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRoot));
             }
+        } else if (entryFilePaths.length === 1) {
+            entryRoot = path.dirname(entryFilePaths[0]);
         }
 
         if (moduleFormat === 'esm' && entryFilePaths.some((e) => /\.m[tj]s$/i.test(e))) {
@@ -369,7 +374,17 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 path: outputFilePath,
                 size,
                 // TODO:
-                isEntry: getEntryOutFileInfo(outputFilePath, outBase ?? '', options, false).isEntry
+                isEntry: entryPoints
+                    ? getEntryOutFileInfo({
+                          currentOutFilePath: outputFilePath,
+                          fromEntryFileName: false,
+                          outDir: options.outDir,
+                          outBase,
+                          entryPoints,
+                          projectRoot,
+                          entryRoot
+                      }).isEntry
+                    : false
             });
 
             const prefix = options.dryRun ? 'Built: ' : 'Emitted: ';

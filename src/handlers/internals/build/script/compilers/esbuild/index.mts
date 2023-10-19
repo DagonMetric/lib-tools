@@ -152,18 +152,22 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         entryPoints = options.tsConfigInfo?.fileNames ? [...options.tsConfigInfo.fileNames] : undefined;
     }
 
-    // TODO:
+    const { projectRoot } = options.taskInfo;
+    let entryRoot: string | undefined;
     let outBase: string | undefined;
+
     let suggestedJsOutExt = '.js';
 
     if (entryPoints) {
-        const { projectRoot } = options.taskInfo;
         const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
         if (entryFilePaths.length > 1) {
-            const entryRootDir = getRootBasePath(entryFilePaths);
-            if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
-                outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRootDir));
+            const rootBasePath = getRootBasePath(entryFilePaths);
+            if (rootBasePath && isInFolder(projectRoot, rootBasePath)) {
+                entryRoot = rootBasePath;
+                outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRoot));
             }
+        } else if (entryFilePaths.length === 1) {
+            entryRoot = path.dirname(entryFilePaths[0]);
         }
 
         if (moduleFormat === 'esm' && entryFilePaths.some((e) => /\.m[tj]s$/i.test(e))) {
@@ -277,7 +281,17 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             builtAssets.push({
                 path: outputFile.path,
                 size,
-                isEntry: getEntryOutFileInfo(outputFile.path, outBase ?? '', options, false).isEntry
+                isEntry: entryPoints
+                    ? getEntryOutFileInfo({
+                          currentOutFilePath: outputFile.path,
+                          fromEntryFileName: false,
+                          outDir: options.outDir,
+                          outBase,
+                          entryPoints,
+                          projectRoot,
+                          entryRoot
+                      }).isEntry
+                    : false
             });
         }
 
