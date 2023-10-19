@@ -25,7 +25,7 @@ function formatMessage(
         formattedMsg += `\n  config location: `;
         formattedMsg += colors.lightRed(configLocation);
     } else {
-        formattedMsg += colors.lightRed('Options error:') + ` ${message}`;
+        formattedMsg += colors.lightRed('Error:') + ` ${message}`;
     }
 
     return formattedMsg;
