@@ -110,10 +110,10 @@ export default async function (cliInfo?: Readonly<CliInfo>): Promise<void> {
                 } else if (typeof err.stack === 'string') {
                     errMsg = unknownErrorPrefix + '\n' + err.stack;
                 } else if (typeof err !== 'object') {
-                    errMsg = unknownErrorPrefix + '\n' + +String(err);
+                    errMsg = unknownErrorPrefix + '\n' + String(err);
                 } else {
                     // errMsg = unknownErrorPrefix + '\n' + util.format('%o', err);
-                    errMsg = unknownErrorPrefix + '\n' + +JSON.stringify(err, null, 2);
+                    errMsg = unknownErrorPrefix + '\n' + JSON.stringify(err, null, 2);
                 }
 
                 logger.error(errMsg);
