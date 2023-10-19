@@ -8,8 +8,9 @@
 import { CompilerOptions } from 'typescript';
 
 import {
+    AssetLoader,
     ScriptModuleFormat,
-    ScriptTargetStrings,
+    ScriptTarget,
     SubstitutionEntry,
     TreeshakingOptions
 } from '../../../../../config-models/index.mjs';
@@ -25,31 +26,28 @@ export interface TsConfigInfo {
 
 export interface CompileOptions {
     readonly taskInfo: Readonly<TaskInfo & { readonly compilationIndex: number | undefined }>;
-
-    readonly entryFilePath: string | undefined;
-    readonly preferredEntryFilePath: boolean | undefined;
-    readonly outFilePath: string | undefined;
     readonly outDir: string;
-
-    readonly scriptTarget: ScriptTargetStrings | undefined;
-    readonly moduleFormat: ScriptModuleFormat | undefined;
-
-    readonly sourceMap: boolean;
-    readonly minify: boolean;
+    readonly bundle: boolean | undefined;
+    readonly entryPoints: Record<string, string> | string[] | undefined;
+    readonly entryPointsPreferred: boolean | undefined;
+    readonly assetLoaders: Record<string, AssetLoader> | undefined;
+    readonly assetOut: string | undefined;
     readonly tsConfigInfo: Readonly<TsConfigInfo> | undefined;
-    readonly emitDeclarationOnly: boolean | undefined;
-    readonly declaration: boolean | undefined;
+    readonly scriptTarget: ScriptTarget | undefined;
+    readonly moduleFormat: ScriptModuleFormat | undefined;
+    readonly sourceMap: boolean | undefined;
+    readonly minify: boolean | undefined;
+    readonly preserveSymlinks: boolean | undefined;
     readonly environmentTargets: readonly string[] | undefined;
     readonly externals: readonly string[] | undefined;
     readonly globals: Readonly<Record<string, string>> | undefined;
-    readonly preserveSymlinks: boolean | undefined;
+
     readonly globalName: string | undefined;
     readonly treeshake: boolean | Readonly<TreeshakingOptions> | undefined;
 
     readonly banner: string | undefined;
     readonly footer: string | undefined;
-    readonly substitutions: readonly Readonly<SubstitutionEntry>[];
-
+    readonly substitutions: readonly Readonly<SubstitutionEntry>[] | undefined;
     readonly dryRun: boolean;
     readonly logLevel: LogLevelStrings;
 }

@@ -8,14 +8,13 @@
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 
-import { CompilerOptions } from 'typescript';
 import webpackDefault, { Configuration, StatsAsset } from 'webpack';
 
 import { LoggerBase, colors, normalizePathToPOSIXStyle } from '../../../../../../utils/index.mjs';
 
-import { CompilationError } from '../../../../../exceptions/index.mjs';
+import { InvalidConfigError } from '../../../../../exceptions/index.mjs';
 
-import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.mjs';
+import { CompileAsset, CompileOptions, CompileResult } from '../compile-interfaces.mjs';
 import { ts } from '../tsproxy.mjs';
 
 import { ScriptWebpackPlugin } from './plugins/script-webpack-plugin/index.mjs';
@@ -125,149 +124,29 @@ function getWebpackTargets(options: CompileOptions): string[] {
     return targets;
 }
 
-// TODO: Sync with rollup
-function getTsCompilerOptions(options: CompileOptions): CompilerOptions {
-    const configFileCompilerOptions = options.tsConfigInfo?.compilerOptions ?? {};
-
-    const compilerOptions: CompilerOptions = {};
-
-    compilerOptions.outDir = options.outDir;
-
-    if (options.entryFilePath) {
-        compilerOptions.rootDir = path.dirname(options.entryFilePath);
-
-        if (/\.(jsx|mjs|cjs|js)$/i.test(options.entryFilePath)) {
-            compilerOptions.allowJs = true;
-        }
-    }
-
-    let scriptTarget = options.scriptTarget ? ts.ScriptTarget[options.scriptTarget] : configFileCompilerOptions.target;
-
-    if (options.scriptTarget) {
-        scriptTarget = ts.ScriptTarget[options.scriptTarget];
-
-        if (scriptTarget === ts.ScriptTarget.Latest) {
-            compilerOptions.target = ts.ScriptTarget.ESNext;
-        } else {
-            compilerOptions.target = scriptTarget;
-        }
-    } else if (scriptTarget === ts.ScriptTarget.Latest) {
-        compilerOptions.target = ts.ScriptTarget.ESNext;
-    }
-
-    if (options.moduleFormat === 'cjs') {
-        if (
-            configFileCompilerOptions.module == null ||
-            (configFileCompilerOptions.module !== ts.ModuleKind.CommonJS &&
-                configFileCompilerOptions.module !== ts.ModuleKind.Node16 &&
-                configFileCompilerOptions.module !== ts.ModuleKind.NodeNext)
-        ) {
-            if ((compilerOptions.target as number) > 8) {
-                // TODO: To review
-                compilerOptions.module = ts.ModuleKind.NodeNext;
-            } else {
-                // TODO: To review
-                compilerOptions.module = ts.ModuleKind.CommonJS;
-            }
-        }
-    } else if (options.moduleFormat === 'esm') {
-        if (
-            configFileCompilerOptions.module == null ||
-            configFileCompilerOptions.module === ts.ModuleKind.None ||
-            configFileCompilerOptions.module === ts.ModuleKind.AMD ||
-            configFileCompilerOptions.module === ts.ModuleKind.CommonJS ||
-            configFileCompilerOptions.module === ts.ModuleKind.System ||
-            configFileCompilerOptions.module === ts.ModuleKind.UMD
-        ) {
-            // TODO: To review
-            compilerOptions.module = ts.ModuleKind.ESNext;
-        }
-    } else if (options.moduleFormat === 'iife') {
-        if (
-            configFileCompilerOptions.module !== ts.ModuleKind.System &&
-            configFileCompilerOptions.module !== ts.ModuleKind.UMD
-        ) {
-            compilerOptions.module = ts.ModuleKind.UMD;
-        }
-
-        // TODO: To review
-        if (configFileCompilerOptions.moduleResolution !== ts.ModuleResolutionKind.Node10) {
-            compilerOptions.moduleResolution = ts.ModuleResolutionKind.Node10;
-        }
-    }
-
-    if (options.declaration != null) {
-        compilerOptions.declaration = options.declaration;
-    } else if (configFileCompilerOptions.declaration != null) {
-        compilerOptions.declaration = configFileCompilerOptions.declaration;
-    }
-
-    if (options.sourceMap) {
-        if (options.entryFilePath) {
-            compilerOptions.sourceRoot = path.dirname(options.entryFilePath);
-        }
-
-        compilerOptions.sourceMap = true;
-        compilerOptions.inlineSourceMap = false;
-        compilerOptions.inlineSources = true;
-    } else {
-        compilerOptions.sourceMap = false;
-        compilerOptions.inlineSourceMap = false;
-        compilerOptions.inlineSources = false;
-
-        if (!configFileCompilerOptions.sourceRoot != null) {
-            compilerOptions.sourceRoot = '';
-        }
-    }
-
-    if (options.preserveSymlinks != null) {
-        compilerOptions.preserveSymlinks = options.preserveSymlinks;
-    }
-
-    return compilerOptions;
-}
-
 export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    if (options.emitDeclarationOnly === true || options.tsConfigInfo?.compilerOptions.emitDeclarationOnly === true) {
-        throw new CompilationError(
-            `${colors.lightRed(
-                'Error:'
-            )} Typescript compiler options 'emitDeclarationOnly' is not supported in webpack compiler tool.`
+    if (options.tsConfigInfo?.compilerOptions.emitDeclarationOnly === true) {
+        throw new InvalidConfigError(
+            `Typescript compiler options 'emitDeclarationOnly' is not supported in webpack compiler tool.`,
+            null,
+            null
         );
     }
 
     if (options.tsConfigInfo?.compilerOptions.noEmit) {
-        throw new CompilationError(
-            `${colors.lightRed(
-                'Error:'
-            )} Typescript compiler options 'noEmit' is not supported in webpack compiler tool.`
+        throw new InvalidConfigError(
+            `Typescript compiler options 'noEmit' is not supported in webpack compiler tool.`,
+            null,
+            null
         );
     }
 
     const libraryType = getWebpackLibraryType(options);
-    const tsCompilerOptions = getTsCompilerOptions(options);
-
-    let entryPoints: Record<string, string> | string | undefined;
-    if (options.entryFilePath && options.outFilePath) {
-        let outExtLength = path.extname(options.outFilePath).length;
-        if (/\.d\.[mj]?ts$/i.test(options.outFilePath)) {
-            outExtLength += 2;
-        }
-
-        const outFilePathWithoutExt = options.outFilePath.substring(0, options.outFilePath.length - outExtLength);
-
-        const outEntryName = normalizePathToPOSIXStyle(path.relative(options.outDir, outFilePathWithoutExt));
-        entryPoints = {
-            [outEntryName]: options.entryFilePath
-        };
-    } else if (options.entryFilePath && !options.outFilePath) {
-        entryPoints = options.entryFilePath;
-    }
 
     const webpackConfig: Configuration = {
         devtool: options.sourceMap ? 'source-map' : false,
         mode: 'production',
-        entry: entryPoints,
+        entry: options.entryPoints,
         output: {
             path: options.outDir,
             iife: options.moduleFormat === 'iife' ? true : undefined,
@@ -308,7 +187,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                             loader: require.resolve('ts-loader'),
                             options: {
                                 configFile: options.tsConfigInfo?.configPath,
-                                compilerOptions: tsCompilerOptions
+                                compilerOptions: options.tsConfigInfo?.compilerOptions
                             }
                         }
                     ]
@@ -338,12 +217,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
 
     const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
     logger.info(`Bundling with ${colors.lightMagenta('webpack')}...${dryRunSuffix}`);
-
-    if (options.entryFilePath) {
-        logger.info(
-            `With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`
-        );
-    }
 
     if (options.tsConfigInfo?.configPath) {
         logger.info(

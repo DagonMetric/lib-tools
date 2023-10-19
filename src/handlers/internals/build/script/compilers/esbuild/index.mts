@@ -14,14 +14,16 @@ import {
     LoggerBase,
     colors,
     formatSizeInBytes,
-    isSamePath,
+    getRootBasePath,
+    isInFolder,
     normalizePathToPOSIXStyle,
     pathExists
 } from '../../../../../../utils/index.mjs';
 
-import { CompilationError } from '../../../../../exceptions/index.mjs';
+import { CompilationError, InvalidConfigError } from '../../../../../exceptions/index.mjs';
 
-import { CompileAsset, CompileOptions, CompileResult } from '../interfaces.mjs';
+import { CompileAsset, CompileOptions, CompileResult } from '../compile-interfaces.mjs';
+import { getEntryOutFileInfo } from '../compile-options-helpers.mjs';
 
 function getEsBuildTargets(options: CompileOptions): string[] {
     const targets: string[] = [];
@@ -59,7 +61,6 @@ function getEsBuildTargets(options: CompileOptions): string[] {
 function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefined {
     if (
         options.moduleFormat === 'cjs' ||
-        (options.outFilePath != null && path.extname(options.outFilePath).toLowerCase() === '.cjs') ||
         options.environmentTargets?.some(
             (t) => t === 'node' || t === 'deno' || t.startsWith('node') || t.startsWith('deno')
         )
@@ -89,78 +90,145 @@ function getEsBuildPlatform(options: CompileOptions): esbuild.Platform | undefin
     return undefined;
 }
 
-export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
-    let entryPoints: { in: string; out: string }[] | string[] | undefined;
-    let outdir: string | undefined;
-
-    if (options.entryFilePath && options.outFilePath) {
-        entryPoints = [
-            {
-                in: options.entryFilePath,
-                out: options.outFilePath
-            }
-        ];
-    } else if (options.entryFilePath && !options.outFilePath) {
-        entryPoints = [options.entryFilePath];
-        outdir = options.outDir;
-    } else {
-        outdir = options.outDir;
+function getTsConfigRaw(options: CompileOptions): esbuild.TsconfigRaw | undefined {
+    if (!options.scriptTarget) {
+        return undefined;
     }
 
-    const moduleFormat = options.moduleFormat === 'umd' ? 'iife' : options.moduleFormat;
+    const tsconfigRaw: esbuild.TsconfigRaw = {
+        compilerOptions: {
+            target: options.scriptTarget.toLowerCase()
+        }
+    };
+
+    return tsconfigRaw;
+}
+
+export default async function (options: CompileOptions, logger: LoggerBase): Promise<CompileResult> {
+    if (options.tsConfigInfo?.compilerOptions.emitDeclarationOnly) {
+        throw new InvalidConfigError(
+            `Typescript compiler options 'emitDeclarationOnly' is currently not supported in esbuild compiler tool.`,
+            null,
+            null
+        );
+    }
+
+    if (options.tsConfigInfo?.compilerOptions.noEmit) {
+        throw new InvalidConfigError(
+            `Typescript compiler options 'noEmit' is currently not supported in esbuild compiler tool.`,
+            null,
+            null
+        );
+    }
+
+    if (options.tsConfigInfo?.compilerOptions.declaration) {
+        logger.warn(`Typescript compiler options 'declaration' is currently not supported in esbuild compiler tool.`);
+    }
+
+    if (options.treeshake && typeof options.treeshake === 'object') {
+        logger.warn(
+            `Treeshake object options is currently not supported in esbuild compiler tool. The sytem will use treeshake=true instead.`
+        );
+    }
+
+    let moduleFormat: esbuild.Format | undefined;
+    if (options.moduleFormat === 'esm') {
+        moduleFormat = 'esm';
+    } else if (options.moduleFormat === 'cjs') {
+        moduleFormat = 'cjs';
+    } else if (options.moduleFormat === 'iife' || options.moduleFormat === 'umd') {
+        moduleFormat = 'iife';
+    } else {
+        logger.warn(`Module format '${options.moduleFormat}' is currently not supported in esbuild compiler tool.`);
+    }
+
     const platform = getEsBuildPlatform(options);
     const targets = getEsBuildTargets(options);
 
+    let entryPoints: Record<string, string> | string[] | undefined;
+    if (options.entryPoints && options.entryPointsPreferred !== false) {
+        entryPoints = options.entryPoints;
+    } else {
+        entryPoints = options.tsConfigInfo?.fileNames ? [...options.tsConfigInfo.fileNames] : undefined;
+    }
+
+    // TODO:
+    let outBase: string | undefined;
+    let suggestedJsOutExt = '.js';
+
+    if (entryPoints) {
+        const { projectRoot } = options.taskInfo;
+        const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
+        const entryRootDir = getRootBasePath(entryFilePaths);
+        if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
+            outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRootDir));
+        }
+
+        if (moduleFormat === 'esm' && entryFilePaths.some((e) => /\.m[tj]s$/i.test(e))) {
+            suggestedJsOutExt = '.mjs';
+        } else if (moduleFormat === 'cjs' && entryFilePaths.some((e) => /\.c[tj]s$/i.test(e))) {
+            suggestedJsOutExt = '.cjs';
+        } else if (entryFilePaths.some((e) => /\.[tj]sx$/i.test(e))) {
+            suggestedJsOutExt = '.jsx';
+        }
+    } else {
+        // throw?
+    }
+
+    const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
+    logger.info(
+        `${options.bundle ? 'Bundling' : 'Compiling'} with ${colors.lightMagenta('esbuild')}...${dryRunSuffix}`
+    );
+
+    if (options.tsConfigInfo?.configPath) {
+        logger.info(
+            `With tsconfig file: ${normalizePathToPOSIXStyle(
+                path.relative(process.cwd(), options.tsConfigInfo.configPath)
+            )}`
+        );
+    }
+
+    if (moduleFormat) {
+        logger.info(`With module format: ${moduleFormat}`);
+    }
+
+    if (platform) {
+        logger.info(`With platform: ${platform}`);
+    }
+
+    if (targets.length > 0) {
+        logger.info(`With target: ${targets.join(',')}`);
+    }
+
     try {
-        const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
-        logger.info(`Bundling with ${colors.lightMagenta('esbuild')}...${dryRunSuffix}`);
-
-        if (options.entryFilePath) {
-            logger.info(
-                `With entry file: ${normalizePathToPOSIXStyle(path.relative(process.cwd(), options.entryFilePath))}`
-            );
-        }
-
-        if (options.tsConfigInfo?.configPath) {
-            logger.info(
-                `With tsconfig file: ${normalizePathToPOSIXStyle(
-                    path.relative(process.cwd(), options.tsConfigInfo.configPath)
-                )}`
-            );
-        }
-
-        if (moduleFormat) {
-            logger.info(`With module format: ${moduleFormat}`);
-        }
-
-        if (platform) {
-            logger.info(`With platform: ${platform}`);
-        }
-
-        if (targets.length > 0) {
-            logger.info(`With target: ${targets.join(',')}`);
-        }
-
         const startTime = Date.now();
 
         const esbuildResult = await esbuild.build({
             entryPoints,
-            outdir,
-            bundle: true,
+            outdir: options.outDir,
+            outbase: outBase,
+            outExtension: { '.js': suggestedJsOutExt },
+            assetNames: options.assetOut ? options.assetOut : '[dir]/[name]',
+            bundle: options.bundle,
             // TODO: Substitutions
             banner: options.banner ? { js: options.banner } : undefined,
             footer: options.footer ? { js: options.footer } : undefined,
+            // TODO: To check
             sourcemap: options.sourceMap ? 'linked' : false,
             minify: options.minify,
             format: moduleFormat,
             platform,
             target: targets,
             tsconfig: options.tsConfigInfo?.configPath,
+            tsconfigRaw: getTsConfigRaw(options),
             external: options.externals ? [...options.externals] : undefined,
+            packages: options.externals ? undefined : 'external',
             globalName: options.globalName,
             write: false,
             preserveSymlinks: options.preserveSymlinks,
-            logLevel: 'silent'
+            logLevel: 'silent',
+            loader: options.assetLoaders,
+            treeShaking: options.treeshake != null ? options.treeshake !== false : undefined
         });
 
         if (esbuildResult.errors.length > 0) {
@@ -207,11 +275,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             builtAssets.push({
                 path: outputFile.path,
                 size,
-                // TODO: Check with entry file path
-                isEntry:
-                    options.entryFilePath && options.outFilePath && isSamePath(outputFile.path, options.outFilePath)
-                        ? true
-                        : false
+                isEntry: getEntryOutFileInfo(outputFile.path, options, false).isEntry
             });
         }
 
