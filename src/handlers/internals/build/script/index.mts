@@ -56,6 +56,7 @@ let lastDetectectedEntryFileExt: string | null = null;
 
 const cwdRequire = createRequire(process.cwd() + '/');
 
+// TODO: try catch
 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 setTypescriptModule(cwdRequire('typescript'));
 
@@ -112,7 +113,7 @@ function getYearFromScriptTarget(scriptTarget: ScriptTarget): number {
     return 0;
 }
 
-export function getTsCompilerOptionsOverride(
+function getTsCompilerOptionsOverride(
     tsConfigInfo: TsConfigInfo,
     compilation: ParsedCompilation,
     taskInfo: TaskInfo
@@ -124,7 +125,7 @@ export function getTsCompilerOptionsOverride(
     compilerOptions.outDir = compilation._outDir;
 
     let entryFilePaths: string[];
-    if (compilation._entryPoints) {
+    if (compilation._entryPoints && (compilation.entry ?? !tsConfigInfo.fileNames.length)) {
         entryFilePaths = Object.entries(compilation._entryPoints).map((pair) => pair[1]);
     } else {
         entryFilePaths = [...tsConfigInfo.fileNames];
@@ -132,10 +133,15 @@ export function getTsCompilerOptionsOverride(
 
     let rootBasePath: string | null = null;
 
-    if (entryFilePaths.length > 0) {
-        const { projectRoot } = taskInfo;
+    const { projectRoot } = taskInfo;
 
-        rootBasePath = getRootBasePath(entryFilePaths);
+    if (entryFilePaths.length > 0) {
+        if (entryFilePaths.length > 1) {
+            rootBasePath = getRootBasePath(entryFilePaths);
+        } else if (compilation.entry) {
+            rootBasePath = path.dirname(entryFilePaths[0]);
+        }
+
         if (rootBasePath && (isSamePath(projectRoot, rootBasePath) || isInFolder(projectRoot, rootBasePath))) {
             compilerOptions.rootDir = rootBasePath;
         }
@@ -143,6 +149,10 @@ export function getTsCompilerOptionsOverride(
         if (entryFilePaths.some((entryFilePath) => /\.(jsx|mjs|cjs|js)$/i.test(entryFilePath))) {
             compilerOptions.allowJs = true;
         }
+    }
+
+    if (compilerOptions.rootDir == null) {
+        compilerOptions.rootDir = projectRoot;
     }
 
     if (compilation._scriptTarget != null) {

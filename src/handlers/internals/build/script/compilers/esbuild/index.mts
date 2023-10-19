@@ -159,9 +159,11 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     if (entryPoints) {
         const { projectRoot } = options.taskInfo;
         const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
-        const entryRootDir = getRootBasePath(entryFilePaths);
-        if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
-            outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRootDir));
+        if (entryFilePaths.length > 1) {
+            const entryRootDir = getRootBasePath(entryFilePaths);
+            if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
+                outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRootDir));
+            }
         }
 
         if (moduleFormat === 'esm' && entryFilePaths.some((e) => /\.m[tj]s$/i.test(e))) {
@@ -275,7 +277,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             builtAssets.push({
                 path: outputFile.path,
                 size,
-                isEntry: getEntryOutFileInfo(outputFile.path, options, false).isEntry
+                isEntry: getEntryOutFileInfo(outputFile.path, outBase ?? '', options, false).isEntry
             });
         }
 

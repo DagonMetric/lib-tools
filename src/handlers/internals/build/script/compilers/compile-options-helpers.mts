@@ -7,12 +7,13 @@
  ****************************************************************************************** */
 import * as path from 'node:path';
 
-import { getRootBasePath, isInFolder, isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/index.mjs';
+import { isSamePath } from '../../../../../utils/index.mjs';
 
 import { CompileOptions } from './compile-interfaces.mjs';
 
 export function getEntryOutFileInfo(
     currentOutFilePath: string,
+    outBase: string,
     options: CompileOptions,
     fromEntryFileName: boolean
 ): { isEntry: boolean; outFilePath: string } {
@@ -38,17 +39,7 @@ export function getEntryOutFileInfo(
         );
     }
 
-    const { projectRoot } = options.taskInfo;
-    const entryFilePaths = Object.entries(options.entryPoints).map((e) => e[1]);
-    const entryRootDir = getRootBasePath(entryFilePaths);
-    let selectedEntryRootDir = projectRoot;
-    if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
-        selectedEntryRootDir = entryRootDir;
-    }
-
     for (const [outName, entryFilePath] of Object.entries(options.entryPoints)) {
-        const outBase = normalizePathToPOSIXStyle(path.relative(selectedEntryRootDir, path.dirname(entryFilePath)));
-
         const entryFileName = path.basename(entryFilePath);
         const entryNameWithoutExt = entryFileName.substring(
             0,

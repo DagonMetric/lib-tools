@@ -18,7 +18,7 @@ import {
     dashToCamelCase,
     formatSizeInBytes,
     getRootBasePath,
-    isSamePath,
+    isInFolder,
     normalizePathToPOSIXStyle,
     pathExists
 } from '../../../../../../utils/index.mjs';
@@ -26,6 +26,7 @@ import {
 import { CompilationError } from '../../../../../exceptions/index.mjs';
 
 import { CompileAsset, CompileOptions, CompileResult } from '../compile-interfaces.mjs';
+import { getEntryOutFileInfo } from '../compile-options-helpers.mjs';
 import { ts } from '../tsproxy.mjs';
 
 const require = createRequire(process.cwd() + '/');
@@ -231,10 +232,13 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
     let suggestedJsOutExt = '.js';
 
     if (entryPoints) {
+        const { projectRoot } = options.taskInfo;
         const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
-        const rootBasePath = getRootBasePath(entryFilePaths);
-        if (rootBasePath) {
-            outBase = rootBasePath;
+        if (entryFilePaths.length > 1) {
+            const entryRootDir = getRootBasePath(entryFilePaths);
+            if (entryRootDir && isInFolder(projectRoot, entryRootDir)) {
+                outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRootDir));
+            }
         }
 
         if (moduleFormat === 'esm' && entryFilePaths.some((e) => /\.m[tj]s$/i.test(e))) {
@@ -331,52 +335,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         logger.info(`With module format: ${moduleFormat}`);
     }
 
-    // if (platform) {
-    //     logger.info(`With platform: ${platform}`);
-    // }
-
-    // if (targets.length > 0) {
-    //     logger.info(`With target: ${targets.join(',')}`);
-    // }
-
-    const checkIsEntry = (currentOutFilePath: string): boolean => {
-        if (!options.entryPoints) {
-            return false;
-        }
-
-        const currentOutLastExtName = path.extname(currentOutFilePath);
-        let currentOutSecondLastExtName = '';
-        let currentOutFilePathWithoutExt = currentOutFilePath.substring(
-            0,
-            currentOutFilePath.length - currentOutLastExtName.length
-        );
-
-        if (currentOutLastExtName.toLowerCase() === '.map' || /\.d$/i.test(currentOutFilePathWithoutExt)) {
-            currentOutSecondLastExtName = path.extname(currentOutFilePathWithoutExt);
-            currentOutFilePathWithoutExt = currentOutFilePathWithoutExt.substring(
-                0,
-                currentOutFilePathWithoutExt.length - currentOutSecondLastExtName.length
-            );
-        }
-
-        const entryFilePaths = Object.entries(options.entryPoints).map((e) => e[1]);
-
-        for (const entryFilePath of entryFilePaths) {
-            const entryFileName = path.basename(entryFilePath);
-            const testEntryOutPathWithoutExt = path.resolve(
-                options.outDir,
-                outBase ?? '',
-                entryFileName.substring(0, entryFileName.length - path.extname(entryFileName).length)
-            );
-
-            if (isSamePath(currentOutFilePathWithoutExt, testEntryOutPathWithoutExt)) {
-                return currentOutLastExtName.toLowerCase() !== '.map' ? true : false;
-            }
-        }
-
-        return false;
-    };
-
     let bundle: RollupBuild | undefined;
 
     try {
@@ -411,7 +369,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 path: outputFilePath,
                 size,
                 // TODO:
-                isEntry: checkIsEntry(outputFilePath)
+                isEntry: getEntryOutFileInfo(outputFilePath, outBase ?? '', options, false).isEntry
             });
 
             const prefix = options.dryRun ? 'Built: ' : 'Emitted: ';
