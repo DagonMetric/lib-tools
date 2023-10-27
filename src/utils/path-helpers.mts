@@ -261,37 +261,32 @@ export async function findUp(
     return null;
 }
 
-// TODO:
-export function getRootBasePath(paths: readonly string[]): string | null {
+export function getShortestBasePath(paths: readonly string[]): string | undefined {
     if (!paths.length) {
-        return null;
+        return undefined;
     }
 
     if (paths.length === 1) {
         return paths[0];
     }
 
-    const firstItemRoot = path.parse(path.resolve(paths[0])).root;
+    const sortedPaths = [...paths].sort((a, b) => a.length - b.length);
+    let shortestPath = path.resolve(sortedPaths[0]);
+    const shortestPathRoot = path.parse(shortestPath).root;
+    const otherPaths = sortedPaths.slice(1);
 
-    const allPathsAreEquals = (checkPaths: string[]): boolean => checkPaths.every((p) => p === checkPaths[0]);
-    const allPathsAreValid = (checkPaths: string[]): boolean =>
-        checkPaths.every((p) => p && p !== firstItemRoot && p !== path.parse(p).root);
-
-    let checkPaths = paths.map((p) => path.resolve(p));
-
-    if (!allPathsAreValid(checkPaths)) {
-        return null;
-    }
+    const allPathsAreInFolder = (testPaths: string[], testShortestPath: string): boolean =>
+        testPaths.every((p) => isInFolder(testShortestPath, p));
 
     do {
-        if (allPathsAreEquals(checkPaths)) {
-            return checkPaths[0];
+        if (allPathsAreInFolder(otherPaths, shortestPath)) {
+            return shortestPath;
         }
 
-        checkPaths = checkPaths.map((p) => path.dirname(p));
-    } while (allPathsAreValid(checkPaths));
+        shortestPath = path.dirname(shortestPath);
+    } while (shortestPath && shortestPath !== shortestPathRoot);
 
-    throw new Error('TODO: getRootBasePath');
+    return undefined;
 }
 
 export async function getAbsolutePathInfoes(
