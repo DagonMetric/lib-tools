@@ -12,12 +12,11 @@ import { isSamePath, normalizePathToPOSIXStyle } from '../../../../../utils/inde
 export function getEntryOutFileInfo(options: {
     currentOutFilePath: string;
     outDir: string;
-    outBase: string | undefined;
     entryPoints: string[] | Record<string, string>;
     projectRoot: string;
     entryRoot: string | undefined;
 }): { isEntry: boolean; outFilePath: string } {
-    const { currentOutFilePath, entryPoints, outDir, outBase, projectRoot, entryRoot } = options;
+    const { currentOutFilePath, entryPoints, outDir, projectRoot, entryRoot } = options;
 
     const currentOutLastExtName = path.extname(currentOutFilePath);
     let currentOutFilePathWithoutExt = currentOutFilePath.substring(
@@ -43,19 +42,14 @@ export function getEntryOutFileInfo(options: {
         const entryPathRelToEntryRoot = normalizePathToPOSIXStyle(
             path.relative(entryRoot ?? projectRoot, entryFilePath)
         );
-        let subDirPath =
+        const subDirPath =
             entryPathRelToEntryRoot.length > entryFileName.length
                 ? entryPathRelToEntryRoot.substring(0, entryPathRelToEntryRoot.length - entryFileName.length)
                 : '';
 
-        const outBaseNormalized = outBase ? normalizePathToPOSIXStyle(outBase) : '';
-        if (outBaseNormalized && (subDirPath === outBaseNormalized || subDirPath.startsWith(outBaseNormalized))) {
-            subDirPath = subDirPath.substring(outBaseNormalized.length);
-        }
-
         const outName = Array.isArray(entryPoints) ? entryNameWithoutExt : index;
 
-        const testPathWithoutExt = path.resolve(outDir, outBaseNormalized, subDirPath, outName);
+        const testPathWithoutExt = path.resolve(outDir, subDirPath, outName);
 
         if (isSamePath(currentOutFilePathWithoutExt, testPathWithoutExt)) {
             return {

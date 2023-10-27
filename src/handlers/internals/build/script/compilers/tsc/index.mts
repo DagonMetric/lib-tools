@@ -41,9 +41,13 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
     }
 
     if (emitDeclarationOnly) {
-        logger.info(`Generating typing declaration files with ${colors.lightMagenta('tsc')}...`);
+        logger.info(
+            `Generating typing declaration files with ${colors.lightMagenta('tsc')}...${
+                options.dryRun ? ' [dry run]' : ''
+            }`
+        );
     } else {
-        logger.info(`Compiling with ${colors.lightMagenta('tsc')}...`);
+        logger.info(`Compiling with ${colors.lightMagenta('tsc')}...${options.dryRun ? ' [dry run]' : ''}`);
     }
 
     if (options.tsConfigInfo?.configPath) {
@@ -123,7 +127,6 @@ export default function (options: CompileOptions, logger: LoggerBase): Promise<C
             ? getEntryOutFileInfo({
                   currentOutFilePath: filePath,
                   outDir: options.outDir,
-                  outBase: undefined,
                   entryPoints: options.entryPoints,
                   projectRoot,
                   entryRoot

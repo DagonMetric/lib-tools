@@ -325,8 +325,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         preserveModulesRoot: outBase
     };
 
-    const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
-    logger.info(`Bundling with ${colors.lightMagenta('rollup')}...${dryRunSuffix}`);
+    logger.info(`Bundling with ${colors.lightMagenta('rollup')}...${options.dryRun ? ' [dry run]' : ''}`);
 
     if (options.tsConfigInfo?.configPath) {
         logger.info(
@@ -378,7 +377,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                     ? getEntryOutFileInfo({
                           currentOutFilePath: outputFilePath,
                           outDir: options.outDir,
-                          outBase,
                           entryPoints,
                           projectRoot,
                           entryRoot

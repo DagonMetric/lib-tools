@@ -125,6 +125,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         if (entryFilePaths.length > 1) {
             // TODO:
             const rootBasePath = getShortestBasePath(entryFilePaths.map((p) => path.dirname(p)));
+
             if (rootBasePath && isInFolder(projectRoot, rootBasePath)) {
                 entryRoot = rootBasePath;
                 outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRoot));
@@ -142,9 +143,10 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         }
     }
 
-    const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
     logger.info(
-        `${options.bundle ? 'Bundling' : 'Compiling'} with ${colors.lightMagenta('esbuild')}...${dryRunSuffix}`
+        `${options.bundle ? 'Bundling' : 'Compiling'} with ${colors.lightMagenta('esbuild')}...${
+            options.dryRun ? ' [dry run]' : ''
+        }`
     );
 
     if (options.tsConfigInfo?.configPath) {
@@ -198,6 +200,8 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             logLevel: 'silent'
         });
 
+        const duration = Date.now() - startTime;
+
         if (esbuildResult.errors.length > 0) {
             const formattedMessages = await esbuild.formatMessages(esbuildResult.errors, {
                 kind: 'error',
@@ -219,7 +223,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             logger.warn(formattedMessages.join('\n').trim());
         }
 
-        const duration = Date.now() - startTime;
         const builtAssets: CompileAsset[] = [];
 
         for (const outputFile of esbuildResult.outputFiles) {
@@ -227,7 +230,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
             const size = outputFile.contents.length;
 
             if (options.dryRun) {
-                logger.debug(`Built: ${pathRel}, size: ${formatSizeInBytes(size)}`);
+                logger.debug(`Built: ${pathRel} - size: ${formatSizeInBytes(size)}`);
             } else {
                 const dirOfFilePath = path.dirname(outputFile.path);
 
@@ -236,7 +239,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                 }
 
                 await fs.writeFile(outputFile.path, outputFile.contents, 'utf-8');
-                logger.debug(`Emitted: ${pathRel}, size: ${formatSizeInBytes(size)}`);
+                logger.debug(`Emitted: ${pathRel} - size: ${formatSizeInBytes(size)}`);
             }
 
             builtAssets.push({
@@ -246,7 +249,6 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
                     ? getEntryOutFileInfo({
                           currentOutFilePath: outputFile.path,
                           outDir: options.outDir,
-                          outBase,
                           entryPoints,
                           projectRoot,
                           entryRoot

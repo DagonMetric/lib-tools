@@ -215,8 +215,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         webpackConfig.experiments.outputModule = true;
     }
 
-    const dryRunSuffix = options.dryRun ? ' [dry run]' : '';
-    logger.info(`Bundling with ${colors.lightMagenta('webpack')}...${dryRunSuffix}`);
+    logger.info(`Bundling with ${colors.lightMagenta('webpack')}...${options.dryRun ? ' [dry run]' : ''}`);
 
     if (options.tsConfigInfo?.configPath) {
         logger.info(
