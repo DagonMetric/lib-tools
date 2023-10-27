@@ -54,7 +54,7 @@
     "esbuild:bundle": "esbuild src/public-api.mts src/cli/index.mts --bundle --tsconfig=tsconfig.build.json --format=esm --platform=node --target=esnext,node18.16 --packages=external --sourcemap --loader:.json=copy --asset-names=schemas/[name] --outdir=dist --outbase=src --out-extension:.js=.mjs",
     "generate-json-schema": "node ./tools/generate-json-schema.mjs",
     "build": "npm run tsc:compile && npm run generate-json-schema",
-    "test": "glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/cli-*test.mts\"",
+    "test": "glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/utils-*test.mts\"",
     "lib:version": "node --no-warnings --enable-source-maps --loader ts-node/esm ./src/bin/lib.mts --version",
     "lib:help": "node --no-warnings --enable-source-maps --loader ts-node/esm ./src/bin/lib.mts --help",
     "lib:lint": "node --no-warnings --enable-source-maps --loader ts-node/esm ./src/bin/lib.mts lint",
