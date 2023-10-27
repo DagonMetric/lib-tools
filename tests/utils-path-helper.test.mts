@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import {
     findUp,
     getAbsolutePathInfoes,
+    getShortestBasePath,
     isInFolder,
     isSamePath,
     isWindowsStyleAbsolute,
@@ -579,6 +580,15 @@ void describe('utils/path-helpers', () => {
             assert.strictEqual(pathInfoes[0].isDirectory, false);
             assert.strictEqual(pathInfoes[0].isSystemRoot, false);
             assert.strictEqual(pathInfoes[0].isSymbolicLink, false);
+        });
+    });
+
+    void describe('getShortestBasePath', () => {
+        void it(`should get shortest root path`, () => {
+            const testPaths = ['C://path1/path2/path3', 'C://path1/path2', 'C://path1/path2/path3/path4'];
+            const shortestPath = getShortestBasePath(testPaths);
+
+            assert.strictEqual(shortestPath, path.resolve('C://path1/path2'));
         });
     });
 });
