@@ -14,7 +14,7 @@ import {
     LoggerBase,
     colors,
     formatSizeInBytes,
-    getRootBasePath,
+    getShortestBasePath,
     isInFolder,
     normalizePathToPOSIXStyle,
     pathExists
@@ -124,7 +124,7 @@ export default async function (options: CompileOptions, logger: LoggerBase): Pro
         const entryFilePaths = Array.isArray(entryPoints) ? entryPoints : Object.entries(entryPoints).map((e) => e[1]);
         if (entryFilePaths.length > 1) {
             // TODO:
-            const rootBasePath = getRootBasePath(entryFilePaths);
+            const rootBasePath = getShortestBasePath(entryFilePaths.map((p) => path.dirname(p)));
             if (rootBasePath && isInFolder(projectRoot, rootBasePath)) {
                 entryRoot = rootBasePath;
                 outBase = normalizePathToPOSIXStyle(path.relative(projectRoot, entryRoot));

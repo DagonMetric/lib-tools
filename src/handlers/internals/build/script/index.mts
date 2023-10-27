@@ -26,7 +26,7 @@ import {
     colors,
     dashToCamelCase,
     findUp,
-    getRootBasePath,
+    getShortestBasePath,
     isInFolder,
     isSamePath,
     normalizePathToPOSIXStyle,
@@ -131,13 +131,13 @@ function getTsCompilerOptionsOverride(
         entryFilePaths = [...tsConfigInfo.fileNames];
     }
 
-    let rootBasePath: string | null = null;
+    let rootBasePath: string | undefined;
 
     const { projectRoot } = taskInfo;
 
     if (entryFilePaths.length > 0) {
         if (entryFilePaths.length > 1) {
-            rootBasePath = getRootBasePath(entryFilePaths);
+            rootBasePath = getShortestBasePath(entryFilePaths.map((p) => path.dirname(p)));
         } else if (compilation.entry) {
             rootBasePath = path.dirname(entryFilePaths[0]);
         }
