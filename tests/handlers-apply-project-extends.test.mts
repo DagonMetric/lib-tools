@@ -4,8 +4,8 @@ import { describe, it } from 'node:test';
 import { BuildTaskConfig } from '../src/config-models/build-task-config.mjs';
 import { CustomTaskConfig } from '../src/config-models/custom-task-config.mjs';
 import { ProjectConfig } from '../src/config-models/project-config.mjs';
-import { InvalidConfigError } from '../src/handlers/exceptions/index.mjs';
-import { applyProjectExtends } from '../src/handlers/internals/apply-project-extends.mjs';
+import { InvalidConfigError } from '../src/main/exceptions/index.mjs';
+import { applyProjectExtends } from '../src/main/internals/apply-project-extends.mjs';
 
 void describe('handlers/internals/apply-project-extends', () => {
   void describe('applyProjectExtends', () => {

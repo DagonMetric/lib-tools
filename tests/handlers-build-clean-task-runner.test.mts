@@ -4,8 +4,8 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 
 import { AfterBuildCleanOptions, BeforeBuildCleanOptions } from '../src/config-models/index.mjs';
-import { BuildTask } from '../src/handlers/build-task.mjs';
-import { CleanTaskRunner, getCleanTaskRunner } from '../src/handlers/internals/build/clean/index.mjs';
+import { BuildTask } from '../src/main/build-task.mjs';
+import { CleanTaskRunner, getCleanTaskRunner } from '../src/main/internals/build/clean/index.mjs';
 import { Logger } from '../src/utils/index.mjs';
 
 void describe('handlers/internals/build/clean', () => {
@@ -728,7 +728,7 @@ void describe('handlers/internals/build/clean', () => {
       // Clean resources
       const tempOutDirexisted = fs.existsSync(tempOutDir);
       if (tempOutDirexisted) {
-        fs.rmdirSync(tempOutDir, { recursive: true });
+        fs.rmSync(tempOutDir, { recursive: true, force: true });
       }
     });
 

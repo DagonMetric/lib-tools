@@ -17,9 +17,7 @@ export default tseslint.config(
         ...globals.node
       },
       parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-        project: './tsconfig.json'
+        projectService: true
       }
     }
   },
@@ -209,7 +207,7 @@ export default tseslint.config(
               // Setters
               // "public-static-set",
               // "protected-static-set",
-              /// "private-static-set",
+              // / "private-static-set",
               // "#private-static-set",
 
               // "public-decorated-set",
@@ -329,7 +327,7 @@ export default tseslint.config(
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       // ----------------------------------------
       // #endregion
-      
+
       // #region prettier
       // ----------------------------------------
       'prettier/prettier': [

@@ -276,10 +276,7 @@ export type WebpackScriptModuleFormat =
  * Script module format.
  */
 export type ScriptModuleFormat =
-  | TypescriptScriptModuleFormat
-  | EsBuildScriptModuleFormat
-  | RollupScriptModuleFormat
-  | WebpackScriptModuleFormat;
+  TypescriptScriptModuleFormat | EsBuildScriptModuleFormat | RollupScriptModuleFormat | WebpackScriptModuleFormat;
 
 /**
  * Script target.

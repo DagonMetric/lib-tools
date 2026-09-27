@@ -86,7 +86,7 @@ export class ScriptWebpackPlugin {
                     commentfooter: string;
                   };
 
-                  if (!cached || cached.commentBanner !== commentBanner || cached.commentfooter !== commentFooter) {
+                  if (cached?.commentBanner !== commentBanner || cached.commentfooter !== commentFooter) {
                     let source: sources.Source;
 
                     if (commentBanner && commentFooter) {

@@ -7,8 +7,9 @@
  ****************************************************************************************** */
 import { CommandOptions } from '../../config-models/index.mjs';
 
-export interface ParsedCommandOptions
-  extends Readonly<Pick<CommandOptions, 'logLevel' | 'dryRun' | 'env' | 'clean' | 'packageVersion'>> {
+export interface ParsedCommandOptions extends Readonly<
+  Pick<CommandOptions, 'logLevel' | 'dryRun' | 'env' | 'clean' | 'packageVersion'>
+> {
   readonly workspaceRoot: string;
   readonly configPath: string | null;
   readonly projects: readonly string[];

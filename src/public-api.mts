@@ -7,10 +7,12 @@
  ****************************************************************************************** */
 export * from './utils/colors.mjs';
 export * from './utils/logger.mjs';
+
 export * from './config-models/build-task-options.mjs';
 export * from './config-models/command-options.mjs';
 export * from './config-models/custom-task-options.mjs';
 export * from './config-models/task-options.mjs';
-export * from './handlers/index.mjs';
+
+export * from './main/index.mjs';
 
 export const VERSION = '0.0.0-PLACEHOLDER';

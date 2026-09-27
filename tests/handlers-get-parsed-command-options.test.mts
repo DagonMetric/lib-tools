@@ -3,9 +3,9 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { CommandOptions } from '../src/config-models/index.mjs';
-import { InvalidCommandOptionError } from '../src/handlers//exceptions/index.mjs';
-import { getParsedCommandOptions } from '../src/handlers/internals/get-parsed-command-options.mjs';
-import { ParsedCommandOptions } from '../src/handlers/internals/parsed-command-options.mjs';
+import { InvalidCommandOptionError } from '../src/main//exceptions/index.mjs';
+import { getParsedCommandOptions } from '../src/main/internals/get-parsed-command-options.mjs';
+import { ParsedCommandOptions } from '../src/main/internals/parsed-command-options.mjs';
 
 void describe('handlers/internals/get-parsed-command-options', () => {
   void describe('getParsedCommandOptions', () => {

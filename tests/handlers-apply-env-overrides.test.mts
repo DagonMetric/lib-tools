@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 
 import { BuildTaskConfig } from '../src/config-models/build-task-config.mjs';
 import { CustomTaskConfig } from '../src/config-models/custom-task-config.mjs';
-import { applyEnvOverrides } from '../src/handlers/internals/apply-env-overrides.mjs';
+import { applyEnvOverrides } from '../src/main/internals/apply-env-overrides.mjs';
 
 void describe('handlers/internals/apply-env-overrides', () => {
   void describe('applyEnvOverrides', () => {

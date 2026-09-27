@@ -3,8 +3,8 @@ import * as path from 'node:path';
 import { describe, it } from 'node:test';
 
 import { CommandOptions } from '../src/config-models/index.mjs';
-import { BuildTask } from '../src/handlers/build-task.mjs';
-import { getTasksFromCommandOptions } from '../src/handlers/get-tasks.mjs';
+import { BuildTask } from '../src/main/build-task.mjs';
+import { getTasksFromCommandOptions } from '../src/main/get-tasks.mjs';
 
 void describe('handlers/get-tasks', () => {
   void describe('getTasksFromCommandOptions', () => {

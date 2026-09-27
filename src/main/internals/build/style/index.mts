@@ -494,7 +494,7 @@ export class StyleTaskRunner {
     for (const p of this.options.styleOptions.includePaths) {
       const normalizedPath = normalizePathToPOSIXStyle(p);
 
-      let foundPath: string | null = null;
+      let foundPath: string | null;
 
       foundPath = await findUp(normalizedPath, null, projectRoot);
 

@@ -4,8 +4,8 @@ import * as path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 
 import { CopyEntry } from '../src/config-models/index.mjs';
-import { BuildTask } from '../src/handlers/build-task.mjs';
-import { CopyTaskRunner, getCopyTaskRunner } from '../src/handlers/internals/build/copy/index.mjs';
+import { BuildTask } from '../src/main/build-task.mjs';
+import { CopyTaskRunner, getCopyTaskRunner } from '../src/main/internals/build/copy/index.mjs';
 import { Logger } from '../src/utils/index.mjs';
 
 void describe('handlers/internals/build/copy', () => {
@@ -547,7 +547,7 @@ void describe('handlers/internals/build/copy', () => {
       // Clean resources
       const tempOutDirexisted = fs.existsSync(outDir);
       if (tempOutDirexisted) {
-        fs.rmdirSync(outDir, { recursive: true });
+        fs.rmSync(outDir, { recursive: true, force: true });
       }
     });
 
