@@ -10,5 +10,5 @@ import * as tsTypes from 'typescript';
 export let ts: typeof tsTypes;
 
 export function setTypescriptModule(override: typeof tsTypes) {
-    ts = override;
+  ts = override;
 }

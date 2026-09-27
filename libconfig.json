@@ -14,21 +14,28 @@
           "script": {
             "banner": true,
             "substitutions": {
-              "files": []
+              "values": [
+                {
+                  "searchValue": "0.0.0-PLACEHOLDER",
+                  "replaceValue": "_generated",
+                  "bannerOnly": false
+                }
+              ],
+              "files": ["src/public-api.mts"]
             },
             "compilations": [
-              {
-                "compiler": "tsc",
-                "entry": "src/public-api.mts",
-                "tsconfig": "tsconfig.build.json",
-                "emitDeclarationOnly": true,
-                "outDir": "types"
-              },
-              {
-                "compiler": "tsc",
-                "tsconfig": "tsconfig.build.json",
-                "declaration": false
-              },
+              // {
+              //   "compiler": "tsc",
+              //   "entry": "src/public-api.mts",
+              //   "tsconfig": "tsconfig.build.json",
+              //   "emitDeclarationOnly": true,
+              //   "outDir": "types"
+              // },
+              // {
+              //   "compiler": "tsc",
+              //   "tsconfig": "tsconfig.build.json",
+              //   "declaration": false
+              // },
               {
                 "compiler": "esbuild",
                 "entry": ["src/public-api.mts", "src/cli/index.mts"],
@@ -48,7 +55,7 @@
           "handler": "exec: glob -c \"node --no-warnings --loader ts-node/esm --test\" \"tests/**/*test.ts\""
         },
         "lint": {
-          "handler": "exec: eslint ."
+          "handler": "exec:eslint"
         }
       }
     }

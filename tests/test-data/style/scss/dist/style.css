@@ -1,0 +1,52 @@
+/*!
+ * Cssnano Note - any special comments marked with ! are kept by default.
+ * @license
+ * Copyright 2023 DagonMetric All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://github.com/dagonmetric/lib-tools.
+ * packagename: style-package
+ * packageversion: 1.0.0
+ * packagedescription: This is a style test project.
+ * fullhash:018134c9e6d9b5a8ea74, chunkhash:b41a61531e3f341b141b, name:style, filebase:style.css, query:, file:style.css
+ */
+@media print {
+/* print styles */
+/* ------------------------------ */
+@font-face {
+  font-family: "Trickster";
+  src: local("Trickster"), url("../fonts/trickster-COLRv1.otf") format("opentype") tech(color-COLRv1), url("../fonts/trickster-outline.otf") format("opentype"), url("../fonts/trickster-outline.woff") format("woff");
+}
+/* ------------------------------ */
+}
+/* button styles */
+.button {
+  border-radius: 3px;
+  padding: 8px;
+}
+
+/* code styles */
+code {
+  padding: 0.25em;
+  line-height: 0;
+}
+
+:root {
+  --bgColor: #12345678;
+}
+
+body {
+  color: rgba(1, 46, 112, 0.6);
+  background-color: var(--bgColor);
+}
+
+.image {
+  background-image: url(./image@1x.png);
+}
+@media (min-resolution: 2dppx) {
+  .image {
+    background-image: url(./image@2x.png);
+  }
+}
+
+/*# sourceMappingURL=style.css.map*/

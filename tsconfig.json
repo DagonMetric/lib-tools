@@ -25,8 +25,5 @@
     "baseUrl": "./",
     "rootDir": "./",
     "outDir": "./dist"
-  },
-  "ts-node": {
-    "esm": true
   }
 }

@@ -9,30 +9,30 @@
 import { colors } from '../../utils/index.mjs';
 
 function formatMessage(
-    message: string,
-    configPath: string | null | undefined,
-    configLocation: string | null | undefined
+  message: string,
+  configPath: string | null | undefined,
+  configLocation: string | null | undefined
 ): string {
-    let formattedMsg = '';
+  let formattedMsg = '';
 
-    if (configPath) {
-        formattedMsg += `${colors.lightCyan(configPath)} - `;
-    }
+  if (configPath) {
+    formattedMsg += `${colors.lightCyan(configPath)} - `;
+  }
 
-    if (configLocation) {
-        formattedMsg += colors.lightRed('Configuration error:') + ` ${message}`;
+  if (configLocation) {
+    formattedMsg += colors.lightRed('Configuration error:') + ` ${message}`;
 
-        formattedMsg += `\n  config location: `;
-        formattedMsg += colors.lightRed(configLocation);
-    } else {
-        formattedMsg += colors.lightRed('Error:') + ` ${message}`;
-    }
+    formattedMsg += `\n  config location: `;
+    formattedMsg += colors.lightRed(configLocation);
+  } else {
+    formattedMsg += colors.lightRed('Error:') + ` ${message}`;
+  }
 
-    return formattedMsg;
+  return formattedMsg;
 }
 
 export class InvalidConfigError extends Error {
-    constructor(message: string, configPath: string | null | undefined, configLocation: string | null | undefined) {
-        super(formatMessage(message, configPath, configLocation));
-    }
+  constructor(message: string, configPath: string | null | undefined, configLocation: string | null | undefined) {
+    super(formatMessage(message, configPath, configLocation));
+  }
 }

@@ -659,6 +659,13 @@
           "type": "string",
           "description": "Custom output directory path relative to project `outDir`."
         },
+        "outExtension": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom file extension of the generated files."
+        },
         "moduleFormat": {
           "$ref": "#/definitions/ScriptModuleFormat",
           "description": "Module format."
@@ -886,6 +893,13 @@
           "type": "string",
           "description": "Custom output directory path relative to project `outDir`."
         },
+        "outExtension": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom file extension of the generated files."
+        },
         "moduleFormat": {
           "$ref": "#/definitions/TypescriptScriptModuleFormat",
           "description": "Module format."
@@ -995,6 +1009,13 @@
           "type": "string",
           "description": "Custom output directory path relative to project `outDir`."
         },
+        "outExtension": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom file extension of the generated files."
+        },
         "moduleFormat": {
           "$ref": "#/definitions/EsBuildScriptModuleFormat",
           "description": "Module format."
@@ -1088,6 +1109,13 @@
         "outDir": {
           "type": "string",
           "description": "Custom output directory path relative to project `outDir`."
+        },
+        "outExtension": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom file extension of the generated files."
         },
         "moduleFormat": {
           "$ref": "#/definitions/RollupScriptModuleFormat",
@@ -1198,6 +1226,13 @@
           "type": "string",
           "description": "Custom output directory path relative to project `outDir`."
         },
+        "outExtension": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom file extension of the generated files."
+        },
         "moduleFormat": {
           "$ref": "#/definitions/WebpackScriptModuleFormat",
           "description": "Module format."
@@ -1299,6 +1334,13 @@
         "outDir": {
           "type": "string",
           "description": "Custom output directory path relative to project `outDir`."
+        },
+        "outExtension": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom file extension of the generated files."
         },
         "moduleFormat": {
           "$ref": "#/definitions/ScriptModuleFormat",

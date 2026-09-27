@@ -13,7 +13,7 @@ export * from './simple-decorator';
  * sayHello function.
  */
 export function sayHello() {
-    const message: Message = data;
-    const greeter = new Greeter(message);
-    greeter.greet();
+  const message: Message = data;
+  const greeter = new Greeter(message);
+  greeter.greet();
 }

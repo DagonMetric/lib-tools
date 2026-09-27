@@ -6,6 +6,6 @@
  * found in the LICENSE file at https://github.com/dagonmetric/lib-tools
  ****************************************************************************************** */
 export interface TaskFilter {
-    projectNames?: readonly string[];
-    taskNames?: readonly string[];
+  projectNames?: readonly string[];
+  taskNames?: readonly string[];
 }

@@ -8,8 +8,8 @@
 import { LogLevelStrings, LoggerBase } from '../utils/index.mjs';
 
 export interface HandlerOptions {
-    readonly logger: LoggerBase;
-    readonly logLevel: LogLevelStrings;
-    readonly dryRun: boolean;
-    readonly env: string | undefined;
+  readonly logger: LoggerBase;
+  readonly logLevel: LogLevelStrings;
+  readonly dryRun: boolean;
+  readonly env: string | undefined;
 }

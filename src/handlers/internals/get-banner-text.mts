@@ -19,158 +19,154 @@ const regExpEscapePattern = /[.*+?^${}()|[\]\\]/g;
 const bannerTextCache = new Map<string, string>();
 
 async function readFileUp(searchFileNames: string[], startDir: string, endDir: string): Promise<string | undefined> {
-    const cacheKey = `${startDir}!${endDir}!${searchFileNames.join('!')}`;
-    const cached = bannerTextCache.get(cacheKey);
-    if (cached !== undefined) {
-        if (cached.length > 0) {
-            return cached;
-        }
-
-        return undefined;
+  const cacheKey = `${startDir}!${endDir}!${searchFileNames.join('!')}`;
+  const cached = bannerTextCache.get(cacheKey);
+  if (cached !== undefined) {
+    if (cached.length > 0) {
+      return cached;
     }
 
-    let content: string | undefined;
+    return undefined;
+  }
 
-    for (const searchFile of searchFileNames) {
-        const foundPath = await findUp(searchFile, startDir, endDir, true);
-        if (foundPath) {
-            content = await fs.readFile(foundPath, 'utf-8');
-            content = content.trim();
+  let content: string | undefined;
 
-            break;
-        }
+  for (const searchFile of searchFileNames) {
+    const foundPath = await findUp(searchFile, startDir, endDir, true);
+    if (foundPath) {
+      content = await fs.readFile(foundPath, 'utf-8');
+      content = content.trim();
+
+      break;
     }
+  }
 
-    if (content) {
-        bannerTextCache.set(cacheKey, content);
-    } else {
-        bannerTextCache.set(cacheKey, '');
-    }
+  if (content) {
+    bannerTextCache.set(cacheKey, content);
+  } else {
+    bannerTextCache.set(cacheKey, '');
+  }
 
-    return content;
+  return content;
 }
 
 function wrapComment(str: string, location: 'banner' | 'footer') {
-    if (str.startsWith('//') || str.startsWith('/*')) {
-        return str;
-    }
+  if (str.startsWith('//') || str.startsWith('/*')) {
+    return str;
+  }
 
-    if (location === 'footer') {
-        const lines = str.split(/[\n\r]/);
-        const lastLine = lines[lines.length - 1];
-        if (str.endsWith('*/') || lastLine.startsWith('//') || lastLine.startsWith('/*')) {
-            return str;
-        }
+  if (location === 'footer') {
+    const lines = str.split(/[\n\r]/);
+    const lastLine = lines[lines.length - 1];
+    if (str.endsWith('*/') || lastLine.startsWith('//') || lastLine.startsWith('/*')) {
+      return str;
     }
+  }
 
-    if (!str.includes('\n')) {
-        return `/*! ${str.replace(commentEndRegExp, '* /')} */`;
-    }
-    return `/*!\n * ${str.replace(/\*\//g, '* /').split('\n').join('\n * ').replace(/\s+\n/g, '\n').trimEnd()}\n */`;
+  if (!str.includes('\n')) {
+    return `/*! ${str.replace(commentEndRegExp, '* /')} */`;
+  }
+  return `/*!\n * ${str.replace(/\*\//g, '* /').split('\n').join('\n * ').replace(/\s+\n/g, '\n').trimEnd()}\n */`;
 }
 
 function applySubstitutions(str: string, substitutions: readonly SubstitutionEntry[]): string {
-    for (const substitution of substitutions) {
-        const escapedPattern = substitution.searchValue.replace(regExpEscapePattern, '\\$&'); // $& means the whole matched string
-        const searchRegExp = new RegExp(
-            // `${substitution.startDelimiter ?? '\\b'}${escapedPattern}${substitution.endDelimiter ?? '\\b(?!\\.)'}`,
-            `${escapedPattern}`,
-            'g'
-        );
-        str = str.replace(searchRegExp, substitution.replaceValue);
-    }
+  for (const substitution of substitutions) {
+    const escapedPattern = substitution.searchValue.replace(regExpEscapePattern, '\\$&'); // $& means the whole matched string
+    const searchRegExp = new RegExp(
+      // `${substitution.startDelimiter ?? '\\b'}${escapedPattern}${substitution.endDelimiter ?? '\\b(?!\\.)'}`,
+      `${escapedPattern}`,
+      'g'
+    );
+    str = str.replace(searchRegExp, substitution.replaceValue);
+  }
 
-    return str;
+  return str;
 }
 
 export async function getBannerText(
-    location: 'banner' | 'footer',
-    bannerFor: 'script' | 'style',
-    banner: boolean | string | undefined,
-    buildTask: Readonly<BuildTask>,
-    substitutions: readonly SubstitutionEntry[]
+  location: 'banner' | 'footer',
+  bannerFor: 'script' | 'style',
+  banner: boolean | string | undefined,
+  buildTask: Readonly<BuildTask>,
+  substitutions: readonly SubstitutionEntry[]
 ): Promise<string | undefined> {
-    if (!banner) {
-        return undefined;
-    }
+  if (!banner) {
+    return undefined;
+  }
 
-    if (!banner) {
-        return undefined;
-    }
+  if (!banner) {
+    return undefined;
+  }
 
-    const { workspaceRoot, projectRoot, projectName, taskName, configPath } = buildTask;
+  const { workspaceRoot, projectRoot, projectName, taskName, configPath } = buildTask;
 
-    const taskLocation = `tasks/${taskName}/${bannerFor}/${location}`;
-    const configLocation = projectName ? `projects/${projectName}/${taskLocation}` : taskLocation;
+  const taskLocation = `tasks/${taskName}/${bannerFor}/${location}`;
+  const configLocation = projectName ? `projects/${projectName}/${taskLocation}` : taskLocation;
 
-    const searchFiles = [
-        `${location}.${bannerFor}.md`,
-        `${location}.${bannerFor}.txt`,
-        `${location}.md`,
-        `${location}.txt`
-    ];
+  const searchFiles = [
+    `${location}.${bannerFor}.md`,
+    `${location}.${bannerFor}.txt`,
+    `${location}.md`,
+    `${location}.txt`
+  ];
 
-    let bannerText: string | undefined;
+  let bannerText: string | undefined;
 
-    if (
-        banner === true ||
-        (typeof banner === 'string' &&
-            (banner.trim().toLowerCase() === 'true' || banner.trim().toLowerCase() === 'auto'))
-    ) {
-        bannerText = await readFileUp(searchFiles, projectRoot, workspaceRoot);
-
-        if (!bannerText) {
-            throw new InvalidConfigError(
-                `${
-                    location === 'footer' ? 'Footer' : 'Banner'
-                } file could not be detected automatically. Specify ${location} file path manually.`,
-                configPath,
-                `${configLocation}`
-            );
-        }
-    } else {
-        const trimedInput = banner.trim();
-
-        if (
-            !trimedInput.startsWith('//') &&
-            !trimedInput.startsWith('/*') &&
-            !trimedInput.endsWith('*/') &&
-            !/[\n\r\t\s:*?"]/.test(trimedInput) &&
-            trimedInput.length <= 4096
-        ) {
-            bannerText = await readFileUp([trimedInput], projectRoot, workspaceRoot);
-
-            if (!bannerText) {
-                if (
-                    path.extname(trimedInput).toLowerCase() === '.md' ||
-                    path.extname(trimedInput).toLowerCase() === '.txt'
-                ) {
-                    throw new InvalidConfigError(
-                        `${location === 'footer' ? 'Footer' : 'Banner'} file could not be found.`,
-                        configPath,
-                        `${configLocation}`
-                    );
-                } else {
-                    bannerText = trimedInput;
-                }
-            }
-        } else {
-            bannerText = trimedInput;
-        }
-    }
+  if (
+    banner === true ||
+    (typeof banner === 'string' && (banner.trim().toLowerCase() === 'true' || banner.trim().toLowerCase() === 'auto'))
+  ) {
+    bannerText = await readFileUp(searchFiles, projectRoot, workspaceRoot);
 
     if (!bannerText) {
-        return undefined;
+      throw new InvalidConfigError(
+        `${
+          location === 'footer' ? 'Footer' : 'Banner'
+        } file could not be detected automatically. Specify ${location} file path manually.`,
+        configPath,
+        `${configLocation}`
+      );
     }
+  } else {
+    const trimedInput = banner.trim();
 
-    bannerText = wrapComment(bannerText, location);
-    bannerText = applySubstitutions(bannerText, substitutions);
+    if (
+      !trimedInput.startsWith('//') &&
+      !trimedInput.startsWith('/*') &&
+      !trimedInput.endsWith('*/') &&
+      !/[\n\r\t\s:*?"]/.test(trimedInput) &&
+      trimedInput.length <= 4096
+    ) {
+      bannerText = await readFileUp([trimedInput], projectRoot, workspaceRoot);
 
-    const normalizedBannerText = bannerText
-        .split(/[\r\n]/)
-        .filter((l) => l.trim().length > 0)
-        .join('\n')
-        .trim();
+      if (!bannerText) {
+        if (path.extname(trimedInput).toLowerCase() === '.md' || path.extname(trimedInput).toLowerCase() === '.txt') {
+          throw new InvalidConfigError(
+            `${location === 'footer' ? 'Footer' : 'Banner'} file could not be found.`,
+            configPath,
+            `${configLocation}`
+          );
+        } else {
+          bannerText = trimedInput;
+        }
+      }
+    } else {
+      bannerText = trimedInput;
+    }
+  }
 
-    return normalizedBannerText;
+  if (!bannerText) {
+    return undefined;
+  }
+
+  bannerText = wrapComment(bannerText, location);
+  bannerText = applySubstitutions(bannerText, substitutions);
+
+  const normalizedBannerText = bannerText
+    .split(/[\r\n]/)
+    .filter((l) => l.trim().length > 0)
+    .join('\n')
+    .trim();
+
+  return normalizedBannerText;
 }

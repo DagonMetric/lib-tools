@@ -12,3 +12,5 @@ export * from './config-models/command-options.mjs';
 export * from './config-models/custom-task-options.mjs';
 export * from './config-models/task-options.mjs';
 export * from './handlers/index.mjs';
+
+export const VERSION = '0.0.0-PLACEHOLDER';

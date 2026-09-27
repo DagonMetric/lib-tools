@@ -6,9 +6,9 @@
  * found in the LICENSE file at https://github.com/dagonmetric/lib-tools
  ****************************************************************************************** */
 export interface TaskInfo {
-    readonly taskName: string;
-    readonly workspaceRoot: string;
-    readonly projectRoot: string;
-    readonly projectName?: string;
-    readonly configPath?: string | null;
+  readonly taskName: string;
+  readonly workspaceRoot: string;
+  readonly projectRoot: string;
+  readonly projectName?: string;
+  readonly configPath?: string | null;
 }

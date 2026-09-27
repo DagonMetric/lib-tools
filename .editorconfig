@@ -1,18 +1,19 @@
-# http://editorconfig.org
-
+# Stop the editor from looking for .editorconfig files in the parent directories
 root = true
 
 [*]
+# Non-configurable Prettier behaviors
 charset = utf-8
-indent_style = space
 insert_final_newline = true
-trim_trailing_whitespace = true
+# Caveat: Prettier won’t trim trailing whitespace inside template strings, but your editor might.
+# trim_trailing_whitespace = true
 
-[*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,html,css,scss,less}]
-indent_size = 4
+# Configurable Prettier behaviors
+end_of_line = lf
+indent_style = space
+indent_size = 2
+# max_line_length = 120
 
 [*.md]
+max_line_length = off
 trim_trailing_whitespace = false
-
-[*.{json,xml,yaml,yml}]
-indent_size = 2
